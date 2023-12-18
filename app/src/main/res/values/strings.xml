@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">MIA</string>
+    <string name="send">send</string>
+    <string name="rmsValue">Loudness: 0.00 dB</string>
+    <string name="toggleButton">ToggleButton</string>
+    <string name="talkToMIA">Talk to MIA...</string>
+</resources>
