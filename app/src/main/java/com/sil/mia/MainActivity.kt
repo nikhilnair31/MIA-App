@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private val maxRecordingTimeInSec = 60
     private var lastTimeAboveThreshold = System.currentTimeMillis()
 
-    private var mediaRecorder: MediaRecorder? = null
+    private var mediaRecorder: MediaRecorder? = nul
     private var isRecording = false
     private var audioFile: File? = null
     private lateinit var toggleButton: ToggleButton
