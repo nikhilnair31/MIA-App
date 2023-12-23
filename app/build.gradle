@@ -20,6 +20,7 @@ android {
         buildConfigField "String", "BUCKET_NAME", "\"${BUCKET_NAME}\""
         buildConfigField "String", "AWS_ACCESS_KEY", "\"${AWS_ACCESS_KEY}\""
         buildConfigField "String", "AWS_SECRET_KEY", "\"${AWS_SECRET_KEY}\""
+        buildConfigField "String", "AWS_API_ENDPOINT", "\"${AWS_API_ENDPOINT}\""
     }
 
     buildTypes {
