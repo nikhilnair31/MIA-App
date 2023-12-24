@@ -37,7 +37,7 @@ class MessagesAdapter(private val messagesList: List<MainActivity.Message>) :
         )
 
         val layoutParams = holder.textView.layoutParams as LinearLayout.LayoutParams
-        layoutParams.gravity = if (message.isUser) Gravity.START else Gravity.END
+        layoutParams.gravity = if (message.isUser) Gravity.END else Gravity.START
         holder.textView.layoutParams = layoutParams
     }
 

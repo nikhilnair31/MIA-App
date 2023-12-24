@@ -1,7 +1,11 @@
 package com.sil.mia
 
 import android.Manifest
+import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -11,7 +15,6 @@ import android.os.SystemClock
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -21,10 +24,13 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.DataOutputStream
 import java.io.File
@@ -47,7 +53,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var editText: EditText
-    private lateinit var sendButton: Button
+    private lateinit var sendButton: ImageButton
     private lateinit var toggleButton: ToggleButton
     private lateinit var audioRecord: AudioRecord
     private var mediaRecorder: MediaRecorder? = null
@@ -60,11 +66,15 @@ class MainActivity : AppCompatActivity() {
     private var lastTimeAboveThreshold = System.currentTimeMillis()
     private lateinit var adapter: MessagesAdapter
     data class Message(val content: String, val isUser: Boolean)
+    private val messageArray = JSONArray()
     private val messagesList = mutableListOf<Message>()
+    private lateinit var sharedPref: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        sharedPref = getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
 
         setupListeningButton()
         setupChatLayout()
@@ -277,28 +287,101 @@ class MainActivity : AppCompatActivity() {
     private fun setupChatLayout() {
         // Set up RecyclerView
         recyclerView = findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this) // Set LinearLayoutManager for vertical list
-        adapter = MessagesAdapter(messagesList)
-        recyclerView.adapter = adapter
+        chatMessages()
 
         editText = findViewById(R.id.editText)
         sendButton = findViewById(R.id.buttonSend)
         sendButton.setOnClickListener {
-            val userMessage = editText.text.toString()
-            if (userMessage.isNotEmpty()) {
-                // Add message to the list and clear the input field
-                messagesList.add(Message(userMessage, true))
-                adapter.notifyItemInserted(messagesList.size - 1)
-                editText.text.clear()
+            sendMessage()
+        }
+    }
+    private fun chatMessages() {
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        adapter = MessagesAdapter(messagesList)
+        recyclerView.adapter = adapter
 
-                // Call the API
-                CoroutineScope(Dispatchers.Main).launch {
-                    val systemMessage = callContextAPI(userMessage)
-                    messagesList.add(Message(systemMessage, false))
-                    adapter.notifyItemInserted(messagesList.size - 1)
+        loadMessages()
+        scrollToBottom()
+    }
+    private fun sendMessage() {
+        val userMessage = editText.text.toString()
+        if (userMessage.isNotEmpty()) {
+            // Add message to the list and clear the input field
+            messagesList.add(Message(userMessage, true))
+            adapter.notifyItemInserted(messagesList.size - 1)
+            editText.text.clear()
+            saveMessages()
+            scrollToBottom()
+
+            sendButton.isEnabled = false
+
+            // Call the API
+            CoroutineScope(Dispatchers.Main).launch {
+                val contextMemory = callContextAPI(userMessage)
+
+                val payload = JSONObject().apply {
+                    put("model", "gpt-4-1106-preview")
+                    put("messages", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("role", "system")
+                            put("content", "You are the user's companion. Help them using the context provided from metadata text. Do not make up any information, admit if you don't know something. Context: $contextMemory")
+                        })
+                        put(JSONObject().apply {
+                            put("role", "user")
+                            put("content", userMessage)
+                        })
+                    })
+                    put("seed", 48)
+                    put("max_tokens", 512)
+                    put("temperature", 0)
                 }
+                Log.i("AudioRecord", "sendMessage payload: $payload")
+                val assistantMessage = callOpenaiAPI(payload)
+
+                messagesList.add(Message(assistantMessage, false))
+                adapter.notifyItemInserted(messagesList.size - 1)
+                saveMessages()
+                scrollToBottom()
+
+                sendButton.isEnabled = true
             }
         }
+    }
+
+    private fun loadMessages() {
+        val messagesJson = sharedPref.getString("messages", null)
+        if (messagesJson != null) {
+            val type = object : TypeToken<List<Message>>() {}.type
+            messagesList.addAll(Gson().fromJson(messagesJson, type))
+            adapter.notifyDataSetChanged()
+        }
+
+        val systemJson = JSONObject().apply {
+            put("role", "system")
+            put("content", """
+                You are the user's companion. Help them using the context provided from metadata text.
+                Do not make up any information, admit if you don't know something.
+                Context:
+            """)
+        }
+        messageArray.put(systemJson)
+        messagesList.forEach { message ->
+            val role = if (message.isUser) "user" else "assistant"
+            val messageJson = JSONObject().apply {
+                put("role", role)
+                put("content", message.content)
+            }
+            messageArray.put(messageJson)
+        }
+    }
+    private fun saveMessages() {
+        val editor = sharedPref.edit()
+        val messagesJson = Gson().toJson(messagesList)
+        editor.putString("messages", messagesJson)
+        editor.apply()
+    }
+    private fun scrollToBottom() {
+        recyclerView.scrollToPosition(adapter.itemCount - 1)
     }
     // endregion
 
@@ -309,10 +392,10 @@ class MainActivity : AppCompatActivity() {
         Log.i("AudioRecord", "transcriptResponse: $transcriptResponse")
 
         // Setup transcription cleaning parameters. Pull USER input for JSON payload, Set SYSTEM prompt for JSON payload, Set MODEL type for JSON payload
-        val modelName = "gpt-3.5-turbo"
-        val cleaningSystemPrompt = "You will receive a user's transcribed speech and are to process it to correct potential errors.\nDO NOT DO THE FOLLOWING:\n- Generate any additional content\n- Censor any of the content\n- Print repetitive content\nDO THE FOLLOWING:\n- Account for transcript include speech of multiple users\n- Only output corrected text\n- If too much of the content seems erroneous return '.'\nTranscription: "
-        val cleanedTranscript = callOpenaiAPI(modelName, cleaningSystemPrompt, transcriptResponse)
-        Log.i("AudioRecord", "cleanedTranscript: $cleanedTranscript")
+        // val modelName = "gpt-3.5-turbo"
+        // val cleaningSystemPrompt = "You will receive a user's transcribed speech and are to process it to correct potential errors.\nDO NOT DO THE FOLLOWING:\n- Generate any additional content\n- Censor any of the content\n- Print repetitive content\nDO THE FOLLOWING:\n- Account for transcript include speech of multiple users\n- Only output corrected text\n- If too much of the content seems erroneous return '.'\nTranscription: "
+        // val cleanedTranscript = callOpenaiAPI(modelName, cleaningSystemPrompt, transcriptResponse)
+        // Log.i("AudioRecord", "cleanedTranscript: $cleanedTranscript")
     }
     private suspend fun transcribeAudio(): String {
         return withContext(Dispatchers.IO) {
@@ -369,31 +452,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    private suspend fun callOpenaiAPI(model: String, system: String, user: String): String {
-        if (user.isEmpty()) return "No transcription available"
+    // endregion
 
+    // region Utility Functions
+    private suspend fun callContextAPI(input_text: String): String {
         return withContext(Dispatchers.IO) {
             try {
                 val payload = """
                 {
-                    "model": "$model",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "${JsonObject.escape(system)}"
-                        },
-                        {
-                            "role": "user",
-                            "content": "${JsonObject.escape(user)}"
-                        }
-                    ]
+                    "query_text": "$input_text",
+                    "query_top_k": "3",
+                    "show_log": "True"
                 }
                 """.trimIndent()
+                Log.i("AudioRecord", "callContextAPI payload: $payload")
 
-                val url = URL("https://api.openai.com/v1/chat/completions")
+                val url = URL(awsApiEndpoint)
                 val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
-                    setRequestProperty("Authorization", "Bearer $openaiApiKey")
                     setRequestProperty("Content-Type", "application/json")
                     doOutput = true
                     outputStream.use { it.write(payload.toByteArray()) }
@@ -403,6 +479,42 @@ class MainActivity : AppCompatActivity() {
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                     val jsonResponse = JSONObject(responseJson)
+                    val content = jsonResponse.getString("output")
+                    Log.i("AudioRecord", "API Response: $content")
+                    content
+                } else {
+                    val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
+                    Log.e("AudioRecord", "Error Response: $errorResponse")
+                    ""
+                }
+            } catch (e: IOException) {
+                Log.e("AudioRecord", "IO Exception: ${e.message}")
+                ""
+            } catch (e: Exception) {
+                Log.e("AudioRecord", "Exception: ${e.message}")
+                ""
+            }
+        }
+    }
+    private suspend fun callOpenaiAPI(payload: JSONObject): String {
+        if (payload.toString().isEmpty()) return "No payload available"
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://api.openai.com/v1/chat/completions")
+                val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Authorization", "Bearer $openaiApiKey")
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                    outputStream.use { it.write(payload.toString().toByteArray()) }
+                }
+
+                val responseCode = httpURLConnection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
+                    val jsonResponse = JSONObject(responseJson)
+                    Log.i("AudioRecord", "GPT Response: $jsonResponse")
                     val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
                     content
                 } else {
@@ -419,25 +531,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    // endregion
 
-    // region Utility Functions
-    object JsonObject {
-        // Helper function to escape special characters in JSON strings
-        fun escape(str: String): String {
-            return str.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\b", "\\b")
-                .replace("\t", "\\t")
-        }
-    }
-    private fun showToast(message: String) {
-        runOnUiThread {
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        }
-    }
     private fun rms(buffer: ShortArray, length: Int): Double {
         var sum = 0.0
         for (i in 0 until length) {
@@ -445,43 +539,10 @@ class MainActivity : AppCompatActivity() {
         }
         return kotlin.math.sqrt(sum / length) * 1000
     }
-    private suspend fun callContextAPI(input_text: String): String {
-        return withContext(Dispatchers.IO) {
-            try {
-                val payload = """
-                {
-                    "show_log": "True",
-                    "input_text": "$input_text"
-                }
-                """.trimIndent()
 
-                val url = URL(awsApiEndpoint)
-                val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
-                    outputStream.use { it.write(payload.toByteArray()) }
-                }
-
-                val responseCode = httpURLConnection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
-                    val jsonResponse = JSONObject(responseJson)
-                    val content = jsonResponse.getString("gpt_output")
-                    Log.i("AudioRecord", "API Response: $content")
-                    content
-                } else {
-                    val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                    Log.e("AudioRecord", "Error Response: $errorResponse")
-                    ""
-                }
-            } catch (e: IOException) {
-                Log.e("AudioRecord", "IO Exception: ${e.message}")
-                ""
-            } catch (e: Exception) {
-                Log.e("AudioRecord", "Exception: ${e.message}")
-                ""
-            }
+    private fun showToast(message: String) {
+        runOnUiThread {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {

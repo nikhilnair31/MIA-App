@@ -3,13 +3,13 @@
 
     <item>
         <shape>
-            <solid android:color="@color/beige"/>
+            <solid android:color="@color/gray_900"/>
             <corners android:radius="8dp"/>
         </shape>
     </item>
 
     <item
-        android:drawable="@drawable/ic_baseline_send_enabled_24"
+        android:drawable="@drawable/ic_baseline_mic_off_24"
         android:gravity="center"/>
 
 </layer-list>
