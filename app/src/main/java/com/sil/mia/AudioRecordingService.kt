@@ -11,15 +11,11 @@ import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.os.Build
 import android.os.Environment
 import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
-import android.widget.TextView
-import android.widget.Toast
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
@@ -81,15 +77,14 @@ class AudioRecordingService : Service() {
     private fun createNotificationChannel() {
         Log.i("AudioRecord", "Creating notification channel")
 
-        val channel = NotificationChannel(channelId, "Audio Recording Service Channel", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Audio Recording Service Channel"
-        }
+        val channel = NotificationChannel(channelId, "MIA Listening Channel", NotificationManager.IMPORTANCE_LOW)
         val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
 
         val notification: Notification = Notification.Builder(this, channelId)
-            .setContentTitle("MIA On")
+            .setContentTitle("MIA")
             .setContentText("Listening...")
+            .setOngoing(true)
             .setSmallIcon(R.drawable.ic_baseline_mic_24)
             .build()
         startForeground(1, notification)

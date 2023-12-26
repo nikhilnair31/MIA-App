@@ -1,6 +1,9 @@
 package com.sil.mia
 
 import android.Manifest
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.PorterDuff
@@ -8,10 +11,9 @@ import android.graphics.PorterDuffColorFilter
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.os.Build
-import android.os.Bundle
-import android.os.Environment
-import android.os.SystemClock
+import android.net.Uri
+import android.os.*
+import android.provider.Settings
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -40,16 +42,13 @@ import java.net.URL
 
 class MainActivity : AppCompatActivity() {
     // region Vars
-    private val openaiApiKey = BuildConfig.OPENAI_API_KEY
-    private val awsApiEndpoint = BuildConfig.AWS_API_ENDPOINT
-
     private lateinit var recyclerView: RecyclerView
     private lateinit var loudnessTextView: TextView
     private lateinit var editText: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var toggleButton: ToggleButton
 
-    private val recordRequestCode = 101
+    private val finalRequestCode = 100
 
     private lateinit var adapter: MessagesAdapter
     data class Message(val content: String, val isUser: Boolean)
@@ -57,6 +56,10 @@ class MainActivity : AppCompatActivity() {
     private val messagesList = mutableListOf<Message>()
     private lateinit var sharedPref: SharedPreferences
 
+    private val alarmIntervalInMin: Long = 15
+
+    private val callingAPIs = CallingAPIs
+    private val helpers = Helpers(this)
     private lateinit var audioUpdateReceiver: BroadcastReceiver
     // endregion
 
@@ -67,7 +70,12 @@ class MainActivity : AppCompatActivity() {
 
         sharedPref = getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
 
+        if (isBatteryOptimizationEnabled(this)) {
+            promptDisableBatteryOptimization(this)
+        }
         setupAudioUpdateReceiver()
+        scheduleRepeatingAlarm(this)
+
         setupListeningButton()
         setupChatLayout()
     }
@@ -93,11 +101,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startServiceWithPermissionCheck() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Log.i("AudioRecord", "startServiceWithPermissionCheck checkSelfPermission")
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), recordRequestCode)
-        } else {
+        if (
+            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+            &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.i("AudioRecord", "Requesting RECORD_AUDIO and POST_NOTIFICATIONS permission")
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS), finalRequestCode)
+        }
+        else {
             startService()
+        }
+    }
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            finalRequestCode -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    startServiceWithPermissionCheck()
+                }
+                else {
+                    helpers.showToast("Permissions denied")
+                    toggleButton.isChecked = false
+                }
+            }
+            else -> {
+                // Ignore all other requests.
+            }
         }
     }
     private fun startService() {
@@ -151,11 +181,16 @@ class MainActivity : AppCompatActivity() {
     }
     private fun loadMessages() {
         val messagesJson = sharedPref.getString("messages", null)
-        if (messagesJson != null) {
+        if (messagesJson == null) {
+            messagesList.add(Message("Hello! I'm MIA, your freshly booted AI companion. I'm here to assist you, charm you with my sarcasm, and perhaps occasionally make you roll your eyes. Let's skip the awkward silences and jump right in—what's your name?", false))
+            saveMessages()
+        }
+        else {
             val type = object : TypeToken<List<Message>>() {}.type
             messagesList.addAll(Gson().fromJson(messagesJson, type))
-            adapter.notifyDataSetChanged()
         }
+        scrollToBottom()
+        adapter.notifyDataSetChanged()
 
         val systemJson = JSONObject().apply {
             put("role", "system")
@@ -206,7 +241,7 @@ class MainActivity : AppCompatActivity() {
                     put("temperature", 0)
                 }
                 Log.i("AudioRecord", "sendMessage taskPayload: $taskPayload")
-                val taskGuess = callOpenaiAPI(taskPayload)
+                val taskGuess = callingAPIs.callOpenaiAPI(taskPayload)
                 Log.i("AudioRecord", "sendMessage taskGuess: $taskGuess")
 
                 val assistantMessage: String
@@ -217,7 +252,7 @@ class MainActivity : AppCompatActivity() {
                         put("show_log", "True")
                     }
                     Log.i("AudioRecord", "sendMessage contextPayload: $contextPayload")
-                    val contextMemory = callContextAPI(contextPayload)
+                    val contextMemory = callingAPIs.callContextAPI(contextPayload)
                     Log.i("AudioRecord", "sendMessage contextMemory: $contextMemory")
 
                     val replyPayload = JSONObject().apply {
@@ -237,7 +272,7 @@ class MainActivity : AppCompatActivity() {
                         put("temperature", 0)
                     }
                     Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
-                    assistantMessage = callOpenaiAPI(replyPayload)
+                    assistantMessage = callingAPIs.callOpenaiAPI(replyPayload)
                     Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
                 }
                 else {
@@ -254,14 +289,13 @@ class MainActivity : AppCompatActivity() {
                         put("temperature", 0.9)
                     }
                     Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
-                    assistantMessage = callOpenaiAPI(replyPayload)
+                    assistantMessage = callingAPIs.callOpenaiAPI(replyPayload)
                     Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
                 }
 
                 messagesList.add(Message(assistantMessage, false))
                 adapter.notifyItemInserted(messagesList.size - 1)
                 saveMessages()
-                scrollToBottom()
 
                 sendButton.isEnabled = true
             }
@@ -279,98 +313,39 @@ class MainActivity : AppCompatActivity() {
     }
     // endregion
 
-    // region Utility Functions
-    private suspend fun callContextAPI(payload: JSONObject): String {
-        return withContext(Dispatchers.IO) {
-            try {
-                Log.i("AudioRecord", "callContextAPI payload: $payload")
-
-                val url = URL(awsApiEndpoint)
-                val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
-                    outputStream.use { it.write(payload.toString().toByteArray()) }
-                }
-
-                val responseCode = httpURLConnection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
-                    val jsonResponse = JSONObject(responseJson)
-                    Log.i("AudioRecord", "callContextAPI API Response: $jsonResponse")
-                    val content = jsonResponse.getString("output")
-                    content
-                }
-                else {
-                    val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                    Log.e("AudioRecord", "callContextAPI Error Response: $errorResponse")
-                    ""
-                }
+    // region Battery Optimization Related
+    private fun isBatteryOptimizationEnabled(context: Context): Boolean {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return !powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    }
+    private fun promptDisableBatteryOptimization(context: Context) {
+        if (isBatteryOptimizationEnabled(context)) {
+            val intent = Intent().apply {
+                action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                data = Uri.parse("package:${context.packageName}")
             }
-            catch (e: IOException) {
-                Log.e("AudioRecord", "IO Exception: ${e.message}")
-                ""
-            }
-            catch (e: Exception) {
-                Log.e("AudioRecord", "Exception: ${e.message}")
-                ""
-            }
+            context.startActivity(intent)
         }
     }
-    private suspend fun callOpenaiAPI(payload: JSONObject): String {
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = URL("https://api.openai.com/v1/chat/completions")
-                val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Authorization", "Bearer $openaiApiKey")
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
-                    outputStream.use { it.write(payload.toString().toByteArray()) }
-                }
+    // endregion
 
-                val responseCode = httpURLConnection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
-                    val jsonResponse = JSONObject(responseJson)
-                    Log.i("AudioRecord", "callOpenaiAPI Response: $jsonResponse")
-                    val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
-                    content
-                } else {
-                    val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                    Log.e("AudioRecord", "callOpenaiAPI Error Response: $errorResponse")
-                    ""
-                }
-            } catch (e: IOException) {
-                Log.e("AudioRecord", "IO Exception: ${e.message}")
-                ""
-            } catch (e: Exception) {
-                Log.e("AudioRecord", "Exception: ${e.message}")
-                ""
-            }
-        }
-    }
-    private fun showToast(message: String) {
-        runOnUiThread {
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        }
-    }
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            recordRequestCode -> {
-                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    startService()
-                } else {
-                    showToast("Permission denied")
-                    toggleButton.isChecked = false
-                }
-                return
-            }
-            else -> {
-                // Ignore all other requests.
-            }
-        }
+    // region Periodic Thought Notifications Related
+    private fun scheduleRepeatingAlarm(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, MyAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, FLAG_IMMUTABLE)
+
+        // Set the alarm to wake up the device and fire approximately every N minutes
+        // val interval = AlarmManager.INTERVAL_HALF_HOUR
+        val intervalInMin : Long = alarmIntervalInMin * 60 * 1000
+
+        // `setInexactRepeating()` is battery-friendly as it allows the system to adjust the alarm's timing to match other alarms
+        alarmManager.setInexactRepeating(
+            AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis(),
+            intervalInMin,
+            pendingIntent
+        )
     }
     // endregion
 }

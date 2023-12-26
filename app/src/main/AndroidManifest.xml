@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
     <application
         android:allowBackup="true"
@@ -13,7 +16,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MIA"
         >
-        <service android:name=".AudioRecordingService" />
+        <receiver
+            android:name=".MyAlarmReceiver"
+        />
+        <service
+            android:name=".AudioRecordingService"
+            android:label="Audio listening..."
+            android:foregroundServiceType="microphone"
+        />
         <activity
             android:name=".MainActivity"
             android:exported="true">
