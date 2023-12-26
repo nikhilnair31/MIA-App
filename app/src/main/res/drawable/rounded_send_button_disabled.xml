@@ -10,7 +10,7 @@
     </item>
 
     <item
-        android:drawable="@drawable/ic_baseline_send_disabled_24"
+        android:drawable="@drawable/spinner"
         android:gravity="center"/>
 
 </layer-list>
