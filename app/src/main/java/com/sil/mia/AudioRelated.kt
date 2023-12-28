@@ -8,9 +8,12 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.os.BatteryManager
 import android.os.Environment
 import android.os.IBinder
 import android.os.SystemClock
@@ -27,20 +30,15 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 
-class AudioRecordingService : Service() {
+class AudioRelated : Service() {
     // region Vars
-    private val threshold = 5
-    private val timeoutInSec = 4
-    private val maxRecordingTimeInSec = 600
-    private val minRecordingTimeInSec = 6
+    companion object {
+        const val AUDIO_SERVICE_UPDATE = "com.sil.mia.AUDIO_SERVICE_UPDATE"
+    }
 
-    private val bucketName = BuildConfig.BUCKET_NAME
-    private val awsAccessKey = BuildConfig.AWS_ACCESS_KEY
-    private val awsSecretKey = BuildConfig.AWS_SECRET_KEY
-
-    private var audioFile: File? = null
-    private lateinit var audioRecord: AudioRecord
     private var mediaRecorder: MediaRecorder? = null
+    private lateinit var audioRecord: AudioRecord
+    private var audioFile: File? = null
     private var isListening = false
     private var isRecording = false
 
@@ -48,11 +46,12 @@ class AudioRecordingService : Service() {
     private var recordingStartTime: Long = 0
     private var lastTimeAboveThreshold = System.currentTimeMillis()
 
-    private val channelId = "AudioRecordingServiceChannel"
+    private val threshold = 5
+    private val timeoutInSec = 4
+    private val maxRecordingTimeInSec = 600
+    private val minRecordingTimeInSec = 6
 
-    companion object {
-        const val AUDIO_SERVICE_UPDATE = "com.sil.mia.AUDIO_SERVICE_UPDATE"
-    }
+    private val channelId = "AudioRecordingServiceChannel"
     // endregion
 
     // region Common
@@ -74,6 +73,7 @@ class AudioRecordingService : Service() {
     }
     // endregion
 
+    // region Notification Related
     private fun createNotificationChannel() {
         Log.i("AudioRecord", "Creating notification channel")
 
@@ -89,7 +89,10 @@ class AudioRecordingService : Service() {
             .build()
         startForeground(1, notification)
     }
+    // endregion
 
+    // region Listening and Recording Related
+    // Listening Related
     private fun startListening() {
         Log.i("AudioRecord", "startListening")
 
@@ -119,9 +122,8 @@ class AudioRecordingService : Service() {
 
             while (isListening) {
                 val numberOfShort = audioRecord.read(audioData, 0, minBufferSize)
-                val rmsValue = rms(audioData, numberOfShort) / 100000
+                val rmsValue = Helpers.rms(audioData, numberOfShort) / 100000
                 val formattedRmsValue = String.format("%.1f", rmsValue)
-                //Log.i("AudioRecord", "rmsValue: $formattedRmsValue")
 
                 val intent = Intent(AUDIO_SERVICE_UPDATE)
                 intent.putExtra("formattedRmsValue", formattedRmsValue)
@@ -156,7 +158,7 @@ class AudioRecordingService : Service() {
     private fun stopListening() {
         Log.i("AudioRecord", "Stopped Listening")
 
-        val serviceIntent = Intent(this, AudioRecordingService::class.java)
+        val serviceIntent = Intent(this, AudioRelated::class.java)
         stopService(serviceIntent)
 
         if (isRecording) {
@@ -170,6 +172,7 @@ class AudioRecordingService : Service() {
         }
     }
 
+    // Recording Related
     private fun startRecording() {
         mediaRecorder = MediaRecorder().apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -222,45 +225,11 @@ class AudioRecordingService : Service() {
         val recordingEndTime = System.currentTimeMillis()
         if ((recordingEndTime - recordingStartTime) > minRecordingTimeInSec*1000) {
             CoroutineScope(Dispatchers.IO).launch {
-                uploadToS3()
+                Helpers.uploadToS3(audioFile)
             }
         } else {
             Log.i("AudioRecord", "Recording duration was less than minimum. Not uploading.")
         }
     }
-
-    private fun uploadToS3() {
-        Log.i("AudioRecord", "Uploading to S3...")
-
-        try {
-            val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
-            val s3Client = AmazonS3Client(credentials)
-
-            audioFile?.let {
-                val keyName = "recordings/" + it.name
-
-                s3Client.putObject(bucketName, keyName, "Uploaded String Object")
-
-                val metadata = ObjectMetadata()
-                metadata.contentType = "media/m4a"
-
-                val request = PutObjectRequest(bucketName, keyName, it).withMetadata(metadata)
-                s3Client.putObject(request)
-
-                Log.i("AudioRecord", "Uploaded to S3!")
-            }
-        }
-        catch (e: AmazonServiceException) {
-            e.printStackTrace()
-            Log.e("AudioRecord", "Error uploading to S3: ${e.message}")
-        }
-    }
-
-    private fun rms(buffer: ShortArray, length: Int): Double {
-        var sum = 0.0
-        for (i in 0 until length) {
-            sum += buffer[i] * buffer[i]
-        }
-        return kotlin.math.sqrt(sum / length) * 1000
-    }
+    // endregion
 }
