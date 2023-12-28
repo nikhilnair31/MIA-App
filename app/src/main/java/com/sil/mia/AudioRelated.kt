@@ -8,22 +8,14 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.os.BatteryManager
 import android.os.Environment
 import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import com.amazonaws.AmazonServiceException
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.services.s3.model.PutObjectRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -183,6 +175,7 @@ class AudioRelated : Service() {
             setMaxDuration(maxRecordingTimeInSec*1000)
 
             // Set an output file in Documents folder
+            // val audioFile = File.createTempFile("recording_${SystemClock.elapsedRealtime()}", ".m4a")
             audioFile = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "recording_${SystemClock.elapsedRealtime()}.m4a")
             val audioFilePath = audioFile?.absolutePath
             setOutputFile(audioFilePath)
@@ -225,7 +218,8 @@ class AudioRelated : Service() {
         val recordingEndTime = System.currentTimeMillis()
         if ((recordingEndTime - recordingStartTime) > minRecordingTimeInSec*1000) {
             CoroutineScope(Dispatchers.IO).launch {
-                Helpers.uploadToS3(audioFile)
+                val metadataJson = Helpers.pullDeviceData(this@AudioRelated)
+                Helpers.uploadToS3(audioFile, metadataJson)
             }
         } else {
             Log.i("AudioRecord", "Recording duration was less than minimum. Not uploading.")

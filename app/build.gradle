@@ -22,6 +22,7 @@ android {
         buildConfigField "String", "AWS_SECRET_KEY", "\"${AWS_SECRET_KEY}\""
         buildConfigField "String", "AWS_API_ENDPOINT", "\"${AWS_API_ENDPOINT}\""
         buildConfigField "String", "WEATHER_API_KEY", "\"${WEATHER_API_KEY}\""
+        buildConfigField "String", "GEOLOCATION_API_KEY", "\"${GEOLOCATION_API_KEY}\""
     }
 
     buildTypes {

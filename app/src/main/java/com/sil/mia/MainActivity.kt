@@ -118,6 +118,9 @@ class MainActivity : AppCompatActivity() {
         toggleButton = findViewById(R.id.toggleButton)
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
+                // CoroutineScope(Dispatchers.Main).launch {
+                //     Helpers.pullDeviceData(this@MainActivity)
+                // }
                 startService()
             }
             else {

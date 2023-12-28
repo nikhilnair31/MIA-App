@@ -27,10 +27,17 @@ import java.util.*
 
 class Helpers {
     companion object {
-        // region API Call Related
+        // region API Keys
+        private const val bucketName = BuildConfig.BUCKET_NAME
+        private const val awsAccessKey = BuildConfig.AWS_ACCESS_KEY
+        private const val awsSecretKey = BuildConfig.AWS_SECRET_KEY
         private const val openaiApiKey = BuildConfig.OPENAI_API_KEY
         private const val awsApiEndpoint = BuildConfig.AWS_API_ENDPOINT
+        private const val weatherApiEndpoint = BuildConfig.WEATHER_API_KEY
+        private const val locationApiEndpoint = BuildConfig.GEOLOCATION_API_KEY
+        // endregion
 
+        // region API Call Related
         suspend fun callContextAPI(payload: JSONObject): String {
             return withContext(Dispatchers.IO) {
                 try {
@@ -105,14 +112,77 @@ class Helpers {
                 }
             }
         }
+        suspend fun callGeocodingAPI(latitude: Double, longitude: Double): String {
+            return withContext(Dispatchers.IO) {
+                try {
+                    // Construct the URL with latitude and longitude
+                    val urlString = "https://geocode.maps.co/reverse?lat=$latitude&lon=$longitude&api_key=$locationApiEndpoint"
+                    val url = URL(urlString)
+
+                    // Open the connection
+                    val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET" // This is a GET request
+                    }
+
+                    // Handle the response
+                    val responseCode = httpURLConnection.responseCode
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
+                        val jsonResponse = JSONObject(responseJson)
+                        Log.i("AudioRecord", "callGeocodingAPI Response: $jsonResponse")
+                        val content = jsonResponse.getString("display_name")
+                        content
+                    } else {
+                        val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
+                        Log.e("AudioRecord", "callGeocodingAPI Error Response: $errorResponse")
+                        ""
+                    }
+                } catch (e: IOException) {
+                    Log.e("AudioRecord", "IO Exception: ${e.message}")
+                    ""
+                } catch (e: Exception) {
+                    Log.e("AudioRecord", "Exception: ${e.message}")
+                    ""
+                }
+            }
+        }
+        suspend fun callWeatherAPI(latitude: Double, longitude: Double): JSONObject? {
+            return withContext(Dispatchers.IO) {
+                try {
+                    // Construct the URL with latitude and longitude
+                    val urlString = "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&units=metric&appid=$weatherApiEndpoint"
+                    val url = URL(urlString)
+
+                    // Open the connection
+                    val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET" // This is a GET request
+                    }
+
+                    // Handle the response
+                    val responseCode = httpURLConnection.responseCode
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
+                        val jsonResponse = JSONObject(responseJson)
+                        Log.i("AudioRecord", "callWeatherAPI Response: $jsonResponse")
+                        jsonResponse
+                    } else {
+                        val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
+                        Log.e("AudioRecord", "callWeatherAPI Error Response: $errorResponse")
+                        null
+                    }
+                } catch (e: IOException) {
+                    Log.e("AudioRecord", "IO Exception: ${e.message}")
+                    null
+                } catch (e: Exception) {
+                    Log.e("AudioRecord", "Exception: ${e.message}")
+                    null
+                }
+            }
+        }
         // endregion
 
-        // region Data Related
-        private const val bucketName = BuildConfig.BUCKET_NAME
-        private const val awsAccessKey = BuildConfig.AWS_ACCESS_KEY
-        private const val awsSecretKey = BuildConfig.AWS_SECRET_KEY
-
-        fun uploadToS3(audioFile: File?) {
+        // region Cloud Related
+        fun uploadToS3(audioFile: File?, metadataJson: JSONObject) {
             Log.i("AudioRecord", "Uploading to S3...")
 
             try {
@@ -120,15 +190,21 @@ class Helpers {
                 val s3Client = AmazonS3Client(credentials)
 
                 audioFile?.let {
-                    val keyName = "recordings/" + it.name
+                    // Upload audio file
+                    val audioKeyName = "recordings/" + it.name
+                    val audioMetadata = ObjectMetadata()
+                    audioMetadata.contentType = "media/m4a"
+                    audioMetadata.contentLength = it.length()
+                    val audioRequest = PutObjectRequest(bucketName, audioKeyName, it).withMetadata(audioMetadata)
+                    s3Client.putObject(audioRequest)
 
-                    s3Client.putObject(bucketName, keyName, "Uploaded String Object")
-
-                    val metadata = ObjectMetadata()
-                    metadata.contentType = "media/m4a"
-
-                    val request = PutObjectRequest(bucketName, keyName, it).withMetadata(metadata)
-                    s3Client.putObject(request)
+                    // Upload metadata file
+                    val metadataKeyName = "recordings/meta_" + it.nameWithoutExtension + ".json"
+                    val metadataFile = File.createTempFile("meta_", ".json")
+                    metadataFile.writeText(metadataJson.toString())
+                    val metadataRequest = PutObjectRequest(bucketName, metadataKeyName, metadataFile)
+                    s3Client.putObject(metadataRequest)
+                    metadataFile.delete()
 
                     Log.i("AudioRecord", "Uploaded to S3!")
                 }
@@ -138,23 +214,39 @@ class Helpers {
                 Log.e("AudioRecord", "Error uploading to S3: ${e.message}")
             }
         }
-        private fun pullDeviceData(context: Context) {
-            // Time
+        // endregion
+
+        // region Data Related
+        suspend fun pullDeviceData(context: Context): JSONObject {
+            val finalOutput = JSONObject()
+
+            // region Time
             // Pulling system time in ms
-            val currentTime = System.currentTimeMillis()
+            val currentSystemTime = System.currentTimeMillis()
+            finalOutput.apply {
+                put("systemTime", currentSystemTime)
+            }
             // Pulling formatted time string
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
             val currentTimeFormattedString = dateFormat.format(Date())
-
-            // Battery
+            finalOutput.apply {
+                put("currentTimeFormattedString", currentTimeFormattedString)
+            }
+            // endregion
+            // region Battery
             // Pulling current battery level
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             val batteryLevel = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            finalOutput.apply {
+                put("batteryLevel", batteryLevel)
+            }
             // Pulling battery charging status
-
-            // Location
+            // endregion
+            // region Location
             // Pulling user's current latitude/longitude
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val location: Location?
+            var address = ""
             var latitude: Double? = null
             var longitude: Double? = null
             // Check for location permission
@@ -163,17 +255,55 @@ class Helpers {
                 ||
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
             ) {
-                val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                location?.latitude
-                location?.longitude
+                location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                location?.let {
+                    latitude = it.latitude
+                    longitude = it.longitude
+                    address = callGeocodingAPI(latitude!!, longitude!!)
+                }
             }
-            // Pulling street address
-
-            // Climate
+            finalOutput.apply {
+                put("latitude", latitude)
+                put("longitude", longitude)
+                put("address", address)
+            }
+            // endregion
+            // region Climate
             // Pull user's current location's temperature and humidity
+            val weatherJSON = callWeatherAPI(latitude!!, longitude!!)
+            var firstWeatherDescription = ""
+            var feelsLike = ""
+            var humidity = ""
+            var windSpeed = ""
+            var cloudAll = ""
+            if (weatherJSON != null) {
+                val weatherArray = weatherJSON.getJSONArray("weather")
+                firstWeatherDescription = weatherArray.getJSONObject(0).getString("description")
 
-            // Motion
+                val mainObject = weatherJSON.getJSONObject("main")
+                feelsLike = mainObject.getDouble("feels_like").toString()
+                humidity = mainObject.getInt("humidity").toString()
+
+                val windObject = weatherJSON.getJSONObject("wind")
+                windSpeed = windObject.getDouble("speed").toString()
+
+                val cloudsObject = weatherJSON.getJSONObject("clouds")
+                cloudAll = cloudsObject.getInt("all").toString()
+            }
+            finalOutput.apply {
+                put("firstWeatherDescription", firstWeatherDescription)
+                put("feelsLike", feelsLike)
+                put("humidity", humidity)
+                put("windSpeed", windSpeed)
+                put("cloudAll", cloudAll)
+            }
+            // endregion
+            // region Motion
             // Pull user's current movement (accelerometer/gyroscope)
+            // endregion
+
+            Log.i("AudioRecord", "pullDeviceData finalOutput: $finalOutput")
+            return finalOutput
         }
         // endregion
 
