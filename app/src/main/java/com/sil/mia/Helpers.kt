@@ -311,10 +311,11 @@ class Helpers {
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
             return dateFormat.format(Date())
         }
-        fun removeTimeKeyFromJsonArray(jsonArray: JSONArray): JSONArray {
+        fun removeKeyFromJsonArray(jsonArray: JSONArray): JSONArray {
             for (i in 0 until jsonArray.length()) {
                 val jsonObject = jsonArray.getJSONObject(i)
                 jsonObject.remove("time")
+                jsonObject.remove("metadata")
             }
             return jsonArray
         }

@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     // region Vars
     private var isFirstAppLaunch = true
     private val finalRequestCode = 100
+    private var userMessage: String = ""
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var loudnessTextView: TextView
@@ -53,8 +54,8 @@ class MainActivity : AppCompatActivity() {
         // isFirstAppLaunch = true;
 
         setupPermissions()
-        setupListening()
-        setupChatLayout()
+        audioRelated()
+        chatRelated()
         // scheduleRepeatingAlarm(this)
     }
     override fun onResume() {
@@ -113,7 +114,7 @@ class MainActivity : AppCompatActivity() {
     // endregion
 
     // region Audio Related Functions
-    private fun setupListening() {
+    private fun audioRelated() {
         toggleButton = findViewById(R.id.toggleButton)
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
@@ -128,7 +129,6 @@ class MainActivity : AppCompatActivity() {
 
         setupAudioUpdateReceiver()
     }
-
     private fun setupAudioUpdateReceiver() {
         Log.i("AudioRecord", "setupAudioUpdateReceiver")
 
@@ -149,9 +149,8 @@ class MainActivity : AppCompatActivity() {
     // endregion
 
     // region Chat Related Functions
-    private fun setupChatLayout() {
-        chatMessages()
-        loadMessages()
+    private fun chatRelated() {
+        setupChat()
 
         editText = findViewById(R.id.editText)
         sendButton = findViewById(R.id.buttonSend)
@@ -159,12 +158,17 @@ class MainActivity : AppCompatActivity() {
             sendMessage()
         }
     }
-    private fun chatMessages() {
+    private fun setupChat() {
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
+
         adapter = MessagesAdapter(messagesList)
         recyclerView.adapter = adapter
         recyclerView.scrollToPosition(adapter.itemCount - 1)
+
+        CoroutineScope(Dispatchers.Main).launch {
+            loadMessages()
+        }
     }
     private fun loadMessages() {
         sharedPref = getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
@@ -221,7 +225,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendMessage() {
-        val userMessage = editText.text.toString()
+        userMessage = editText.text.toString()
         if (userMessage.isNotEmpty()) {
             // Disable send button once message sent
             sendButton.isEnabled = false
@@ -239,129 +243,7 @@ class MainActivity : AppCompatActivity() {
 
             // Call the API to determine if MIA should reply directly or look at Pinecone
             CoroutineScope(Dispatchers.Main).launch {
-                // Create JSON for checking if MIA should look into Pinecone
-                val taskPayload = JSONObject().apply {
-                    put("model", "gpt-4-1106-preview")
-                    put("messages", JSONArray().apply {
-                        put(JSONObject().apply {
-                            put("role", "system")
-                            put(
-                                "content",
-                                """You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
-                                Depending on the user's messages determine where to look to reply. Answer with N if internal and Y if external. 
-                                Examples: 
-                                Example #1: user: help me make a crème caramel assistant: N 
-                                Example #2: user: what did they discuss about the marketing project? assistant: Y 
-                                Example #3: user: who is steve jobs? assistant: N user: no i heard something about him i'm sure assistant: Y"""
-                            )
-                        })
-                        put(JSONObject().apply {
-                            put("role", "user")
-                            put("content", userMessage)
-                        })
-                    })
-                    put("seed", 48)
-                    put("max_tokens", 24)
-                    put("temperature", 0)
-                }
-                Log.i("AudioRecord", "sendMessage taskPayload: $taskPayload")
-                val taskGuess = Helpers.callOpenaiAPI(taskPayload)
-                Log.i("AudioRecord", "sendMessage taskGuess: $taskGuess")
-
-                val assistantMessage: String
-                // If MIA should look in Pinecone
-                if(taskGuess == "Y") {
-                    // Use GPT to create a good query
-                    val contextData = Helpers.pullDeviceData(this@MainActivity)
-                    val queryGeneratorPayload = JSONObject().apply {
-                        put("model", "gpt-4-1106-preview")
-                        put("messages", JSONArray().apply {
-                            put(JSONObject().apply {
-                                put("role", "system")
-                                put(
-                                    "content",
-                                    """
-                                        You are a system that generates queries based on the user's message. 
-                                        These queries are used to search a vector database using its embedding's cosine similarity.
-                                        The database itself contains transcripts of the user's continuous daily life audio recordings.
-                                        You will be provided with some contextual information like current time, location etc. 
-                                        You may choose to keep it or discard t in the final query.
-                                        You are to reply with a single line of text that is best suited to extract the relevant information.
-                                        Context:
-                                        $contextData"""
-                                )
-                            })
-                            put(JSONObject().apply {
-                                put("role", "user")
-                                put("content", userMessage)
-                            })
-                        })
-                        put("seed", 48)
-                        put("max_tokens", 512)
-                        put("temperature", 0.9)
-                    }
-                    Log.i("AudioRecord", "sendMessage queryGeneratorPayload: $queryGeneratorPayload")
-                    val queryMessage = Helpers.callOpenaiAPI(queryGeneratorPayload)
-                    Log.i("AudioRecord", "sendMessage queryMessage: $queryMessage")
-
-                    // Pull relevant Pinecone data using a query
-                    val contextPayload = JSONObject().apply {
-                        put("query_text", queryMessage)
-                        put("query_top_k", 3)
-                        put("show_log", "True")
-                    }
-                    Log.i("AudioRecord", "sendMessage contextPayload: $contextPayload")
-                    val contextMemory = Helpers.callContextAPI(contextPayload)
-                    Log.i("AudioRecord", "sendMessage contextMemory: $contextMemory")
-
-                    // Using the Pinecone data and were the user's message
-                    val replyPayload = JSONObject().apply {
-                        put("model", "gpt-4-1106-preview")
-                        put("messages", JSONArray().apply {
-                            put(JSONObject().apply {
-                                put("role", "system")
-                                put(
-                                    "content",
-                                    """You are the user's companion. Help them using the context provided from metadata text. 
-                                    Do not make up any information, admit if you don't know something. 
-                                    Context: $contextMemory"""
-                                )
-                            })
-                            put(JSONObject().apply {
-                                put("role", "user")
-                                put("content", userMessage)
-                            })
-                        })
-                        put("seed", 48)
-                        put("max_tokens", 512)
-                        put("temperature", 0)
-                    }
-                    Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
-                    assistantMessage = Helpers.callOpenaiAPI(replyPayload)
-                    Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
-                }
-                // If MIA should reply directly
-                else {
-                    // Create JSON for user's message and save it to array
-                    val userJson = JSONObject().apply {
-                        put("role", "user")
-                        put("content", userMessage)
-                        put("time", Helpers.pullTimeFormattedString())
-                    }
-                    messageArray.put(userJson)
-                    val messagesArrayWithoutTime = Helpers.removeTimeKeyFromJsonArray(messageArray)
-                    // Generate response from user's message
-                    val replyPayload = JSONObject().apply {
-                        put("model", "gpt-4-1106-preview")
-                        put("messages", messagesArrayWithoutTime)
-                        put("seed", 48)
-                        put("max_tokens", 1024)
-                        put("temperature", 0.9)
-                    }
-                    Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
-                    assistantMessage = Helpers.callOpenaiAPI(replyPayload)
-                    Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
-                }
+                val assistantMessage = createMiaResponse()
 
                 // Add response to user's message, display it and save it
                 messagesList.add(JSONObject().apply {
@@ -377,6 +259,181 @@ class MainActivity : AppCompatActivity() {
                 sendButton.isEnabled = true
             }
         }
+    }
+    private suspend fun createMiaResponse(): String {
+        // If MIA should should look into Pinecone or reply directly
+        val assistantMessage =
+            if(shouldMiaLookExternally())
+                ifUserMessageIsTask()
+            else
+                ifUserMessageIsNotTask()
+        // Return
+        return assistantMessage
+    }
+    private suspend fun shouldMiaLookExternally(): Boolean {
+        val taskPayload = JSONObject().apply {
+            put("model", "gpt-4-1106-preview")
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put(
+                        "content",
+                        """
+                        You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
+                        Depending on the user's messages determine where to look to reply. Answer with "int" if internal and "ext" if external. 
+                        Examples: 
+                        Example #1: user: help me make a crème caramel assistant: "int"
+                        Example #2: user: what did they discuss about the marketing project? assistant: "ext"
+                        Example #3: user: who is steve jobs? assistant: "int" user: no i heard something about him i'm sure assistant: "ext"
+                        """
+                    )
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userMessage)
+                })
+            })
+            put("seed", 48)
+            put("max_tokens", 24)
+            put("temperature", 0)
+        }
+        Log.i("AudioRecord", "ifMiaShouldLookInPinecone taskPayload: $taskPayload")
+        val taskGuess = Helpers.callOpenaiAPI(taskPayload)
+        Log.i("AudioRecord", "ifMiaShouldLookInPinecone taskGuess: $taskGuess")
+
+        return taskGuess == "ext"
+    }
+    private suspend fun ifUserMessageIsNotTask(): String {
+        // Append JSON for user's message
+        messageArray.put(JSONObject().apply {
+            put("role", "user")
+            put("content", userMessage)
+            put("time", Helpers.pullTimeFormattedString())
+        })
+
+        // Remove time key from array to send to OpenaAI API
+        val messagesArrayWithoutTime = Helpers.removeKeyFromJsonArray(messageArray)
+
+        // Generate response from user's message
+        val replyPayload = JSONObject().apply {
+            put("model", "gpt-4-1106-preview")
+            put("messages", messagesArrayWithoutTime)
+            put("seed", 48)
+            put("max_tokens", 1024)
+            put("temperature", 0.9)
+        }
+        Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
+        val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
+        Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
+
+        return assistantMessage
+    }
+    private suspend fun ifUserMessageIsTask(): String {
+        val contextData = Helpers.pullDeviceData(this@MainActivity)
+
+        // Use GPT to create a good query
+        val queryTextGeneratorPayload = JSONObject().apply {
+            put("model", "gpt-4-1106-preview")
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put(
+                        "content",
+                        """
+                        You are a system that generates queries based on the user's message. 
+                        These queries are used to search a vector database using its embedding's cosine similarity.
+                        The database itself contains transcripts of the user's continuous daily life audio recordings.
+                        You will be provided with some contextual information like current time, location etc. 
+                        You may choose to keep it or discard t in the final query.
+                        You are to reply with a single line of text that is best suited to extract the relevant information.
+                        Context:
+                        $contextData"""
+                    )
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userMessage)
+                })
+            })
+            put("seed", 48)
+            put("max_tokens", 512)
+            put("temperature", 0.9)
+        }
+        Log.i("AudioRecord", "sendMessage queryTextGeneratorPayload: $queryTextGeneratorPayload")
+        val queryTextMessage = Helpers.callOpenaiAPI(queryTextGeneratorPayload)
+        Log.i("AudioRecord", "sendMessage queryTextMessage: $queryTextMessage")
+
+        // Use GPT to determine response length
+        val queryLengthGeneratorPayload = JSONObject().apply {
+            put("model", "gpt-4-1106-preview")
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put(
+                        "content",
+                        """
+                        You are a system that outputs query length based on the user's message. 
+                        If message has anything to do with time then output "all" else "few". 
+                        You are to reply with a single word.
+                        Context:
+                        $contextData
+                        Example:
+                        Input: what movie did i watch a few days ago?
+                        Output: all"""
+                    )
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userMessage)
+                })
+            })
+            put("seed", 48)
+            put("max_tokens", 24)
+            put("temperature", 0)
+        }
+        Log.i("AudioRecord", "sendMessage queryLengthGeneratorPayload: $queryLengthGeneratorPayload")
+        val queryLengthMessage = Helpers.callOpenaiAPI(queryLengthGeneratorPayload)
+        val lengthTopK = if (queryLengthMessage == "all") 10000 else 3
+        Log.i("AudioRecord", "sendMessage queryLengthMessage: $queryLengthMessage - lengthTopK: $lengthTopK")
+
+        // Pull relevant Pinecone data using a query
+        val contextPayload = JSONObject().apply {
+            put("query_text", queryTextMessage)
+            put("query_top_k", lengthTopK)
+            put("show_log", "True")
+        }
+        Log.i("AudioRecord", "sendMessage contextPayload: $contextPayload")
+        val contextMemory = Helpers.callContextAPI(contextPayload)
+        Log.i("AudioRecord", "sendMessage contextMemory: $contextMemory")
+
+        // Using the Pinecone data and were the user's message
+        val replyPayload = JSONObject().apply {
+            put("model", "gpt-4-1106-preview")
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put(
+                        "content",
+                        """
+                        You are the user's companion. Help them using the context provided from metadata text. 
+                        Do not make up any information, admit if you don't know something. 
+                        Context: $contextMemory"""
+                    )
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userMessage)
+                })
+            })
+            put("seed", 48)
+            put("max_tokens", 512)
+            put("temperature", 0)
+        }
+        Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
+        val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
+        Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
+
+        return assistantMessage
     }
 
     private fun saveMessages() {
