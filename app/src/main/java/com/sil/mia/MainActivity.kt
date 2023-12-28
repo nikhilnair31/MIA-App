@@ -36,7 +36,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toggleButton: ToggleButton
 
     private lateinit var audioUpdateReceiver: BroadcastReceiver
-    data class Message(val content: String, val isUser: Boolean)
     private val messageArray = JSONArray()
     private val messagesList = mutableListOf<JSONObject>()
     private lateinit var adapter: MessagesAdapter
@@ -166,7 +165,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupChatLayout() {
         chatMessages()
         loadMessages()
-        scrollToBottom()
+        Helpers.scrollToBottom(recyclerView, adapter)
 
         editText = findViewById(R.id.editText)
         sendButton = findViewById(R.id.buttonSend)
@@ -196,6 +195,7 @@ class MainActivity : AppCompatActivity() {
                             Let's skip the awkward silences and jump right in—what's your name?
                         """.trimIndent()
                     )
+                    put("time", Helpers.pullTimeFormattedString())
                 }
             )
         }
@@ -206,7 +206,7 @@ class MainActivity : AppCompatActivity() {
         }
         adapter.notifyItemInserted(messagesList.size - 1)
         saveMessages()
-        scrollToBottom()
+        Helpers.scrollToBottom(recyclerView, adapter)
 
         // Create an array with all the same messages but with an extra system message at the start
         val systemJson = JSONObject().apply {
@@ -219,6 +219,7 @@ class MainActivity : AppCompatActivity() {
                     You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
                 """
             )
+            put("time", Helpers.pullTimeFormattedString())
         }
         messageArray.put(systemJson)
         messagesList.forEach { message ->
@@ -226,6 +227,7 @@ class MainActivity : AppCompatActivity() {
                 JSONObject().apply {
                     put("role", message["role"])
                     put("content", message["content"])
+                    put("time", message["time"])
                 }
             )
         }
@@ -241,10 +243,12 @@ class MainActivity : AppCompatActivity() {
             messagesList.add(JSONObject().apply {
                 put("role", "user")
                 put("content", userMessage)
+                put("time", Helpers.pullTimeFormattedString())
             })
             adapter.notifyItemInserted(messagesList.size - 1)
             editText.text.clear()
             saveMessages()
+            Helpers.scrollToBottom(recyclerView, adapter)
 
             // Call the API to determine if MIA should reply directly or look at Pinecone
             CoroutineScope(Dispatchers.Main).launch {
@@ -322,12 +326,14 @@ class MainActivity : AppCompatActivity() {
                     val userJson = JSONObject().apply {
                         put("role", "user")
                         put("content", userMessage)
+                        put("time", Helpers.pullTimeFormattedString())
                     }
                     messageArray.put(userJson)
+                    val messagesArrayWithoutTime = Helpers.removeTimeKeyFromJsonArray(messageArray)
                     // Generate response from user's message
                     val replyPayload = JSONObject().apply {
                         put("model", "gpt-4-1106-preview")
-                        put("messages", messageArray)
+                        put("messages", messagesArrayWithoutTime)
                         put("seed", 48)
                         put("max_tokens", 1024)
                         put("temperature", 0.9)
@@ -341,9 +347,11 @@ class MainActivity : AppCompatActivity() {
                 messagesList.add(JSONObject().apply {
                     put("role", "assistant")
                     put("content", assistantMessage)
+                    put("time", Helpers.pullTimeFormattedString())
                 })
                 adapter.notifyItemInserted(messagesList.size - 1)
                 saveMessages()
+                Helpers.scrollToBottom(recyclerView, adapter)
 
                 // Enable send button once response is received
                 sendButton.isEnabled = true
@@ -356,9 +364,6 @@ class MainActivity : AppCompatActivity() {
         val messagesJson = Gson().toJson(messagesList)
         editor.putString("messages", messagesJson)
         editor.apply()
-    }
-    private fun scrollToBottom() {
-        recyclerView.scrollToPosition(adapter.itemCount - 1)
     }
     // endregion
 

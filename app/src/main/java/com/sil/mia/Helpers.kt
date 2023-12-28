@@ -10,6 +10,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
+import androidx.recyclerview.widget.RecyclerView
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
@@ -17,6 +18,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -41,7 +43,7 @@ class Helpers {
         suspend fun callContextAPI(payload: JSONObject): String {
             return withContext(Dispatchers.IO) {
                 try {
-                    Log.i("AudioRecord", "callContextAPI payload: $payload")
+                    Log.d("AudioRecord", "callContextAPI payload: $payload")
 
                     val url = URL(awsApiEndpoint)
                     val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
@@ -55,7 +57,7 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.i("AudioRecord", "callContextAPI API Response: $jsonResponse")
+                        Log.d("AudioRecord", "callContextAPI API Response: $jsonResponse")
                         val content = jsonResponse.getString("output")
                         content
                     }
@@ -91,7 +93,7 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.i("AudioRecord", "callOpenaiAPI Response: $jsonResponse")
+                        Log.d("AudioRecord", "callOpenaiAPI Response: $jsonResponse")
                         val content = jsonResponse.getJSONArray("choices").getJSONObject(0)
                             .getJSONObject("message").getString("content")
                         content
@@ -129,7 +131,7 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.i("AudioRecord", "callGeocodingAPI Response: $jsonResponse")
+                        Log.d("AudioRecord", "callGeocodingAPI Response: $jsonResponse")
                         val content = jsonResponse.getString("display_name")
                         content
                     } else {
@@ -163,7 +165,7 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.i("AudioRecord", "callWeatherAPI Response: $jsonResponse")
+                        Log.d("AudioRecord", "callWeatherAPI Response: $jsonResponse")
                         jsonResponse
                     } else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
@@ -195,16 +197,16 @@ class Helpers {
                     val audioMetadata = ObjectMetadata()
                     audioMetadata.contentType = "media/m4a"
                     audioMetadata.contentLength = it.length()
+
+                    // Convert JSONObject to Map and add to metadata
+                    val metadataMap = metadataJson.toMap()
+                    metadataMap.forEach { (key, value) ->
+                        Log.d("AudioRecord", "Metadata - Key: $key, Value: $value")
+                        audioMetadata.addUserMetadata(key, value)
+                    }
+
                     val audioRequest = PutObjectRequest(bucketName, audioKeyName, it).withMetadata(audioMetadata)
                     s3Client.putObject(audioRequest)
-
-                    // Upload metadata file
-                    val metadataKeyName = "recordings/meta_" + it.nameWithoutExtension + ".json"
-                    val metadataFile = File.createTempFile("meta_", ".json")
-                    metadataFile.writeText(metadataJson.toString())
-                    val metadataRequest = PutObjectRequest(bucketName, metadataKeyName, metadataFile)
-                    s3Client.putObject(metadataRequest)
-                    metadataFile.delete()
 
                     Log.i("AudioRecord", "Uploaded to S3!")
                 }
@@ -214,6 +216,8 @@ class Helpers {
                 Log.e("AudioRecord", "Error uploading to S3: ${e.message}")
             }
         }
+
+        private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
         // endregion
 
         // region Data Related
@@ -227,8 +231,7 @@ class Helpers {
                 put("systemTime", currentSystemTime)
             }
             // Pulling formatted time string
-            val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
-            val currentTimeFormattedString = dateFormat.format(Date())
+            val currentTimeFormattedString = pullTimeFormattedString()
             finalOutput.apply {
                 put("currentTimeFormattedString", currentTimeFormattedString)
             }
@@ -302,8 +305,19 @@ class Helpers {
             // Pull user's current movement (accelerometer/gyroscope)
             // endregion
 
-            Log.i("AudioRecord", "pullDeviceData finalOutput: $finalOutput")
+            Log.d("AudioRecord", "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
+        }
+        fun pullTimeFormattedString(): String {
+            val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
+            return dateFormat.format(Date())
+        }
+        fun removeTimeKeyFromJsonArray(jsonArray: JSONArray): JSONArray {
+            for (i in 0 until jsonArray.length()) {
+                val jsonObject = jsonArray.getJSONObject(i)
+                jsonObject.remove("time")
+            }
+            return jsonArray
         }
         // endregion
 
@@ -317,6 +331,9 @@ class Helpers {
             else {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
+        }
+        fun scrollToBottom(recyclerView: RecyclerView, adapter: MessagesAdapter) {
+            recyclerView.scrollToPosition(adapter.itemCount - 1)
         }
         // endregion
 
