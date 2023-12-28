@@ -50,7 +50,7 @@ class AudioRelated : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.i("AudioRecord", "onStartCommand")
 
-        createNotificationChannel()
+        startForeground(1, createNotification())
         startListening()
         return START_STICKY
     }
@@ -66,20 +66,20 @@ class AudioRelated : Service() {
     // endregion
 
     // region Notification Related
-    private fun createNotificationChannel() {
+    private fun createNotification(): Notification {
         Log.i("AudioRecord", "Creating notification channel")
 
         val channel = NotificationChannel(channelId, "MIA Listening Channel", NotificationManager.IMPORTANCE_LOW)
         val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
 
-        val notification: Notification = Notification.Builder(this, channelId)
-            .setContentTitle("MIA")
-            .setContentText("Listening...")
+        return Notification.Builder(this, channelId)
+            .setContentTitle("MIA Listening...")
+            .setContentText(null)
+            .setStyle(Notification.BigTextStyle().bigText(""))
             .setOngoing(true)
-            .setSmallIcon(R.drawable.ic_baseline_mic_24)
+            .setSmallIcon(R.drawable.mia_stat_name)
             .build()
-        startForeground(1, notification)
     }
     // endregion
 

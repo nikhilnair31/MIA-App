@@ -117,29 +117,16 @@ class MainActivity : AppCompatActivity() {
         toggleButton = findViewById(R.id.toggleButton)
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                // CoroutineScope(Dispatchers.Main).launch {
-                //     Helpers.pullDeviceData(this@MainActivity)
-                // }
-                startService()
+                Log.i("AudioRecord", "startService")
+                startForegroundService(Intent(this, AudioRelated::class.java))
             }
             else {
-                stopService()
+                Log.i("AudioRecord", "stopService")
+                stopService(Intent(this, AudioRelated::class.java))
             }
         }
 
         setupAudioUpdateReceiver()
-    }
-
-    private fun startService() {
-        Log.i("AudioRecord", "startService")
-
-        val serviceIntent = Intent(this, AudioRelated::class.java)
-        startForegroundService(serviceIntent)
-    }
-    private fun stopService() {
-        Log.i("AudioRecord", "stopService")
-
-        stopService(Intent(this, AudioRelated::class.java))
     }
 
     private fun setupAudioUpdateReceiver() {
@@ -165,7 +152,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupChatLayout() {
         chatMessages()
         loadMessages()
-        Helpers.scrollToBottom(recyclerView, adapter)
 
         editText = findViewById(R.id.editText)
         sendButton = findViewById(R.id.buttonSend)
@@ -178,6 +164,7 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = MessagesAdapter(messagesList)
         recyclerView.adapter = adapter
+        recyclerView.scrollToPosition(adapter.itemCount - 1)
     }
     private fun loadMessages() {
         sharedPref = getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
@@ -205,8 +192,8 @@ class MainActivity : AppCompatActivity() {
             messagesList.addAll(Gson().fromJson(messagesJson, type))
         }
         adapter.notifyItemInserted(messagesList.size - 1)
+        recyclerView.scrollToPosition(adapter.itemCount - 1)
         saveMessages()
-        Helpers.scrollToBottom(recyclerView, adapter)
 
         // Create an array with all the same messages but with an extra system message at the start
         val systemJson = JSONObject().apply {
@@ -246,9 +233,9 @@ class MainActivity : AppCompatActivity() {
                 put("time", Helpers.pullTimeFormattedString())
             })
             adapter.notifyItemInserted(messagesList.size - 1)
+            recyclerView.scrollToPosition(adapter.itemCount - 1)
             editText.text.clear()
             saveMessages()
-            Helpers.scrollToBottom(recyclerView, adapter)
 
             // Call the API to determine if MIA should reply directly or look at Pinecone
             CoroutineScope(Dispatchers.Main).launch {
@@ -284,9 +271,42 @@ class MainActivity : AppCompatActivity() {
                 val assistantMessage: String
                 // If MIA should look in Pinecone
                 if(taskGuess == "Y") {
+                    // Use GPT to create a good query
+                    val contextData = Helpers.pullDeviceData(this@MainActivity)
+                    val queryGeneratorPayload = JSONObject().apply {
+                        put("model", "gpt-4-1106-preview")
+                        put("messages", JSONArray().apply {
+                            put(JSONObject().apply {
+                                put("role", "system")
+                                put(
+                                    "content",
+                                    """
+                                        You are a system that generates queries based on the user's message. 
+                                        These queries are used to search a vector database using its embedding's cosine similarity.
+                                        The database itself contains transcripts of the user's continuous daily life audio recordings.
+                                        You will be provided with some contextual information like current time, location etc. 
+                                        You may choose to keep it or discard t in the final query.
+                                        You are to reply with a single line of text that is best suited to extract the relevant information.
+                                        Context:
+                                        $contextData"""
+                                )
+                            })
+                            put(JSONObject().apply {
+                                put("role", "user")
+                                put("content", userMessage)
+                            })
+                        })
+                        put("seed", 48)
+                        put("max_tokens", 512)
+                        put("temperature", 0.9)
+                    }
+                    Log.i("AudioRecord", "sendMessage queryGeneratorPayload: $queryGeneratorPayload")
+                    val queryMessage = Helpers.callOpenaiAPI(queryGeneratorPayload)
+                    Log.i("AudioRecord", "sendMessage queryMessage: $queryMessage")
+
                     // Pull relevant Pinecone data using a query
                     val contextPayload = JSONObject().apply {
-                        put("query_text", userMessage)
+                        put("query_text", queryMessage)
                         put("query_top_k", 3)
                         put("show_log", "True")
                     }
@@ -350,8 +370,8 @@ class MainActivity : AppCompatActivity() {
                     put("time", Helpers.pullTimeFormattedString())
                 })
                 adapter.notifyItemInserted(messagesList.size - 1)
+                recyclerView.scrollToPosition(adapter.itemCount - 1)
                 saveMessages()
-                Helpers.scrollToBottom(recyclerView, adapter)
 
                 // Enable send button once response is received
                 sendButton.isEnabled = true

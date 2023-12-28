@@ -216,7 +216,6 @@ class Helpers {
                 Log.e("AudioRecord", "Error uploading to S3: ${e.message}")
             }
         }
-
         private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
         // endregion
 
@@ -331,9 +330,6 @@ class Helpers {
             else {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
-        }
-        fun scrollToBottom(recyclerView: RecyclerView, adapter: MessagesAdapter) {
-            recyclerView.scrollToPosition(adapter.itemCount - 1)
         }
         // endregion
 
