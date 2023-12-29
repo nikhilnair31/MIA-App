@@ -26,7 +26,6 @@ import java.lang.reflect.Array.set
 
 class MainActivity : AppCompatActivity() {
     // region Vars
-    private var isFirstAppLaunch = true
     private val finalRequestCode = 100
     private var userMessage: String = ""
 
@@ -37,8 +36,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toggleButton: ToggleButton
 
     private lateinit var audioUpdateReceiver: BroadcastReceiver
-    private val messageArray = JSONArray()
-    private val messagesList = mutableListOf<JSONObject>()
+    private val messagesListUI = mutableListOf<JSONObject>()
+    private val messagesListData = mutableListOf<JSONObject>()
     private lateinit var adapter: MessagesAdapter
     private lateinit var sharedPref: SharedPreferences
 
@@ -51,21 +50,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // isFirstAppLaunch = true;
-
         permissionRelated()
         audioRelated()
         chatRelated()
         // scheduleRepeatingAlarm(this)
-    }
-    override fun onResume() {
-        Log.i("AudioRecord", "onResume")
-        super.onResume()
-
-        // Doing this so the messages aren't loaded twice on app's cold start/launch
-        // if(!isFirstAppLaunch) {
-        //     loadMessages()
-        // }
     }
     override fun onDestroy() {
         Log.i("AudioRecord", "onDestroy")
@@ -132,6 +120,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupAudioUpdateReceiver() {
         Log.i("AudioRecord", "setupAudioUpdateReceiver")
 
+        // Reference the loudness TextView and update its value using the BroadcastReceiver
         loudnessTextView = findViewById(R.id.textView)
         audioUpdateReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
@@ -162,7 +151,7 @@ class MainActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        adapter = MessagesAdapter(messagesList)
+        adapter = MessagesAdapter(messagesListUI)
         recyclerView.adapter = adapter
         recyclerView.scrollToPosition(adapter.itemCount - 1)
 
@@ -175,53 +164,47 @@ class MainActivity : AppCompatActivity() {
         val messagesJson = sharedPref.getString("messages", null)
         // If saved messages are empty then add a message from MIA and save it
         if (messagesJson == null) {
-            messagesList.add(
-                JSONObject().apply {
-                    put("role", "assistant")
-                    put(
-                        "content",
-                        """
-                            Hello! I'm MIA, your freshly booted AI companion. 
-                            I'm here to assist you, charm you with my sarcasm, and perhaps occasionally make you roll your eyes. 
-                            Let's skip the awkward silences and jump right in—what's your name?
-                        """.trimIndent()
-                    )
-                    put("time", Helpers.pullTimeFormattedString())
-                }
-            )
+            val initSystemJson = JSONObject().apply {
+                put("role", "system")
+                put(
+                    "content",
+                    """
+                    Your name is MIA and you're an AI companion of the user. Keep your responses short. 
+                    Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
+                    The user's message may or may not contain:
+                    - Some historical conversation transcript as context. 
+                    - Extra data like their current location, battery level etc.
+                    Do not call these out but use them as needed.
+                    You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
+                    """
+                )
+                put("time", Helpers.pullTimeFormattedString())
+            }
+            messagesListData.add(initSystemJson)
+            val firstAssistantJson = JSONObject().apply {
+                put("role", "assistant")
+                put(
+                    "content",
+                    """
+                    Hello! I'm MIA, your freshly booted AI companion. 
+                    I'm here to assist you, charm you with my sarcasm, and perhaps occasionally make you roll your eyes. 
+                    Let's skip the awkward silences and jump right in—what's your name?
+                    """.trimIndent()
+                )
+                put("time", Helpers.pullTimeFormattedString())
+            }
+            messagesListData.add(firstAssistantJson)
+            messagesListUI.add(firstAssistantJson)
         }
         // If saved messages exist then pull and populate messages
         else {
             val type = object : TypeToken<List<JSONObject>>() {}.type
-            messagesList.addAll(Gson().fromJson(messagesJson, type))
+            messagesListData.addAll(Gson().fromJson(messagesJson, type))
+            messagesListUI.addAll(Gson().fromJson(messagesJson, type))
         }
-        adapter.notifyItemInserted(messagesList.size - 1)
+        adapter.notifyItemInserted(messagesListUI.size - 1)
         recyclerView.scrollToPosition(adapter.itemCount - 1)
         saveMessages()
-
-        // Create an array with all the same messages but with an extra system message at the start
-        val systemJson = JSONObject().apply {
-            put("role", "system")
-            put(
-                "content",
-                """
-                    Your name is MIA and you're an AI companion of the user. Keep your responses short. 
-                    Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
-                    You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
-                """
-            )
-            put("time", Helpers.pullTimeFormattedString())
-        }
-        messageArray.put(systemJson)
-        messagesList.forEach { message ->
-            messageArray.put(
-                JSONObject().apply {
-                    put("role", message["role"])
-                    put("content", message["content"])
-                    put("time", message["time"])
-                }
-            )
-        }
     }
 
     private fun sendMessage() {
@@ -229,14 +212,13 @@ class MainActivity : AppCompatActivity() {
         if (userMessage.isNotEmpty()) {
             // Disable send button once message sent
             sendButton.isEnabled = false
-
-            // Add message to the list and clear the input field
-            messagesList.add(JSONObject().apply {
+            val userJSON = JSONObject().apply {
                 put("role", "user")
                 put("content", userMessage)
                 put("time", Helpers.pullTimeFormattedString())
-            })
-            adapter.notifyItemInserted(messagesList.size - 1)
+            }
+            messagesListUI.add(userJSON)
+            adapter.notifyItemInserted(messagesListUI.size - 1)
             recyclerView.scrollToPosition(adapter.itemCount - 1)
             editText.text.clear()
             saveMessages()
@@ -246,12 +228,13 @@ class MainActivity : AppCompatActivity() {
                 val assistantMessage = createMiaResponse()
 
                 // Add response to user's message, display it and save it
-                messagesList.add(JSONObject().apply {
+                val assistantJSON = JSONObject().apply {
                     put("role", "assistant")
                     put("content", assistantMessage)
                     put("time", Helpers.pullTimeFormattedString())
-                })
-                adapter.notifyItemInserted(messagesList.size - 1)
+                }
+                messagesListUI.add(assistantJSON)
+                adapter.notifyItemInserted(messagesListUI.size - 1)
                 recyclerView.scrollToPosition(adapter.itemCount - 1)
                 saveMessages()
 
@@ -262,21 +245,25 @@ class MainActivity : AppCompatActivity() {
     }
     private suspend fun createMiaResponse(): String {
         // If MIA should should look into Pinecone or reply directly
-        val updatedUserMessage =
+        val userMessageWithOrWithoutContext =
             if(shouldMiaLookExternally())
                 ifUserMessageIsTask()
             else
                 ifUserMessageIsNotTask()
 
+        val systemData = Helpers.pullDeviceData(this@MainActivity)
+        val finalUserMessage = "$userMessageWithOrWithoutContext\nExtra Data:\n$systemData"
+
         // Append JSON for user's message with/without context
-        messageArray.put(JSONObject().apply {
+        val userJSON = JSONObject().apply {
             put("role", "user")
-            put("content", updatedUserMessage)
+            put("content", finalUserMessage)
             put("time", Helpers.pullTimeFormattedString())
-        })
+        }
+        messagesListData.add(userJSON)
 
         // Remove time key from array to send to OpenaAI API
-        val messagesArrayWithoutTime = Helpers.removeKeyFromJsonArray(messageArray)
+        val messagesArrayWithoutTime = Helpers.removeKeyFromJsonList(messagesListData)
 
         // Generate response from user's message
         val replyPayload = JSONObject().apply {
@@ -412,7 +399,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun saveMessages() {
         val editor = sharedPref.edit()
-        val messagesJson = Gson().toJson(messagesList)
+        val messagesJson = Gson().toJson(messagesListUI)
         editor.putString("messages", messagesJson)
         editor.apply()
     }

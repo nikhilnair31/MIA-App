@@ -311,13 +311,12 @@ class Helpers {
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
             return dateFormat.format(Date())
         }
-        fun removeKeyFromJsonArray(jsonArray: JSONArray): JSONArray {
-            for (i in 0 until jsonArray.length()) {
-                val jsonObject = jsonArray.getJSONObject(i)
+        fun removeKeyFromJsonList(jsonList: MutableList<JSONObject>): JSONArray {
+            jsonList.forEach { jsonObject ->
                 jsonObject.remove("time")
                 jsonObject.remove("metadata")
             }
-            return jsonArray
+            return JSONArray(jsonList)
         }
         // endregion
 
