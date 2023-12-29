@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
 
         // isFirstAppLaunch = true;
 
-        setupPermissions()
+        permissionRelated()
         audioRelated()
         chatRelated()
         // scheduleRepeatingAlarm(this)
@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
     // endregion
 
     // region Permissions Related
-    private fun setupPermissions() {
+    private fun permissionRelated() {
         // Get all the permissions needed
         if (
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -262,11 +262,34 @@ class MainActivity : AppCompatActivity() {
     }
     private suspend fun createMiaResponse(): String {
         // If MIA should should look into Pinecone or reply directly
-        val assistantMessage =
+        val updatedUserMessage =
             if(shouldMiaLookExternally())
                 ifUserMessageIsTask()
             else
                 ifUserMessageIsNotTask()
+
+        // Append JSON for user's message with/without context
+        messageArray.put(JSONObject().apply {
+            put("role", "user")
+            put("content", updatedUserMessage)
+            put("time", Helpers.pullTimeFormattedString())
+        })
+
+        // Remove time key from array to send to OpenaAI API
+        val messagesArrayWithoutTime = Helpers.removeKeyFromJsonArray(messageArray)
+
+        // Generate response from user's message
+        val replyPayload = JSONObject().apply {
+            put("model", "gpt-4-1106-preview")
+            put("messages", messagesArrayWithoutTime)
+            put("seed", 48)
+            put("max_tokens", 1024)
+            put("temperature", 0)
+        }
+        Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
+        val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
+        Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
+
         // Return
         return assistantMessage
     }
@@ -304,29 +327,7 @@ class MainActivity : AppCompatActivity() {
         return taskGuess == "ext"
     }
     private suspend fun ifUserMessageIsNotTask(): String {
-        // Append JSON for user's message
-        messageArray.put(JSONObject().apply {
-            put("role", "user")
-            put("content", userMessage)
-            put("time", Helpers.pullTimeFormattedString())
-        })
-
-        // Remove time key from array to send to OpenaAI API
-        val messagesArrayWithoutTime = Helpers.removeKeyFromJsonArray(messageArray)
-
-        // Generate response from user's message
-        val replyPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
-            put("messages", messagesArrayWithoutTime)
-            put("seed", 48)
-            put("max_tokens", 1024)
-            put("temperature", 0.9)
-        }
-        Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
-        val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
-        Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
-
-        return assistantMessage
+        return userMessage
     }
     private suspend fun ifUserMessageIsTask(): String {
         val contextData = Helpers.pullDeviceData(this@MainActivity)
@@ -406,34 +407,7 @@ class MainActivity : AppCompatActivity() {
         val contextMemory = Helpers.callContextAPI(contextPayload)
         Log.i("AudioRecord", "sendMessage contextMemory: $contextMemory")
 
-        // Using the Pinecone data and were the user's message
-        val replyPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put(
-                        "content",
-                        """
-                        You are the user's companion. Help them using the context provided from metadata text. 
-                        Do not make up any information, admit if you don't know something. 
-                        Context: $contextMemory"""
-                    )
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", userMessage)
-                })
-            })
-            put("seed", 48)
-            put("max_tokens", 512)
-            put("temperature", 0)
-        }
-        Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
-        val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
-        Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
-
-        return assistantMessage
+        return "$userMessage\nContext:\n$contextMemory"
     }
 
     private fun saveMessages() {
