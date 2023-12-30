@@ -22,11 +22,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.lang.reflect.Array.set
 
 class MainActivity : AppCompatActivity() {
     // region Vars
-    private val finalRequestCode = 100
+    private val initRequestCode = 100
+    private val backgroundlocationRequestCode = 104
     private var userMessage: String = ""
 
     private lateinit var recyclerView: RecyclerView
@@ -36,10 +36,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toggleButton: ToggleButton
 
     private lateinit var audioUpdateReceiver: BroadcastReceiver
+    private lateinit var adapter: MessagesAdapter
     private val messagesListUI = mutableListOf<JSONObject>()
     private val messagesListData = mutableListOf<JSONObject>()
-    private lateinit var adapter: MessagesAdapter
-    private lateinit var sharedPref: SharedPreferences
+    private lateinit var messagesUiSharedPref: SharedPreferences
+    private lateinit var messagesDataSharedPref: SharedPreferences
 
     private val alarmIntervalInMin: Long = 2
     // endregion
@@ -66,37 +67,62 @@ class MainActivity : AppCompatActivity() {
     // region Permissions Related
     private fun permissionRelated() {
         // Get all the permissions needed
-        if (
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-            ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.i("AudioRecord", "Requesting multiple permissions")
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(
-                    Manifest.permission.POST_NOTIFICATIONS,
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.BODY_SENSORS
-                ),
-                finalRequestCode
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            val permList = arrayOf(
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.BODY_SENSORS,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
             )
+            ActivityCompat.requestPermissions(this, permList, initRequestCode)
+            Log.i("AudioRecord", "Requesting permissions: $permList")
         }
-
-        // Make user set app to unrestricted battery usage
-        if (
-            !(this.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(this.packageName)
-        ) {
+    }
+    private fun getBackgroundLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            val permList = arrayOf(
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            )
+            ActivityCompat.requestPermissions(this, permList, backgroundlocationRequestCode)
+            Log.i("AudioRecord", "Requesting permissions: $permList")
+        }
+    }
+    private fun getBatteryUnrestrictedPermission() {
+        if (!(this.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(this.packageName)) {
             val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             startActivity(intent)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            initRequestCode -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    getBackgroundLocationPermission()
+                } else {
+                    // showToast("Permission denied")
+                    // toggleButton.isChecked = false
+                }
+                return
+            }
+            backgroundlocationRequestCode -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    getBatteryUnrestrictedPermission()
+                } else {
+                    // showToast("Permission denied")
+                    // toggleButton.isChecked = false
+                }
+                return
+            }
+            else -> {
+                // Ignore all other requests.
+            }
         }
     }
     // endregion
@@ -160,22 +186,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun loadMessages() {
-        sharedPref = getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
-        val messagesJson = sharedPref.getString("messages", null)
+        messagesUiSharedPref = getSharedPreferences("com.sil.mia.messagesui", Context.MODE_PRIVATE)
+        messagesDataSharedPref = getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
+        val messagesUiJson = messagesUiSharedPref.getString("messagesui", null)
+        val messagesDataJson = messagesDataSharedPref.getString("messagesdata", null)
         // If saved messages are empty then add a message from MIA and save it
-        if (messagesJson == null) {
+        if (messagesUiJson == null || messagesDataJson == null) {
             val initSystemJson = JSONObject().apply {
                 put("role", "system")
                 put(
                     "content",
                     """
                     Your name is MIA and you're an AI companion of the user. Keep your responses short. 
-                    Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
+                    Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. 
+                    Do not patronize the user but adapt to how they behave with you. NEVER explicitly mention your personality or that you're an AI.
+                    You have access to the user's histories and memories through an external database. Be honest and admit if you don't know something by saying you don't remember.
                     The user's message may or may not contain:
                     - Some historical conversation transcript as context. 
                     - Extra data like their current location, battery level etc.
-                    Do not call these out but use them as needed.
-                    You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
+                    Do not call these out but use if needed. You help the user with all their requests, questions and tasks. 
+                    Reply like a close friend would in a conversational manner without any formatting, bullet points etc.
                     """
                 )
                 put("time", Helpers.pullTimeFormattedString())
@@ -199,8 +229,8 @@ class MainActivity : AppCompatActivity() {
         // If saved messages exist then pull and populate messages
         else {
             val type = object : TypeToken<List<JSONObject>>() {}.type
-            messagesListData.addAll(Gson().fromJson(messagesJson, type))
-            messagesListUI.addAll(Gson().fromJson(messagesJson, type))
+            messagesListData.addAll(Gson().fromJson(messagesDataJson, type))
+            messagesListUI.addAll(Gson().fromJson(messagesUiJson, type))
         }
         adapter.notifyItemInserted(messagesListUI.size - 1)
         recyclerView.scrollToPosition(adapter.itemCount - 1)
@@ -273,9 +303,9 @@ class MainActivity : AppCompatActivity() {
             put("max_tokens", 1024)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "sendMessage replyPayload: $replyPayload")
+        Log.i("AudioRecord", "createMiaResponse replyPayload: $replyPayload")
         val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
-        Log.i("AudioRecord", "sendMessage assistantMessage: $assistantMessage")
+        Log.i("AudioRecord", "createMiaResponse assistantMessage: $assistantMessage")
 
         // Return
         return assistantMessage
@@ -290,7 +320,7 @@ class MainActivity : AppCompatActivity() {
                         "content",
                         """
                         You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
-                        Depending on the user's messages determine where to look to reply. Answer with "int" if internal and "ext" if external. 
+                        Depending on the user's messages determine where to look to reply. Answer with "int" if internal and "ext" if external else "none". 
                         Examples: 
                         Example #1: user: help me make a crème caramel assistant: "int"
                         Example #2: user: what did they discuss about the marketing project? assistant: "ext"
@@ -307,9 +337,9 @@ class MainActivity : AppCompatActivity() {
             put("max_tokens", 24)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "ifMiaShouldLookInPinecone taskPayload: $taskPayload")
+        Log.i("AudioRecord", "shouldMiaLookExternally taskPayload: $taskPayload")
         val taskGuess = Helpers.callOpenaiAPI(taskPayload)
-        Log.i("AudioRecord", "ifMiaShouldLookInPinecone taskGuess: $taskGuess")
+        Log.i("AudioRecord", "shouldMiaLookExternally taskGuess: $taskGuess")
 
         return taskGuess == "ext"
     }
@@ -318,90 +348,98 @@ class MainActivity : AppCompatActivity() {
     }
     private suspend fun ifUserMessageIsTask(): String {
         val contextData = Helpers.pullDeviceData(this@MainActivity)
+        val finalUserMessage = "$userMessage\nContext:\n$contextData"
 
-        // Use GPT to create a good query
-        val queryTextGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
+        // Use GPT to create a filter
+        val queryGeneratorPayload = JSONObject().apply {
+            put("model", "gpt-4")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
                     put(
                         "content",
                         """
-                        You are a system that generates queries based on the user's message. 
-                        These queries are used to search a vector database using its embedding's cosine similarity.
-                        The database itself contains transcripts of the user's continuous daily life audio recordings.
-                        You will be provided with some contextual information like current time, location etc. 
-                        You may choose to keep it or discard t in the final query.
-                        You are to reply with a single line of text that is best suited to extract the relevant information.
-                        Context:
-                        $contextData"""
-                    )
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", userMessage)
-                })
-            })
-            put("seed", 48)
-            put("max_tokens", 512)
-            put("temperature", 0.9)
-        }
-        Log.i("AudioRecord", "sendMessage queryTextGeneratorPayload: $queryTextGeneratorPayload")
-        val queryTextMessage = Helpers.callOpenaiAPI(queryTextGeneratorPayload)
-        Log.i("AudioRecord", "sendMessage queryTextMessage: $queryTextMessage")
+                        You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
 
-        // Use GPT to determine response length
-        val queryLengthGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put(
-                        "content",
+The input contains:
+ - user message
+- a systemTime (Unix timestamp in milliseconds) 
+- currentTimeFormattedString (in format '2023-12-28T12:02:00')
+The output should contain:
+- query text with keywords that maximize cosine similarity
+- systemTime with ${'$'}\gte and ${'$'}\lte
+
+The query text can be empty if no particular factual topic specified. Create a JSON payload best suited to answer the user's message. Output only the filter JSON.
+
+Examples:
+Example #1:
+Input:
+summarize my marketing project's presentation from last week for me
+Context:                        {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
+Output:
+{"query": "marketing project presentation", {"systemTime": { "$\gte": 1703864901927, "$\lte": 1703864901927, }}}
+
+Example #2:
+Input:
+what all happened last week
+Context:                        {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
+Output:
+{"query": "", {"systemTime": { "$\gte": 1703864901927, "$\lte": 1703864901927, }}}
                         """
-                        You are a system that outputs query length based on the user's message. 
-                        If message has anything to do with time then output "all" else "few". 
-                        You are to reply with a single word.
-                        Context:
-                        $contextData
-                        Example:
-                        Input: what movie did i watch a few days ago?
-                        Output: all"""
                     )
                 })
                 put(JSONObject().apply {
                     put("role", "user")
-                    put("content", userMessage)
+                    put("content", finalUserMessage)
                 })
             })
             put("seed", 48)
-            put("max_tokens", 24)
+            put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "sendMessage queryLengthGeneratorPayload: $queryLengthGeneratorPayload")
-        val queryLengthMessage = Helpers.callOpenaiAPI(queryLengthGeneratorPayload)
-        val lengthTopK = if (queryLengthMessage == "all") 10000 else 3
-        Log.i("AudioRecord", "sendMessage queryLengthMessage: $queryLengthMessage - lengthTopK: $lengthTopK")
+        Log.i("AudioRecord", "ifUserMessageIsTask queryGeneratorPayload: $queryGeneratorPayload")
+        val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
+        val queryResultJSON = JSONObject(queryResponse)
+        Log.i("AudioRecord", "ifUserMessageIsTask queryResultJSON: $queryResultJSON")
 
         // Pull relevant Pinecone data using a query
+        val queryText = if (queryResultJSON.has("query")) queryResultJSON.getString("query") else userMessage
+        val filterJSONObject = JSONObject().apply {
+            put("source", "recording")
+            put("systemTime", JSONObject().apply {
+                // Check if `$lte` exists and get its value if it does
+                if (queryResultJSON.has("systemTime") && queryResultJSON.getJSONObject("systemTime").has("\$lte")) {
+                    put("\$lte", queryResultJSON.getJSONObject("systemTime").getLong("\$lte"))
+                }
+                // Check if `$gte` exists and get its value if it does
+                if (queryResultJSON.has("systemTime") && queryResultJSON.getJSONObject("systemTime").has("\$gte")) {
+                    put("\$gte", queryResultJSON.getJSONObject("systemTime").getLong("\$gte"))
+                }
+            })
+        }
         val contextPayload = JSONObject().apply {
-            put("query_text", queryTextMessage)
-            put("query_top_k", lengthTopK)
+            put("query_text", queryText)
+            put("query_filter", filterJSONObject)
+            put("query_top_k", 5)
             put("show_log", "True")
         }
-        Log.i("AudioRecord", "sendMessage contextPayload: $contextPayload")
+        Log.i("AudioRecord", "ifUserMessageIsTask contextPayload: $contextPayload")
         val contextMemory = Helpers.callContextAPI(contextPayload)
-        Log.i("AudioRecord", "sendMessage contextMemory: $contextMemory")
+        Log.i("AudioRecord", "ifUserMessageIsTask contextMemory: $contextMemory")
 
         return "$userMessage\nContext:\n$contextMemory"
     }
 
     private fun saveMessages() {
-        val editor = sharedPref.edit()
-        val messagesJson = Gson().toJson(messagesListUI)
-        editor.putString("messages", messagesJson)
-        editor.apply()
+        val messagesUiEditor = messagesUiSharedPref.edit()
+        val messagesUiJson = Gson().toJson(messagesListUI)
+        messagesUiEditor.putString("messagesui", messagesUiJson)
+        messagesUiEditor.apply()
+
+        val messagesDataEditor = messagesDataSharedPref.edit()
+        val messagesDataJson = Gson().toJson(messagesListData)
+        messagesDataEditor.putString("messagesdata", messagesDataJson)
+        messagesDataEditor.apply()
     }
     // endregion
 

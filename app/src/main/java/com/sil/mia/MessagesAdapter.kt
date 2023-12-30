@@ -29,15 +29,6 @@ class MessagesAdapter(private val messagesList: List<JSONObject>) :
         val message = messagesList[position]
         holder.textView.text = message["content"] as CharSequence?
 
-        // Set the text color based on whether the message is from the user
-        holder.textView.setTextColor(
-            if (message["role"] == "user") {
-                holder.textView.context.resources.getColor(R.color.gray_90, null)
-            } else {
-                holder.textView.context.resources.getColor(R.color.accent, null)
-            }
-        )
-
         // Adjust gravity and text alignment
         val context = holder.textView.context
         val layoutParams = holder.textView.layoutParams as LinearLayout.LayoutParams
@@ -52,7 +43,7 @@ class MessagesAdapter(private val messagesList: List<JSONObject>) :
             holder.textView.textAlignment = View.TEXT_ALIGNMENT_TEXT_END
         }
         else {
-            holder.textView.setTextColor(context.resources.getColor(R.color.accent, null))
+            holder.textView.setTextColor(context.resources.getColor(R.color.accent_0, null))
 
             background?.setColor(ContextCompat.getColor(context, R.color.gray_5))
 

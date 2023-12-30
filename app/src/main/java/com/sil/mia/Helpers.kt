@@ -7,6 +7,7 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.BatteryManager
 import android.util.Log
+import android.util.Log.WARN
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
@@ -251,6 +252,11 @@ class Helpers {
             var address = ""
             var latitude: Double? = null
             var longitude: Double? = null
+            var firstWeatherDescription = ""
+            var feelsLike = ""
+            var humidity = ""
+            var windSpeed = ""
+            var cloudAll = ""
             // Check for location permission
             if (
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -258,41 +264,37 @@ class Helpers {
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
             ) {
                 location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                Log.v("AudioRecord", "pullDeviceData location: $location")
                 location?.let {
+                    Log.v("AudioRecord", "pullDeviceData it.latitude: ${it.latitude} it.longitude: ${it.longitude}")
                     latitude = it.latitude
                     longitude = it.longitude
                     address = callGeocodingAPI(latitude!!, longitude!!)
+
+                    // region Climate
+                    // Pull user's current location's temperature and humidity
+                    val weatherJSON = callWeatherAPI(latitude!!, longitude!!)
+                    if (weatherJSON != null) {
+                        val weatherArray = weatherJSON.getJSONArray("weather")
+                        firstWeatherDescription = weatherArray.getJSONObject(0).getString("description")
+
+                        val mainObject = weatherJSON.getJSONObject("main")
+                        feelsLike = mainObject.getDouble("feels_like").toString()
+                        humidity = mainObject.getInt("humidity").toString()
+
+                        val windObject = weatherJSON.getJSONObject("wind")
+                        windSpeed = windObject.getDouble("speed").toString()
+
+                        val cloudsObject = weatherJSON.getJSONObject("clouds")
+                        cloudAll = cloudsObject.getInt("all").toString()
+                    }
+                    // endregion
                 }
             }
             finalOutput.apply {
                 put("latitude", latitude)
                 put("longitude", longitude)
                 put("address", address)
-            }
-            // endregion
-            // region Climate
-            // Pull user's current location's temperature and humidity
-            val weatherJSON = callWeatherAPI(latitude!!, longitude!!)
-            var firstWeatherDescription = ""
-            var feelsLike = ""
-            var humidity = ""
-            var windSpeed = ""
-            var cloudAll = ""
-            if (weatherJSON != null) {
-                val weatherArray = weatherJSON.getJSONArray("weather")
-                firstWeatherDescription = weatherArray.getJSONObject(0).getString("description")
-
-                val mainObject = weatherJSON.getJSONObject("main")
-                feelsLike = mainObject.getDouble("feels_like").toString()
-                humidity = mainObject.getInt("humidity").toString()
-
-                val windObject = weatherJSON.getJSONObject("wind")
-                windSpeed = windObject.getDouble("speed").toString()
-
-                val cloudsObject = weatherJSON.getJSONObject("clouds")
-                cloudAll = cloudsObject.getInt("all").toString()
-            }
-            finalOutput.apply {
                 put("firstWeatherDescription", firstWeatherDescription)
                 put("feelsLike", feelsLike)
                 put("humidity", humidity)

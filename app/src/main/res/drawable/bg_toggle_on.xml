@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="@color/accent"/> <!-- Change to your 'on' color -->
+    <solid android:color="@color/accent_1"/> <!-- Change to your 'on' color -->
     <corners android:radius="8dp"/>
 </shape>

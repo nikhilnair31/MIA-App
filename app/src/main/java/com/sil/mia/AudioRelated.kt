@@ -38,10 +38,10 @@ class AudioRelated : Service() {
     private var recordingStartTime: Long = 0
     private var lastTimeAboveThreshold = System.currentTimeMillis()
 
-    private val threshold = 5
-    private val timeoutInSec = 4
+    private val threshold = 10
+    private val timeoutInSec = 6
     private val maxRecordingTimeInSec = 600
-    private val minRecordingTimeInSec = 6
+    private val minRecordingTimeInSec = 10
 
     private val channelId = "AudioRecordingServiceChannel"
     // endregion
@@ -175,8 +175,11 @@ class AudioRelated : Service() {
             setMaxDuration(maxRecordingTimeInSec*1000)
 
             // Set an output file in Documents folder
-            // val audioFile = File.createTempFile("recording_${SystemClock.elapsedRealtime()}", ".m4a")
-            audioFile = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "recording_${SystemClock.elapsedRealtime()}.m4a")
+            // Create a timestamp for the file name
+            val timeStamp = SystemClock.elapsedRealtime()
+            val audioFileName = "recording_$timeStamp"
+            // audioFile = File.createTempFile(audioFileName, ".m4a", getExternalFilesDir(null))
+            audioFile = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "$audioFileName.m4a")
             val audioFilePath = audioFile?.absolutePath
             setOutputFile(audioFilePath)
             Log.i("AudioRecord", "setOutputFile $audioFilePath")
