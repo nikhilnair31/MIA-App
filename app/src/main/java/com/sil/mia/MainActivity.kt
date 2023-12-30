@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
     // region Vars
@@ -361,30 +362,28 @@ class MainActivity : AppCompatActivity() {
                         """
                         You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
 
-The input contains:
- - user message
-- a systemTime (Unix timestamp in milliseconds) 
-- currentTimeFormattedString (in format '2023-12-28T12:02:00')
-The output should contain:
-- query text with keywords that maximize cosine similarity
-- systemTime with ${'$'}\gte and ${'$'}\lte
-
-The query text can be empty if no particular factual topic specified. Create a JSON payload best suited to answer the user's message. Output only the filter JSON.
-
-Examples:
-Example #1:
-Input:
-summarize my marketing project's presentation from last week for me
-Context:                        {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
-Output:
-{"query": "marketing project presentation", {"systemTime": { "$\gte": 1703864901927, "$\lte": 1703864901927, }}}
-
-Example #2:
-Input:
-what all happened last week
-Context:                        {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
-Output:
-{"query": "", {"systemTime": { "$\gte": 1703864901927, "$\lte": 1703864901927, }}}
+                        The input contains:
+                         - user message
+                        - a systemtime (Unix timestamp in milliseconds) 
+                        - currentTimeFormattedString (in format '2023-12-28T12:02:00')
+                        The output should contain:
+                        - query text with keywords that maximize cosine similarity
+                        - systemtime with ${'$'}\gte and ${'$'}\lte
+                        
+                        The query text can be empty if no particular factual topic specified. Create a JSON payload best suited to answer the user's message. Output only the filter JSON.
+                        
+                        Examples:
+                        Example #1:
+                        Input:
+                        summarize my marketing project's presentation from last week for me
+                        Context: {"systemtime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
+                        Output: {"query": "marketing project presentation", {"systemtime": { "$\gte": 1703260101000, "$\lte": 1703864901927, }}}
+                        
+                        Example #2:
+                        Input:
+                        what has happened the past couple days
+                        Context: {"systemtime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
+                        Output: {"query": "", {"systemtime": { "$\gte": 1703692101000, "$\lte": 1703864901927, }}}
                         """
                     )
                 })
@@ -405,15 +404,16 @@ Output:
         // Pull relevant Pinecone data using a query
         val queryText = if (queryResultJSON.has("query")) queryResultJSON.getString("query") else userMessage
         val filterJSONObject = JSONObject().apply {
-            put("source", "recording")
-            put("systemTime", JSONObject().apply {
+            put("systemtime", JSONObject().apply {
                 // Check if `$lte` exists and get its value if it does
-                if (queryResultJSON.has("systemTime") && queryResultJSON.getJSONObject("systemTime").has("\$lte")) {
-                    put("\$lte", queryResultJSON.getJSONObject("systemTime").getLong("\$lte"))
+                if (queryResultJSON.has("systemtime") && queryResultJSON.getJSONObject("systemtime").has("\$lte")) {
+                    val lte = abs(queryResultJSON.getJSONObject("systemtime").getInt("\$lte"))
+                    put("\$lte", lte)
                 }
                 // Check if `$gte` exists and get its value if it does
-                if (queryResultJSON.has("systemTime") && queryResultJSON.getJSONObject("systemTime").has("\$gte")) {
-                    put("\$gte", queryResultJSON.getJSONObject("systemTime").getLong("\$gte"))
+                if (queryResultJSON.has("systemtime") && queryResultJSON.getJSONObject("systemtime").has("\$gte")) {
+                    val gte = abs(queryResultJSON.getJSONObject("systemtime").getInt("\$gte"))
+                    put("\$gte", gte)
                 }
             })
         }

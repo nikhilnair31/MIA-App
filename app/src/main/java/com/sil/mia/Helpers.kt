@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -193,6 +194,12 @@ class Helpers {
                 val s3Client = AmazonS3Client(credentials)
 
                 audioFile?.let {
+                    // Verify the file's readability and size
+                    if (!it.exists() || !it.canRead() || it.length() <= 0) {
+                        Log.e("AudioRecord", "File does not exist, is unreadable or empty")
+                        return
+                    }
+
                     // Upload audio file
                     val audioKeyName = "recordings/" + it.name
                     val audioMetadata = ObjectMetadata()
@@ -206,8 +213,18 @@ class Helpers {
                         audioMetadata.addUserMetadata(key, value)
                     }
 
-                    val audioRequest = PutObjectRequest(bucketName, audioKeyName, it).withMetadata(audioMetadata)
-                    s3Client.putObject(audioRequest)
+                    FileInputStream(it).use { fileInputStream ->
+                        val audioRequest = PutObjectRequest(bucketName, audioKeyName, fileInputStream, audioMetadata)
+                        try {
+                            s3Client.putObject(audioRequest)
+                        }
+                        catch (e: Exception) {
+                            Log.e("AudioRecord", "Error in S3 upload: ${e.localizedMessage}")
+                        }
+
+                        // Following line ensures resources are safely released after file has been processed
+                        fileInputStream.close()
+                    }
 
                     Log.i("AudioRecord", "Uploaded to S3!")
                 }

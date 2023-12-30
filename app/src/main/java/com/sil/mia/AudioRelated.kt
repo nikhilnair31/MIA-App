@@ -206,26 +206,35 @@ class AudioRelated : Service() {
     private fun stopRecording(stopReasonText: String) {
         Log.i("AudioRecord", "stopRecording: $stopReasonText")
 
-        mediaRecorder?.apply {
-            try {
-                stop()
-                release()
-                mediaRecorder = null
+        try {
+            mediaRecorder?.apply {
+                try {
+                    stop()
+                    release()
+                    mediaRecorder = null
+                }
+                catch (e: RuntimeException) {
+                    Log.e("AudioRecord", "stop() called before start()")
+                }
             }
-            catch (e: RuntimeException) {
-                Log.e("AudioRecord", "stop() called before start()")
+
+            isRecording = false
+            val recordingEndTime = System.currentTimeMillis()
+            if ((recordingEndTime - recordingStartTime) > minRecordingTimeInSec*1000) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val metadataJson = Helpers.pullDeviceData(this@AudioRelated)
+                    Helpers.uploadToS3(audioFile, metadataJson)
+                }
+            }
+            else {
+                Log.i("AudioRecord", "Recording duration was less than minimum. Not uploading.")
             }
         }
-
-        isRecording = false
-        val recordingEndTime = System.currentTimeMillis()
-        if ((recordingEndTime - recordingStartTime) > minRecordingTimeInSec*1000) {
-            CoroutineScope(Dispatchers.IO).launch {
-                val metadataJson = Helpers.pullDeviceData(this@AudioRelated)
-                Helpers.uploadToS3(audioFile, metadataJson)
-            }
-        } else {
-            Log.i("AudioRecord", "Recording duration was less than minimum. Not uploading.")
+        catch (e: IllegalStateException) {
+            Log.e("AudioRecord", "Illegal state: stop() called in an invalid state.")
+        }
+        catch (e: RuntimeException) {
+            Log.e("AudioRecord", "Runtime exception in mediaRecorder stop.")
         }
     }
     // endregion
