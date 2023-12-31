@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messagesUiSharedPref: SharedPreferences
     private lateinit var messagesDataSharedPref: SharedPreferences
 
-    private val alarmIntervalInMin: Long = 2
+    private val alarmIntervalInMin: Double = 0.5
     // endregion
 
     // region Common
@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
         permissionRelated()
         audioRelated()
         chatRelated()
-        // scheduleRepeatingAlarm(this)
+        // thoughtsRelated()
     }
     override fun onDestroy() {
         Log.i("AudioRecord", "onDestroy")
@@ -444,20 +444,20 @@ class MainActivity : AppCompatActivity() {
     // endregion
 
     // region Periodic Thought Notifications Related
-    private fun scheduleRepeatingAlarm(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, ThoughtsAlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, FLAG_IMMUTABLE)
+    private fun thoughtsRelated() {
+        val alarmManager = this.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, ThoughtsAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, FLAG_IMMUTABLE)
 
         // Set the alarm to wake up the device and fire approximately every N minutes
         // val interval = AlarmManager.INTERVAL_HALF_HOUR
-        val intervalInMin : Long = alarmIntervalInMin * 60 * 1000
+        val intervalInMin : Double = alarmIntervalInMin * 60 * 1000
 
         // `setInexactRepeating()` is battery-friendly as it allows the system to adjust the alarm's timing to match other alarms
         alarmManager.setInexactRepeating(
             AlarmManager.RTC_WAKEUP,
             System.currentTimeMillis(),
-            intervalInMin,
+            intervalInMin.toLong(),
             pendingIntent
         )
     }

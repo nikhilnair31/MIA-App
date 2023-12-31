@@ -20,7 +20,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
 
 class AudioRelated : Service() {
     // region Vars
@@ -29,19 +28,8 @@ class AudioRelated : Service() {
     }
 
     private var mediaRecorder: MediaRecorder? = null
-    private lateinit var audioRecord: AudioRecord
-    private var audioFile: File? = null
-    private var isListening = false
-    private var isRecording = false
-
-    private val sampleRate = 44100
-    private var recordingStartTime: Long = 0
-    private var lastTimeAboveThreshold = System.currentTimeMillis()
-
-    private val threshold = 10
-    private val timeoutInSec = 6
-    private val maxRecordingTimeInSec = 600
-    private val minRecordingTimeInSec = 10
+    private var latestAudioFile: File? = null
+    private val maxRecordingTimeInSec = 10
 
     private val channelId = "AudioRecordingServiceChannel"
     // endregion
@@ -86,155 +74,82 @@ class AudioRelated : Service() {
     // region Listening and Recording Related
     // Listening Related
     private fun startListening() {
-        Log.i("AudioRecord", "startListening")
-
-        val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-        audioRecord = AudioRecord.Builder()
-            .setAudioSource(MediaRecorder.AudioSource.MIC)
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(minBufferSize)
-            .build()
-
-        isListening = true
-        audioRecord.startRecording()
         Log.i("AudioRecord", "Started Listening!")
 
-        Thread {
-            val audioData = ShortArray(minBufferSize)
-            var isCurrentlyRecording = false
+        // Check if audio permission given else log and return
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("AudioRecord", "Recording permission not granted")
+            return
+        }
 
-            while (isListening) {
-                val numberOfShort = audioRecord.read(audioData, 0, minBufferSize)
-                val rmsValue = Helpers.rms(audioData, numberOfShort) / 100000
-                val formattedRmsValue = String.format("%.1f", rmsValue)
-
-                val intent = Intent(AUDIO_SERVICE_UPDATE)
-                intent.putExtra("formattedRmsValue", formattedRmsValue)
-                sendBroadcast(intent)
-
-                if (rmsValue > threshold) {
-                    lastTimeAboveThreshold = System.currentTimeMillis()
-                    if (!isCurrentlyRecording) {
-                        isCurrentlyRecording = true
-                        startRecording()
-                    }
-                }
-                else if (isCurrentlyRecording) {
-                    val timeDiff = System.currentTimeMillis() - lastTimeAboveThreshold
-                    if (timeDiff >= timeoutInSec*1000) {
-                        stopRecording("Stopped recording due to silence timeout.")
-                        isCurrentlyRecording = false
-                    }
-                }
-
-                // Wait for X milliseconds before updating again
-                try {
-                    Thread.sleep(2)
-                }
-                catch (e: InterruptedException) {
-                    // Handle the exception if the Thread is interrupted
-                    e.printStackTrace()
-                }
+        CoroutineScope(Dispatchers.IO).launch {
+            val audioFile: File = createAudioFile()
+            latestAudioFile = audioFile
+            setupMediaRecorder(audioFile)
+            try {
+                mediaRecorder?.start()
             }
-        }.start()
-    }
-    private fun stopListening() {
-        Log.i("AudioRecord", "Stopped Listening")
-
-        val serviceIntent = Intent(this, AudioRelated::class.java)
-        stopService(serviceIntent)
-
-        if (isRecording) {
-            stopRecording("Stopped Listening so stopping Recording")
-        }
-        isListening = false
-        // Stop and release AudioRecord if it's initialized
-        if (::audioRecord.isInitialized && audioRecord.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-            audioRecord.stop()
-            audioRecord.release()
+            catch (e: IllegalStateException) {
+                Log.e("AudioRecord", "Exception starting media recorder", e)
+            }
         }
     }
-
-    // Recording Related
-    private fun startRecording() {
+    private fun setupMediaRecorder(audioFile: File) {
         mediaRecorder = MediaRecorder().apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setMaxDuration(maxRecordingTimeInSec * 1000)
+            setOutputFile(audioFile.absolutePath)
+            prepare()
 
-            // Set the maximum recording duration to N minutes (N*1000 milliseconds)
-            setMaxDuration(maxRecordingTimeInSec*1000)
-
-            // Set an output file in Documents folder
-            // Create a timestamp for the file name
-            val timeStamp = SystemClock.elapsedRealtime()
-            val audioFileName = "recording_$timeStamp"
-            // audioFile = File.createTempFile(audioFileName, ".m4a", getExternalFilesDir(null))
-            audioFile = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "$audioFileName.m4a")
-            val audioFilePath = audioFile?.absolutePath
-            setOutputFile(audioFilePath)
-            Log.i("AudioRecord", "setOutputFile $audioFilePath")
-
-            // On max duration reached, stop the recording
             setOnInfoListener { _, what, _ ->
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-                    stopRecording("Max Recording Time!")
+                    Log.i("AudioRecord", "Max Recording Duration!")
+                    stopRecordingAndUpload(audioFile)
                 }
-            }
-
-            try {
-                prepare()
-                start()
-                isRecording = true
-                recordingStartTime = System.currentTimeMillis()
-                Log.i("AudioRecord", "Started Recording")
-            }
-            catch (e: IOException) {
-                Log.e("AudioRecord", "Recording failed to start")
             }
         }
     }
-    private fun stopRecording(stopReasonText: String) {
-        Log.i("AudioRecord", "stopRecording: $stopReasonText")
+    private fun createAudioFile(): File {
+        val timeStamp = System.currentTimeMillis()
+        val audioFileName = "recording_$timeStamp.m4a"
+        Log.i("AudioRecord", "Created New Audio File: $audioFileName")
+        return File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
+    }
+    private fun stopRecordingAndUpload(audioFile: File) {
+        mediaRecorder?.apply {
+            stop()
+            release()
+        }
+        mediaRecorder = null
+        uploadAudioFileAndMetadata(audioFile)
+        startListening()
+    }
+
+    private fun stopListening() {
+        Log.i("AudioRecord", "Stopped Listening")
 
         try {
-            mediaRecorder?.apply {
-                try {
-                    stop()
-                    release()
-                    mediaRecorder = null
-                }
-                catch (e: RuntimeException) {
-                    Log.e("AudioRecord", "stop() called before start()")
-                }
-            }
+            val serviceIntent = Intent(this, AudioRelated::class.java)
+            stopService(serviceIntent)
 
-            isRecording = false
-            val recordingEndTime = System.currentTimeMillis()
-            if ((recordingEndTime - recordingStartTime) > minRecordingTimeInSec*1000) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    val metadataJson = Helpers.pullDeviceData(this@AudioRelated)
-                    Helpers.uploadToS3(audioFile, metadataJson)
-                }
+            mediaRecorder?.apply {
+                stop()
+                release()
             }
-            else {
-                Log.i("AudioRecord", "Recording duration was less than minimum. Not uploading.")
-            }
+        } catch (e: Exception) {
+            Log.e("AudioRecord", "Error stopping media recorder", e)
+        } finally {
+            mediaRecorder = null
+            latestAudioFile?.let { uploadAudioFileAndMetadata(it) }
         }
-        catch (e: IllegalStateException) {
-            Log.e("AudioRecord", "Illegal state: stop() called in an invalid state.")
-        }
-        catch (e: RuntimeException) {
-            Log.e("AudioRecord", "Runtime exception in mediaRecorder stop.")
+    }
+
+    private fun uploadAudioFileAndMetadata(audioFile: File) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val metadataJson = Helpers.pullDeviceData(this@AudioRelated)
+            Helpers.uploadToS3(audioFile, metadataJson)
         }
     }
     // endregion

@@ -217,16 +217,12 @@ class Helpers {
                         val audioRequest = PutObjectRequest(bucketName, audioKeyName, fileInputStream, audioMetadata)
                         try {
                             s3Client.putObject(audioRequest)
+                            Log.i("AudioRecord", "Uploaded to S3!")
                         }
                         catch (e: Exception) {
                             Log.e("AudioRecord", "Error in S3 upload: ${e.localizedMessage}")
                         }
-
-                        // Following line ensures resources are safely released after file has been processed
-                        fileInputStream.close()
                     }
-
-                    Log.i("AudioRecord", "Uploaded to S3!")
                 }
             }
             catch (e: AmazonServiceException) {

@@ -18,22 +18,24 @@ import org.json.JSONObject
 
 class ThoughtsAlarmReceiver : BroadcastReceiver() {
     private val systemPromptBase: String = """
-        Your name is MIA and you're an AI companion of the user. Keep your responses short. 
+        Your name is MIA and you're an AI companion of the user. Keep your responses short to a single line. 
         Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
         You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
         Start a conversation with the user based on the context of their prior conversation.
-    """.trimIndent()
+    """
+    private var contextMain: Context? = null
 
     data class Message(val content: String, val isUser: Boolean)
 
     override fun onReceive(context: Context, intent: Intent) {
+        contextMain = context
         CoroutineScope(Dispatchers.IO).launch {
-            createMiaThought(context)
+            createMiaThought()
         }
     }
 
-    private suspend fun createMiaThought(context: Context) {
-        val systemPrompt = createSystemPrompt(context)
+    private suspend fun createMiaThought() {
+        val systemPrompt = createSystemPrompt()
 
         val wakePayload = JSONObject().apply {
             put("model", "gpt-4-1106-preview")
@@ -53,23 +55,31 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         Log.i("AudioRecord", "ThoughtsAlarmReciever onReceive wakePayload: $wakeResponse")
 
         // Needs to be update to update the messagesList while activity is still active
-        saveMessages(context, wakeResponse)
+        saveMessages(wakeResponse)
 
         withContext(Dispatchers.Main) {
-            showNotification(context, "MIA", wakeResponse)
+            showNotification("MIA", wakeResponse)
         }
     }
 
-    private fun createSystemPrompt(context: Context): String {
-        val messageHistory = pullConversationHistory(context)
-        val latestRecordings = pullLatestRecordings(context)
+    private fun createSystemPrompt(): String {
+        val messageHistory = pullConversationHistory()
+        val latestRecordings = pullLatestRecordings()
 
         return "$systemPromptBase\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
     }
-    private fun pullConversationHistory(context: Context): JSONArray {
+    private fun pullConversationHistory(): JSONArray {
+        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
+        val messagesDataJson = messagesDataSharedPref?.getString("messagesdata", null)
+        if(messagesDataJson != null) {
+            val type = object : TypeToken<List<JSONObject>>() {}.type
+            val messagesListData = mutableListOf<JSONObject>()
+            messagesListData.addAll(Gson().fromJson(messagesDataJson, type))
+        }
+
         val messageArray = JSONArray()
-        val sharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
-        val messagesJson = sharedPref.getString("messages", null)
+        val sharedPref = contextMain?.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
+        val messagesJson = sharedPref?.getString("messages", null)
         if (messagesJson != null) {
             val type = object : TypeToken<List<Message>>() {}.type
             val messagesFromJson = Gson().fromJson<List<Message>>(messagesJson, type)
@@ -84,35 +94,38 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         }
         return messageArray
     }
-    private fun pullLatestRecordings(context: Context): JSONArray {
+    // TODO: Add logic to pull latest few transcript vectors
+    private fun pullLatestRecordings(): JSONArray {
         val transcriptsArray = JSONArray()
         return transcriptsArray
     }
 
-    private fun showNotification(context: Context, title: String, content: String) {
+    private fun showNotification(title: String, content: String) {
         val channelId = "MIAThoughtChannel"
         val channelName = "API Response Channel"
         val importance = NotificationManager.IMPORTANCE_DEFAULT
         val channel = NotificationChannel(channelId, channelName, importance)
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = contextMain?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
 
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_baseline_mic_24)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-            .build()
+        val notification = contextMain?.let {
+            NotificationCompat.Builder(it, channelId)
+                .setSmallIcon(R.drawable.ic_baseline_mic_24)
+                .setContentTitle(title)
+                .setContentText(content)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                .build()
+        }
 
         notificationManager.notify(2, notification)
     }
 
-    private fun saveMessages(context: Context, assistantMessage: String) {
-        val sharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
+    private fun saveMessages(assistantMessage: String) {
+        val sharedPref = contextMain?.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
 
         // Get the current list of messages, ensuring it's mutable
-        val messagesJson = sharedPref.getString("messages", null)
+        val messagesJson = sharedPref?.getString("messages", null)
         val type = object : TypeToken<List<Message>>() {}.type
         val messages = if (messagesJson != null) {
             Gson().fromJson<MutableList<Message>>(messagesJson, type) ?: mutableListOf()
@@ -124,9 +137,9 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         messages.add(Message(assistantMessage, false))
 
         // Save the updated list back to SharedPreferences
-        val editor = sharedPref.edit()
+        val editor = sharedPref?.edit()
         val updatedMessagesJson = Gson().toJson(messages)
-        editor.putString("messages", updatedMessagesJson)
-        editor.apply()
+        editor?.putString("messages", updatedMessagesJson)
+        editor?.apply()
     }
 }
