@@ -26,7 +26,7 @@ class AudioRelated : Service() {
 
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
-    private val maxRecordingTimeInMin = 60
+    private val maxRecordingTimeInMin = 20
 
     private val channelId = "AudioRecordingServiceChannel"
     // endregion
@@ -96,6 +96,9 @@ class AudioRelated : Service() {
             setAudioSource(MediaRecorder.AudioSource.MIC)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setAudioSamplingRate(44100) // Set CD quality sampling rate
+            setAudioEncodingBitRate(128000) // Set a higher bit rate for better quality
+            setAudioChannels(2) // Set for stereo recording
             setMaxDuration(maxRecordingTimeInMin * 1000)
             setOutputFile(audioFile.absolutePath)
             prepare()

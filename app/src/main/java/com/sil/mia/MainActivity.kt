@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messagesUiSharedPref: SharedPreferences
     private lateinit var messagesDataSharedPref: SharedPreferences
 
-    private val alarmIntervalInMin: Double = 0.5
+    private val alarmIntervalInMin: Double = 5.0
     // endregion
 
     // region Common
@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
         permissionRelated()
         audioRelated()
         chatRelated()
-        // thoughtsRelated()
+        thoughtsRelated()
     }
     override fun onDestroy() {
         Log.i("AudioRecord", "onDestroy")
@@ -477,7 +477,6 @@ class MainActivity : AppCompatActivity() {
         val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, FLAG_IMMUTABLE)
 
         // Set the alarm to wake up the device and fire approximately every N minutes
-        // val interval = AlarmManager.INTERVAL_HALF_HOUR
         val intervalInMin : Double = alarmIntervalInMin * 60 * 1000
 
         // `setInexactRepeating()` is battery-friendly as it allows the system to adjust the alarm's timing to match other alarms
