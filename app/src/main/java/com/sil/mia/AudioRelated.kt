@@ -8,12 +8,9 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioFormat
-import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Environment
 import android.os.IBinder
-import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +26,7 @@ class AudioRelated : Service() {
 
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
-    private val maxRecordingTimeInSec = 300
+    private val maxRecordingTimeInMin = 60
 
     private val channelId = "AudioRecordingServiceChannel"
     // endregion
@@ -99,7 +96,7 @@ class AudioRelated : Service() {
             setAudioSource(MediaRecorder.AudioSource.MIC)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setMaxDuration(maxRecordingTimeInSec * 1000)
+            setMaxDuration(maxRecordingTimeInMin * 1000)
             setOutputFile(audioFile.absolutePath)
             prepare()
 

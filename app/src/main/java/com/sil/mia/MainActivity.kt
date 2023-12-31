@@ -377,27 +377,34 @@ class MainActivity : AppCompatActivity() {
                         You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
 
                         The input contains:
-                         - user message
-                        - a systemtime (Unix timestamp in milliseconds) 
+                        - user message
+                        - systemTime (Unix timestamp in milliseconds) 
                         - currentTimeFormattedString (in format '2023-12-28T12:02:00')
+                        - day (1-31)
+                        - month (1-12)
+                        - year (in format 20XX)
+                        - hours (in 24h format)
+                        - minutes (0-59)
                         The output should contain:
                         - query text with keywords that maximize cosine similarity
-                        - systemtime with ${'$'}\gte and ${'$'}\lte
+                        - any of the time filters with a $\gte and $\lte value based on user's request
                         
-                        The query text can be empty if no particular factual topic specified. Create a JSON payload best suited to answer the user's message. Output only the filter JSON.
+                        The query text can be empty if no particular factual topic specified. 
+                        Create a JSON payload best suited to answer the user's message. 
+                        Output only the filter JSON.
                         
                         Examples:
                         Example #1:
                         Input:
                         summarize my marketing project's presentation from last week for me
-                        Context: {"systemtime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
-                        Output: {"query": "marketing project presentation", {"systemtime": { "$\gte": 1703260101000, "$\lte": 1703864901927, }}}
+                        Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
+                        Output: {"query": "marketing project presentation", "query_filter": {"day": { "$\gte": 22, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
                         
                         Example #2:
                         Input:
-                        what has happened the past couple days
-                        Context: {"systemtime":1703864901927,"currentTimeFormattedString":"Fri 29\/12\/23 10:48","batteryLevel":100,"latitude":39.954080429399724,"longitude":-75.19560390754498,"address":"Sansom Place West, Sansom Street, Powelton Village, Philadelphia, Philadelphia County, Pennsylvania, 19104, United States","firstWeatherDescription":"broken clouds","feelsLike":"7.52","humidity":"76","windSpeed":"3.6","cloudAll":"75"}
-                        Output: {"query": "", {"systemtime": { "$\gte": 1703692101000, "$\lte": 1703864901927, }}}
+                        what were the highlights of last month
+                        Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
+                        Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "${'$'}\eq": 2023 }}}
                         """
                     )
                 })
@@ -415,22 +422,28 @@ class MainActivity : AppCompatActivity() {
         val queryResultJSON = JSONObject(queryResponse)
         Log.i("AudioRecord", "ifUserMessageIsTask queryResultJSON: $queryResultJSON")
 
-        // Pull relevant Pinecone data using a query
-        val queryText = if (queryResultJSON.has("query")) queryResultJSON.getString("query") else userMessage
+        // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
-            put("systemtime", JSONObject().apply {
-                // Check if `$lte` exists and get its value if it does
-                if (queryResultJSON.has("systemtime") && queryResultJSON.getJSONObject("systemtime").has("\$lte")) {
-                    val lte = abs(queryResultJSON.getJSONObject("systemtime").getInt("\$lte"))
-                    put("\$lte", lte)
+            // Check if 'query_filter' is present and iterate through its keys
+            if (queryResultJSON.has("query_filter")) {
+                val queryFilters = queryResultJSON.getJSONObject("query_filter")
+                queryFilters.keys().forEach { key ->
+                    val timeFilter = queryFilters.getJSONObject(key)
+                    val timeFilterJSONObject = JSONObject()
+                    timeFilter.keys().forEach { filterKey ->
+                        when (filterKey) {
+                            "\$gte", "\$lte", "\$eq" -> timeFilterJSONObject.put(filterKey, timeFilter.getInt(filterKey))
+                            // Add cases for other possible filter keys if needed
+                        }
+                    }
+                    put(key, timeFilterJSONObject)
                 }
-                // Check if `$gte` exists and get its value if it does
-                if (queryResultJSON.has("systemtime") && queryResultJSON.getJSONObject("systemtime").has("\$gte")) {
-                    val gte = abs(queryResultJSON.getJSONObject("systemtime").getInt("\$gte"))
-                    put("\$gte", gte)
-                }
-            })
+            }
         }
+        Log.i("AudioRecord", "ifUserMessageIsTask filterJSONObject: $filterJSONObject")
+
+        // Pull relevant data using a query
+        val queryText = queryResultJSON.optString("query", userMessage)
         val contextPayload = JSONObject().apply {
             put("query_text", queryText)
             put("query_filter", filterJSONObject)
