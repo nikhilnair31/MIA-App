@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.*
 import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        initRelated()
         permissionRelated()
         audioRelated()
         chatRelated()
@@ -62,6 +64,18 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
 
         unregisterReceiver(audioUpdateReceiver)
+    }
+    // endregion
+
+    // region Initial
+    private fun initRelated() {
+        val sharedPrefs: SharedPreferences = this.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
+        var uniqueID = sharedPrefs.getString("deviceid", null)
+        if (uniqueID == null) {
+            uniqueID = UUID.randomUUID().toString()
+            sharedPrefs.edit().putString("deviceid", uniqueID).apply()
+        }
+        Log.i("AudioRecord", "initRelated uniqueID: $uniqueID")
     }
     // endregion
 

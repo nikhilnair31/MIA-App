@@ -29,7 +29,7 @@ class AudioRelated : Service() {
 
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
-    private val maxRecordingTimeInSec = 10
+    private val maxRecordingTimeInSec = 300
 
     private val channelId = "AudioRecordingServiceChannel"
     // endregion
@@ -111,21 +111,6 @@ class AudioRelated : Service() {
             }
         }
     }
-    private fun createAudioFile(): File {
-        val timeStamp = System.currentTimeMillis()
-        val audioFileName = "recording_$timeStamp.m4a"
-        Log.i("AudioRecord", "Created New Audio File: $audioFileName")
-        return File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
-    }
-    private fun stopRecordingAndUpload(audioFile: File) {
-        mediaRecorder?.apply {
-            stop()
-            release()
-        }
-        mediaRecorder = null
-        uploadAudioFileAndMetadata(audioFile)
-        startListening()
-    }
 
     private fun stopListening() {
         Log.i("AudioRecord", "Stopped Listening")
@@ -145,11 +130,27 @@ class AudioRelated : Service() {
             latestAudioFile?.let { uploadAudioFileAndMetadata(it) }
         }
     }
+    private fun stopRecordingAndUpload(audioFile: File) {
+        mediaRecorder?.apply {
+            stop()
+            release()
+        }
+        mediaRecorder = null
+        uploadAudioFileAndMetadata(audioFile)
+        startListening()
+    }
 
+    private fun createAudioFile(): File {
+        val timeStamp = System.currentTimeMillis()
+        val audioFileName = "recording_$timeStamp.m4a"
+        Log.i("AudioRecord", "Created New Audio File: $audioFileName")
+        return File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
+    }
     private fun uploadAudioFileAndMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
-            val metadataJson = Helpers.pullDeviceData(this@AudioRelated)
-            Helpers.uploadToS3(audioFile, metadataJson)
+            val context = this@AudioRelated
+            val metadataJson = Helpers.pullDeviceData(context)
+            Helpers.uploadToS3(context, audioFile, metadataJson)
         }
     }
     // endregion

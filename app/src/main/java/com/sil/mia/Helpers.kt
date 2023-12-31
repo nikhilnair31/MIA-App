@@ -2,6 +2,7 @@ package com.sil.mia
 
 import android.app.Activity
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
@@ -116,7 +117,7 @@ class Helpers {
                 }
             }
         }
-        suspend fun callGeocodingAPI(latitude: Double, longitude: Double): String {
+        private suspend fun callGeocodingAPI(latitude: Double, longitude: Double): String {
             return withContext(Dispatchers.IO) {
                 try {
                     // Construct the URL with latitude and longitude
@@ -133,7 +134,7 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.d("AudioRecord", "callGeocodingAPI Response: $jsonResponse")
+                        // Log.d("AudioRecord", "callGeocodingAPI Response: $jsonResponse")
                         val content = jsonResponse.getString("display_name")
                         content
                     } else {
@@ -150,7 +151,7 @@ class Helpers {
                 }
             }
         }
-        suspend fun callWeatherAPI(latitude: Double, longitude: Double): JSONObject? {
+        private suspend fun callWeatherAPI(latitude: Double, longitude: Double): JSONObject? {
             return withContext(Dispatchers.IO) {
                 try {
                     // Construct the URL with latitude and longitude
@@ -167,7 +168,7 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.d("AudioRecord", "callWeatherAPI Response: $jsonResponse")
+                        // Log.d("AudioRecord", "callWeatherAPI Response: $jsonResponse")
                         jsonResponse
                     } else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
@@ -186,7 +187,7 @@ class Helpers {
         // endregion
 
         // region Cloud Related
-        fun uploadToS3(audioFile: File?, metadataJson: JSONObject) {
+        fun uploadToS3(context: Context, audioFile: File?, metadataJson: JSONObject) {
             Log.i("AudioRecord", "Uploading to S3...")
 
             try {
@@ -201,7 +202,11 @@ class Helpers {
                     }
 
                     // Upload audio file
-                    val audioKeyName = "recordings/" + it.name
+                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
+                    val uniqueID = sharedPrefs.getString("deviceid", null)
+                    val audioKeyName = "$uniqueID/recordings/${it.name}"
+
+                    // Metadata
                     val audioMetadata = ObjectMetadata()
                     audioMetadata.contentType = "media/m4a"
                     audioMetadata.contentLength = it.length()
@@ -209,7 +214,7 @@ class Helpers {
                     // Convert JSONObject to Map and add to metadata
                     val metadataMap = metadataJson.toMap()
                     metadataMap.forEach { (key, value) ->
-                        Log.d("AudioRecord", "Metadata - Key: $key, Value: $value")
+                        // Log.d("AudioRecord", "Metadata - Key: $key, Value: $value")
                         audioMetadata.addUserMetadata(key, value)
                     }
 
@@ -237,16 +242,37 @@ class Helpers {
         suspend fun pullDeviceData(context: Context): JSONObject {
             val finalOutput = JSONObject()
 
+            // region Source
+            val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
+            val uniqueID = sharedPrefs.getString("deviceid", null)
+            finalOutput.apply {
+                put("source", uniqueID)
+            }
+            // endregion
             // region Time
             // Pulling system time in ms
-            val currentSystemTime = System.currentTimeMillis()
-            finalOutput.apply {
-                put("systemTime", currentSystemTime)
-            }
+            val currentSystemTime = pullSystemTime()
             // Pulling formatted time string
             val currentTimeFormattedString = pullTimeFormattedString()
+            // Creating a Calendar instance
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = currentSystemTime
+            }
+            // Extracting day, month, year, hours, and minutes
+            val day = calendar.get(Calendar.DAY_OF_MONTH)
+            val month = calendar.get(Calendar.MONTH) + 1
+            val year = calendar.get(Calendar.YEAR)
+            val hours = calendar.get(Calendar.HOUR_OF_DAY)
+            val minutes = calendar.get(Calendar.MINUTE)
+            // Adding values to finalOutput
             finalOutput.apply {
+                put("systemTime", currentSystemTime)
                 put("currentTimeFormattedString", currentTimeFormattedString)
+                put("day", day)
+                put("month", month)
+                put("year", year)
+                put("hours", hours)
+                put("minutes", minutes)
             }
             // endregion
             // region Battery
@@ -256,9 +282,8 @@ class Helpers {
             finalOutput.apply {
                 put("batteryLevel", batteryLevel)
             }
-            // Pulling battery charging status
             // endregion
-            // region Location
+            // region Location & Climate
             // Pulling user's current latitude/longitude
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
             val location: Location?
@@ -277,9 +302,9 @@ class Helpers {
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
             ) {
                 location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                Log.v("AudioRecord", "pullDeviceData location: $location")
+                // Log.v("AudioRecord", "pullDeviceData location: $location")
                 location?.let {
-                    Log.v("AudioRecord", "pullDeviceData it.latitude: ${it.latitude} it.longitude: ${it.longitude}")
+                    // Log.v("AudioRecord", "pullDeviceData it.latitude: ${it.latitude} it.longitude: ${it.longitude}")
                     latitude = it.latitude
                     longitude = it.longitude
                     address = callGeocodingAPI(latitude!!, longitude!!)
@@ -316,11 +341,14 @@ class Helpers {
             }
             // endregion
             // region Motion
-            // Pull user's current movement (accelerometer/gyroscope)
+            // TODO: Pull user's current movement (accelerometer/gyroscope)
             // endregion
 
-            Log.d("AudioRecord", "pullDeviceData finalOutput: $finalOutput")
+            // Log.d("AudioRecord", "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
+        }
+        private fun pullSystemTime(): Long {
+            return System.currentTimeMillis()
         }
         fun pullTimeFormattedString(): String {
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
@@ -332,29 +360,6 @@ class Helpers {
                 jsonObject.remove("metadata")
             }
             return JSONArray(jsonList)
-        }
-        // endregion
-
-        // region UI Related
-        fun showToast(context: Context, message: String) {
-            if (context is Activity) {
-                context.runOnUiThread {
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                }
-            }
-            else {
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            }
-        }
-        // endregion
-
-        // region Audio Related
-        fun rms(buffer: ShortArray, length: Int): Double {
-            var sum = 0.0
-            for (i in 0 until length) {
-                sum += buffer[i] * buffer[i]
-            }
-            return kotlin.math.sqrt(sum / length) * 1000
         }
         // endregion
     }
