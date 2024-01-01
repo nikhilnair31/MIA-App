@@ -55,9 +55,9 @@ class Helpers {
                     val responseCode = httpURLConnection.responseCode
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
-                        val jsonResponse = JSONObject(responseJson)
+                        val jsonResponse = JSONArray(responseJson)
                         Log.d("Helper", "callContextAPI API Response: $jsonResponse")
-                        val content = jsonResponse.getString("output")
+                        val content = jsonResponse.toString()
                         content
                     }
                     else {

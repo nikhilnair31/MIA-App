@@ -28,7 +28,7 @@ import kotlin.math.abs
 class MainActivity : AppCompatActivity() {
     // region Vars
     private val initRequestCode = 100
-    private val backgroundlocationRequestCode = 104
+    private val backgroundLocationRequestCode = 104
     private var userMessage: String = ""
 
     private lateinit var recyclerView: RecyclerView
@@ -75,6 +75,7 @@ class MainActivity : AppCompatActivity() {
             uniqueID = UUID.randomUUID().toString()
             sharedPrefs.edit().putString("deviceid", uniqueID).apply()
         }
+        sharedPrefs.edit().putString("deviceid", "4193f1b0-46ee-49ae-9927-894be3cad631").apply()
         Log.i("AudioRecord", "initRelated uniqueID: $uniqueID")
     }
     // endregion
@@ -103,7 +104,7 @@ class MainActivity : AppCompatActivity() {
             val permList = arrayOf(
                 Manifest.permission.ACCESS_BACKGROUND_LOCATION
             )
-            ActivityCompat.requestPermissions(this, permList, backgroundlocationRequestCode)
+            ActivityCompat.requestPermissions(this, permList, backgroundLocationRequestCode)
             Log.i("AudioRecord", "Requesting permissions: $permList")
         }
     }
@@ -126,7 +127,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 return
             }
-            backgroundlocationRequestCode -> {
+            backgroundLocationRequestCode -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     getBatteryUnrestrictedPermission()
                 } else {
@@ -235,7 +236,6 @@ class MainActivity : AppCompatActivity() {
                     Let's skip the awkward silences and jump right in—what's your name?
                     """.trimIndent()
                 )
-                
             }
             messagesListData.add(firstAssistantJson)
             messagesListUI.add(firstAssistantJson)
@@ -259,7 +259,6 @@ class MainActivity : AppCompatActivity() {
             val userJSON = JSONObject().apply {
                 put("role", "user")
                 put("content", userMessage)
-                
             }
             messagesListUI.add(userJSON)
             adapter.notifyItemInserted(messagesListUI.size - 1)
@@ -275,9 +274,9 @@ class MainActivity : AppCompatActivity() {
                 val assistantJSON = JSONObject().apply {
                     put("role", "assistant")
                     put("content", assistantMessage)
-                    
                 }
                 messagesListUI.add(assistantJSON)
+                messagesListData.add(assistantJSON)
                 adapter.notifyItemInserted(messagesListUI.size - 1)
                 recyclerView.scrollToPosition(adapter.itemCount - 1)
                 saveMessages()
@@ -288,7 +287,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private suspend fun createMiaResponse(): String {
-        val messagesListDataCopy = messagesListData
+        val messagesListDataCopy = messagesListData.toMutableList()
         messagesListDataCopy.add(JSONObject().apply {
             put("role", "user")
             put("content", userMessage)
@@ -312,13 +311,10 @@ class MainActivity : AppCompatActivity() {
         }
         messagesListData.add(userJSON)
 
-        // Remove time key from array to send to OpenaAI API
-        val messagesArrayWithoutTime = Helpers.removeKeyFromJsonList(messagesListData)
-
         // Generate response from user's message
         val replyPayload = JSONObject().apply {
             put("model", "gpt-4-1106-preview")
-            put("messages", messagesArrayWithoutTime)
+            put("messages", JSONArray(messagesListData))
             put("seed", 48)
             put("max_tokens", 1024)
             put("temperature", 0)
@@ -397,13 +393,13 @@ class MainActivity : AppCompatActivity() {
                         Example #1:
                         Input:
                         summarize my marketing project's presentation from last week for me
-                        Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
+                        Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 19, "minutes": 48}
                         Output: {"query": "marketing project presentation", "query_filter": {"day": { "$\gte": 22, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
                         
                         Example #2:
                         Input:
                         what were the highlights of last month
-                        Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
+                        Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 22, "minutes": 48}
                         Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "${'$'}\eq": 2023 }}}
                         """
                     )
