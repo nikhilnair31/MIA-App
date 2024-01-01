@@ -60,8 +60,7 @@ class AudioRelated : Service() {
 
         return Notification.Builder(this, channelId)
             .setContentTitle("MIA Listening...")
-            .setContentText(null)
-            .setStyle(Notification.BigTextStyle().bigText(""))
+            .setContentText("MIA is active")  // Set a brief single-line message here
             .setOngoing(true)
             .setSmallIcon(R.drawable.mia_stat_name)
             .build()

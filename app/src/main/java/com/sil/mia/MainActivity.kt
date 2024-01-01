@@ -223,7 +223,6 @@ class MainActivity : AppCompatActivity() {
                     Reply like a close friend would in a conversational manner without any formatting, bullet points etc.
                     """
                 )
-                put("time", Helpers.pullTimeFormattedString())
             }
             messagesListData.add(initSystemJson)
             val firstAssistantJson = JSONObject().apply {
@@ -236,7 +235,7 @@ class MainActivity : AppCompatActivity() {
                     Let's skip the awkward silences and jump right in—what's your name?
                     """.trimIndent()
                 )
-                put("time", Helpers.pullTimeFormattedString())
+                
             }
             messagesListData.add(firstAssistantJson)
             messagesListUI.add(firstAssistantJson)
@@ -260,7 +259,7 @@ class MainActivity : AppCompatActivity() {
             val userJSON = JSONObject().apply {
                 put("role", "user")
                 put("content", userMessage)
-                put("time", Helpers.pullTimeFormattedString())
+                
             }
             messagesListUI.add(userJSON)
             adapter.notifyItemInserted(messagesListUI.size - 1)
@@ -276,7 +275,7 @@ class MainActivity : AppCompatActivity() {
                 val assistantJSON = JSONObject().apply {
                     put("role", "assistant")
                     put("content", assistantMessage)
-                    put("time", Helpers.pullTimeFormattedString())
+                    
                 }
                 messagesListUI.add(assistantJSON)
                 adapter.notifyItemInserted(messagesListUI.size - 1)
@@ -289,12 +288,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private suspend fun createMiaResponse(): String {
+        val messagesListDataCopy = messagesListData
+        messagesListDataCopy.add(JSONObject().apply {
+            put("role", "user")
+            put("content", userMessage)
+        })
+        val conversationHistoryText = messagesListDataCopy.toString()
+
         // If MIA should should look into Pinecone or reply directly
         val userMessageWithOrWithoutContext =
-            if(shouldMiaLookExternally())
-                ifUserMessageIsTask()
+            if(shouldMiaLookExternally(conversationHistoryText))
+                lookingExternally(conversationHistoryText)
             else
-                ifUserMessageIsNotTask()
+                lookingInternally()
 
         val systemData = Helpers.pullDeviceData(this@MainActivity)
         val finalUserMessage = "$userMessageWithOrWithoutContext\nExtra Data:\n$systemData"
@@ -303,7 +309,6 @@ class MainActivity : AppCompatActivity() {
         val userJSON = JSONObject().apply {
             put("role", "user")
             put("content", finalUserMessage)
-            put("time", Helpers.pullTimeFormattedString())
         }
         messagesListData.add(userJSON)
 
@@ -325,7 +330,7 @@ class MainActivity : AppCompatActivity() {
         // Return
         return assistantMessage
     }
-    private suspend fun shouldMiaLookExternally(): Boolean {
+    private suspend fun shouldMiaLookExternally(conversationHistoryText: String): Boolean {
         val taskPayload = JSONObject().apply {
             put("model", "gpt-4-1106-preview")
             put("messages", JSONArray().apply {
@@ -345,7 +350,7 @@ class MainActivity : AppCompatActivity() {
                 })
                 put(JSONObject().apply {
                     put("role", "user")
-                    put("content", userMessage)
+                    put("content", conversationHistoryText)
                 })
             })
             put("seed", 48)
@@ -353,21 +358,16 @@ class MainActivity : AppCompatActivity() {
             put("temperature", 0)
         }
         Log.i("AudioRecord", "shouldMiaLookExternally taskPayload: $taskPayload")
+
         val taskGuess = Helpers.callOpenaiAPI(taskPayload)
         Log.i("AudioRecord", "shouldMiaLookExternally taskGuess: $taskGuess")
 
         return taskGuess == "ext"
     }
-    private suspend fun ifUserMessageIsNotTask(): String {
-        return userMessage
-    }
-    private suspend fun ifUserMessageIsTask(): String {
-        val contextData = Helpers.pullDeviceData(this@MainActivity)
-        val finalUserMessage = "$userMessage\nContext:\n$contextData"
-
+    private suspend fun lookingExternally(conversationHistoryText: String): String {
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
+            put("model", "gpt-4")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -410,17 +410,17 @@ class MainActivity : AppCompatActivity() {
                 })
                 put(JSONObject().apply {
                     put("role", "user")
-                    put("content", finalUserMessage)
+                    put("content", conversationHistoryText)
                 })
             })
             put("seed", 48)
             put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "ifUserMessageIsTask queryGeneratorPayload: $queryGeneratorPayload")
+        Log.i("AudioRecord", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
         val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
         val queryResultJSON = JSONObject(queryResponse)
-        Log.i("AudioRecord", "ifUserMessageIsTask queryResultJSON: $queryResultJSON")
+        Log.i("AudioRecord", "lookingExternally queryResultJSON: $queryResultJSON")
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
@@ -445,7 +445,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        Log.i("AudioRecord", "ifUserMessageIsTask filterJSONObject: $filterJSONObject")
+        Log.i("AudioRecord", "lookingExternally filterJSONObject: $filterJSONObject")
 
         // Pull relevant data using a query
         val queryText = queryResultJSON.optString("query", userMessage)
@@ -455,11 +455,14 @@ class MainActivity : AppCompatActivity() {
             put("query_top_k", 5)
             put("show_log", "True")
         }
-        Log.i("AudioRecord", "ifUserMessageIsTask contextPayload: $contextPayload")
+        Log.i("AudioRecord", "lookingExternally contextPayload: $contextPayload")
         val contextMemory = Helpers.callContextAPI(contextPayload)
-        Log.i("AudioRecord", "ifUserMessageIsTask contextMemory: $contextMemory")
+        Log.i("AudioRecord", "lookingExternally contextMemory: $contextMemory")
 
         return "$userMessage\nContext:\n$contextMemory"
+    }
+    private suspend fun lookingInternally(): String {
+        return userMessage
     }
 
     private fun saveMessages() {

@@ -42,7 +42,7 @@ class Helpers {
         suspend fun callContextAPI(payload: JSONObject): String {
             return withContext(Dispatchers.IO) {
                 try {
-                    Log.d("AudioRecord", "callContextAPI payload: $payload")
+                    Log.d("Helper", "callContextAPI payload: $payload")
 
                     val url = URL(awsApiEndpoint)
                     val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
@@ -56,22 +56,22 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.d("AudioRecord", "callContextAPI API Response: $jsonResponse")
+                        Log.d("Helper", "callContextAPI API Response: $jsonResponse")
                         val content = jsonResponse.getString("output")
                         content
                     }
                     else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("AudioRecord", "callContextAPI Error Response: $errorResponse")
+                        Log.e("Helper", "callContextAPI Error Response: $errorResponse")
                         ""
                     }
                 }
                 catch (e: IOException) {
-                    Log.e("AudioRecord", "IO Exception: ${e.message}")
+                    Log.e("Helper", "IO Exception: ${e.message}")
                     ""
                 }
                 catch (e: Exception) {
-                    Log.e("AudioRecord", "Exception: ${e.message}")
+                    Log.e("Helper", "Exception: ${e.message}")
                     ""
                 }
             }
@@ -92,23 +92,23 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        Log.d("AudioRecord", "callOpenaiAPI Response: $jsonResponse")
+                        Log.d("Helper", "callOpenaiAPI Response: $jsonResponse")
                         val content = jsonResponse.getJSONArray("choices").getJSONObject(0)
                             .getJSONObject("message").getString("content")
                         content
                     }
                     else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("AudioRecord", "callOpenaiAPI Error Response: $errorResponse")
+                        Log.e("Helper", "callOpenaiAPI Error Response: $errorResponse")
                         ""
                     }
                 }
                 catch (e: IOException) {
-                    Log.e("AudioRecord", "IO Exception: ${e.message}")
+                    Log.e("Helper", "IO Exception: ${e.message}")
                     ""
                 }
                 catch (e: Exception) {
-                    Log.e("AudioRecord", "Exception: ${e.message}")
+                    Log.e("Helper", "Exception: ${e.message}")
                     ""
                 }
             }
@@ -130,19 +130,19 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        // Log.d("AudioRecord", "callGeocodingAPI Response: $jsonResponse")
+                        // Log.d("Helper", "callGeocodingAPI Response: $jsonResponse")
                         val content = jsonResponse.getString("display_name")
                         content
                     } else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("AudioRecord", "callGeocodingAPI Error Response: $errorResponse")
+                        Log.e("Helper", "callGeocodingAPI Error Response: $errorResponse")
                         ""
                     }
                 } catch (e: IOException) {
-                    Log.e("AudioRecord", "IO Exception: ${e.message}")
+                    Log.e("Helper", "IO Exception: ${e.message}")
                     ""
                 } catch (e: Exception) {
-                    Log.e("AudioRecord", "Exception: ${e.message}")
+                    Log.e("Helper", "Exception: ${e.message}")
                     ""
                 }
             }
@@ -164,18 +164,18 @@ class Helpers {
                     if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
-                        // Log.d("AudioRecord", "callWeatherAPI Response: $jsonResponse")
+                        // Log.d("Helper", "callWeatherAPI Response: $jsonResponse")
                         jsonResponse
                     } else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("AudioRecord", "callWeatherAPI Error Response: $errorResponse")
+                        Log.e("Helper", "callWeatherAPI Error Response: $errorResponse")
                         null
                     }
                 } catch (e: IOException) {
-                    Log.e("AudioRecord", "IO Exception: ${e.message}")
+                    Log.e("Helper", "IO Exception: ${e.message}")
                     null
                 } catch (e: Exception) {
-                    Log.e("AudioRecord", "Exception: ${e.message}")
+                    Log.e("Helper", "Exception: ${e.message}")
                     null
                 }
             }
@@ -184,7 +184,7 @@ class Helpers {
 
         // region Cloud Related
         fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
-            Log.i("AudioRecord", "Uploading to S3...")
+            Log.i("Helpers", "Uploading to S3...")
 
             try {
                 val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
@@ -193,7 +193,7 @@ class Helpers {
                 audioFile?.let {
                     // Verify the file's readability and size
                     if (!it.exists() || !it.canRead() || it.length() <= 0) {
-                        Log.e("AudioRecord", "File does not exist, is unreadable or empty")
+                        Log.e("Helper", "File does not exist, is unreadable or empty")
                         return
                     }
 
@@ -210,7 +210,7 @@ class Helpers {
                     // Convert JSONObject to Map and add to metadata
                     val metadataMap = metadataJson.toMap()
                     metadataMap.forEach { (key, value) ->
-                        // Log.d("AudioRecord", "Metadata - Key: $key, Value: $value")
+                        // Log.d("Helper", "Metadata - Key: $key, Value: $value")
                         audioMetadata.addUserMetadata(key, value)
                     }
 
@@ -219,26 +219,26 @@ class Helpers {
                         val audioRequest = PutObjectRequest(bucketName, audioKeyName, fileInputStream, audioMetadata)
                         try {
                             s3Client.putObject(audioRequest)
-                            Log.i("AudioRecord", "Uploaded to S3!")
+                            Log.i("Helper", "Uploaded to S3!")
                         }
                         catch (e: Exception) {
-                            Log.e("AudioRecord", "Error in S3 upload: ${e.localizedMessage}")
+                            Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
                         }
                     }
 
                     // Delete the file after upload
                     if (it.delete()) {
-                        Log.i("AudioRecord", "Deleted audio file after upload: ${it.name}")
+                        Log.i("Helper", "Deleted audio file after upload: ${it.name}")
                     } else {
-                        Log.e("AudioRecord", "Failed to delete audio file after upload: ${it.name}")
+                        Log.e("Helper", "Failed to delete audio file after upload: ${it.name}")
                     }
                 }
             }
             catch (e: Exception) {
                 when (e) {
-                    is AmazonServiceException -> Log.e("AudioRecord", "Error uploading to S3: ${e.message}")
-                    is FileNotFoundException -> Log.e("AudioRecord", "File not found: ${e.message}")
-                    else -> Log.e("AudioRecord", "Error in S3 upload: ${e.localizedMessage}")
+                    is AmazonServiceException -> Log.e("Helper", "Error uploading to S3: ${e.message}")
+                    is FileNotFoundException -> Log.e("Helper", "File not found: ${e.message}")
+                    else -> Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
                 }
                 e.printStackTrace()
             }
@@ -310,9 +310,9 @@ class Helpers {
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
             ) {
                 location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                // Log.v("AudioRecord", "pullDeviceData location: $location")
+                // Log.v("Helper", "pullDeviceData location: $location")
                 location?.let {
-                    // Log.v("AudioRecord", "pullDeviceData it.latitude: ${it.latitude} it.longitude: ${it.longitude}")
+                    // Log.v("Helper", "pullDeviceData it.latitude: ${it.latitude} it.longitude: ${it.longitude}")
                     latitude = it.latitude
                     longitude = it.longitude
                     address = callGeocodingAPI(latitude!!, longitude!!)
@@ -352,7 +352,7 @@ class Helpers {
             // TODO: Pull user's current movement (accelerometer/gyroscope)
             // endregion
 
-            // Log.d("AudioRecord", "pullDeviceData finalOutput: $finalOutput")
+            // Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
         }
         private fun pullSystemTime(): Long {

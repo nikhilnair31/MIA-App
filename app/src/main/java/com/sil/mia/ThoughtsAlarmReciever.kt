@@ -4,6 +4,8 @@ import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_IMMUTABLE
+import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -19,16 +21,20 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class ThoughtsAlarmReceiver : BroadcastReceiver() {
+    // region Vars
     private val systemPromptBase: String = """
         Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
         Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
         You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
         Use the context of their prior conversation and the metadata of their real world live audio recordings. 
-        Using this data decide if there's anything helpful to message the user. If not respond with .
+        Using this data decide if there's anything helpful to message the user. If not respond with "null"
     """
     private var contextMain: Context? = null
     data class Message(val content: String, val isUser: Boolean)
+    private val channelId = "MIAThoughtChannel"
+    // endregion
 
+    // region Initial
     override fun onReceive(context: Context, intent: Intent) {
         Log.i("ThoughtsAlarm", "onReceive")
 
@@ -38,7 +44,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
                 Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
             }
             else {
-                Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
+                Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
                 createMiaThought()
             }
         }
@@ -52,7 +58,9 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
             (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
         }
     }
+    // endregion
 
+    // region Thought Generation
     private suspend fun createMiaThought() {
         Log.i("ThoughtsAlarm", "createMiaThought")
 
@@ -70,24 +78,28 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
             put("max_tokens", 256)
             put("temperature", 0.9)
         }
-        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever onReceive wakePayload: $wakePayload")
+        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever wakePayload: $wakePayload")
         val wakeResponse = Helpers.callOpenaiAPI(wakePayload)
-        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever onReceive wakePayload: $wakeResponse")
+        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever wakeResponse: $wakeResponse")
 
-        // TODO: Needs to be update to update the messagesList while activity is still active
-        // saveMessages(wakeResponse)
+        if(wakeResponse != "null") {
+            saveMessages(wakeResponse)
 
-        withContext(Dispatchers.Main) {
-            showNotification(wakeResponse)
+            withContext(Dispatchers.Main) {
+                showNotification(wakeResponse)
+            }
         }
     }
 
     private suspend fun createSystemPrompt(): String {
+        val deviceData = contextMain?.let { Helpers.pullDeviceData(it) }
         val messageHistory = pullConversationHistory()
         val latestRecordings = pullLatestRecordings()
 
-        return "$systemPromptBase\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
+        return "$systemPromptBase\nCurrent Device Data:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
     }
+
+    // TODO: Fix this logic it's still using the Message data type
     private fun pullConversationHistory(): JSONArray {
         val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
         val messagesDataJson = messagesDataSharedPref?.getString("messagesdata", null)
@@ -120,7 +132,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
+            put("model", "gpt-4")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -204,57 +216,71 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
         return contextMemory
     }
+    // endregion
 
+    // region Notification
     private fun showNotification(content: String) {
-        if(content.trimIndent().strip() != ".") {
-            val title = "MIA"
-            val channelId = "MIAThoughtChannel"
-            val channelName = "MIA Thoughts Channel"
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(channelId, channelName, importance)
+        val title = "MIA"
+        val channelName = "MIA Thoughts Channel"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel(channelId, channelName, importance)
 
-            val notificationManager = contextMain?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+        val notificationManager = contextMain?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
 
-            // Intent to open the main activity
-            val intent = Intent(contextMain, MainActivity::class.java) // Replace MainActivity with your activity
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            val pendingIntent = PendingIntent.getActivity(contextMain, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // Intent to open the main activity
+        val intent = Intent(contextMain, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val pendingIntent = PendingIntent.getActivity(contextMain, 0, intent, FLAG_IMMUTABLE)
 
-            val notification = contextMain?.let {
-                NotificationCompat.Builder(it, channelId)
-                    .setSmallIcon(R.drawable.mia_stat_name)
-                    .setContentTitle(title)
-                    .setContentText(content)
-                    .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-                    .setContentIntent(pendingIntent)
-                    .setAutoCancel(true) // Remove the notification once tapped
-                    .build()
-            }
-
-            notificationManager.notify(2, notification)
+        val notification = contextMain?.let {
+            NotificationCompat.Builder(it, channelId)
+                .setSmallIcon(R.drawable.mia_stat_name)
+                .setContentTitle(title)
+                .setContentText(content)
+                // .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true) // Remove the notification once tapped
+                .build()
         }
-    }
 
+        notificationManager.notify(2, notification)
+    }
+    // endregion
+
+    // region Message Data
     private fun saveMessages(assistantMessage: String) {
-        val sharedPref = contextMain?.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
+        val type = object : TypeToken<List<JSONObject>>() {}.type
 
-        // Get the current list of messages, ensuring it's mutable
-        val messagesJson = sharedPref?.getString("messages", null)
-        val type = object : TypeToken<List<Message>>() {}.type
-        val messages = if (messagesJson != null) {
-            Gson().fromJson<MutableList<Message>>(messagesJson, type) ?: mutableListOf()
-        } else {
-            mutableListOf()
+        val uitype = "messagesui"
+        val messagesListUI = mutableListOf<JSONObject>()
+        val messagesUiSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$uitype", Context.MODE_PRIVATE)
+        val messagesUiJson = messagesUiSharedPref?.getString(uitype, null)
+        messagesListUI.addAll(Gson().fromJson(messagesUiJson, type))
+        messagesListUI.add(JSONObject().apply {
+            put("role", "assistant")
+            put("content", assistantMessage)
+            put("time", Helpers.pullTimeFormattedString())
+        })
+        messagesUiSharedPref?.edit()?.apply {
+            putString(uitype, Gson().toJson(messagesListUI))
+            apply()
         }
 
-        // Add the new assistant message
-        messages.add(Message(assistantMessage, false))
-
-        // Save the updated list back to SharedPreferences
-        val editor = sharedPref?.edit()
-        val updatedMessagesJson = Gson().toJson(messages)
-        editor?.putString("messages", updatedMessagesJson)
-        editor?.apply()
+        val datatype = "messagesdata"
+        val messagesListData = mutableListOf<JSONObject>()
+        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$datatype", Context.MODE_PRIVATE)
+        val messagesDataJson = messagesDataSharedPref?.getString(datatype, null)
+        messagesListData.addAll(Gson().fromJson(messagesDataJson, type))
+        messagesListData.add(JSONObject().apply {
+            put("role", "assistant")
+            put("content", assistantMessage)
+            put("time", Helpers.pullTimeFormattedString())
+        })
+        messagesDataSharedPref?.edit()?.apply {
+            putString(datatype, Gson().toJson(messagesListData))
+            apply()
+        }
     }
+    // endregion
 }
