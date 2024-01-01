@@ -3,6 +3,7 @@ package com.sil.mia
 import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -19,24 +20,27 @@ import org.json.JSONObject
 
 class ThoughtsAlarmReceiver : BroadcastReceiver() {
     private val systemPromptBase: String = """
-        Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line. 
+        Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
         Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
         You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
         Use the context of their prior conversation and the metadata of their real world live audio recordings. 
         Using this data decide if there's anything helpful to message the user. If not respond with .
     """
     private var contextMain: Context? = null
-
     data class Message(val content: String, val isUser: Boolean)
 
     override fun onReceive(context: Context, intent: Intent) {
+        Log.i("ThoughtsAlarm", "onReceive")
+
         contextMain = context
         CoroutineScope(Dispatchers.IO).launch {
             if (isAppInForeground()) {
-                Log.i("ThoughtsAlarmReceiver", "App is in foreground. Not showing notification.")
-                return@launch
+                Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
             }
-            createMiaThought()
+            else {
+                Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
+                createMiaThought()
+            }
         }
     }
     private fun isAppInForeground(): Boolean {
@@ -50,6 +54,8 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
     }
 
     private suspend fun createMiaThought() {
+        Log.i("ThoughtsAlarm", "createMiaThought")
+
         val systemPrompt = createSystemPrompt()
 
         val wakePayload = JSONObject().apply {
@@ -64,9 +70,9 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
             put("max_tokens", 256)
             put("temperature", 0.9)
         }
-        Log.i("AudioRecord", "ThoughtsAlarmReciever onReceive wakePayload: $wakePayload")
+        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever onReceive wakePayload: $wakePayload")
         val wakeResponse = Helpers.callOpenaiAPI(wakePayload)
-        Log.i("AudioRecord", "ThoughtsAlarmReciever onReceive wakePayload: $wakeResponse")
+        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever onReceive wakePayload: $wakeResponse")
 
         // TODO: Needs to be update to update the messagesList while activity is still active
         // saveMessages(wakeResponse)
@@ -114,7 +120,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4")
+            put("model", "gpt-4-1106-preview")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -159,10 +165,10 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
             put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "pullLatestRecordings queryGeneratorPayload: $queryGeneratorPayload")
+        Log.i("ThoughtsAlarm", "pullLatestRecordings queryGeneratorPayload: $queryGeneratorPayload")
         val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
         val queryResultJSON = JSONObject(queryResponse)
-        Log.i("AudioRecord", "pullLatestRecordings queryResultJSON: $queryResultJSON")
+        Log.i("ThoughtsAlarm", "pullLatestRecordings queryResultJSON: $queryResultJSON")
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
@@ -182,7 +188,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
                 }
             }
         }
-        Log.i("AudioRecord", "pullLatestRecordings filterJSONObject: $filterJSONObject")
+        Log.i("ThoughtsAlarm", "pullLatestRecordings filterJSONObject: $filterJSONObject")
 
         // Pull relevant data using a query
         val queryText = queryResultJSON.optString("query", "")
@@ -192,9 +198,9 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
             put("query_top_k", 20)
             put("show_log", "True")
         }
-        Log.i("AudioRecord", "pullLatestRecordings contextPayload: $contextPayload")
+        Log.i("ThoughtsAlarm", "pullLatestRecordings contextPayload: $contextPayload")
         val contextMemory = Helpers.callContextAPI(contextPayload)
-        Log.i("AudioRecord", "pullLatestRecordings contextMemory: $contextMemory")
+        Log.i("ThoughtsAlarm", "pullLatestRecordings contextMemory: $contextMemory")
 
         return contextMemory
     }
@@ -207,9 +213,13 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(channelId, channelName, importance)
 
-            val notificationManager =
-                contextMain?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager = contextMain?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
+
+            // Intent to open the main activity
+            val intent = Intent(contextMain, MainActivity::class.java) // Replace MainActivity with your activity
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            val pendingIntent = PendingIntent.getActivity(contextMain, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
             val notification = contextMain?.let {
                 NotificationCompat.Builder(it, channelId)
@@ -217,6 +227,8 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
                     .setContentTitle(title)
                     .setContentText(content)
                     .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true) // Remove the notification once tapped
                     .build()
             }
 

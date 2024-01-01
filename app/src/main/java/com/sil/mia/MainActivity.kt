@@ -212,7 +212,7 @@ class MainActivity : AppCompatActivity() {
                 put(
                     "content",
                     """
-                    Your name is MIA and you're an AI companion of the user. Keep your responses short. 
+                    Your name is MIA and you're an AI companion of the user. Keep your responses short. Reply in a casual texting style and lingo. 
                     Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. 
                     Do not patronize the user but adapt to how they behave with you. NEVER explicitly mention your personality or that you're an AI.
                     You have access to the user's histories and memories through an external database. Be honest and admit if you don't know something by saying you don't remember.
@@ -367,7 +367,7 @@ class MainActivity : AppCompatActivity() {
 
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4")
+            put("model", "gpt-4-1106-preview")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -424,7 +424,12 @@ class MainActivity : AppCompatActivity() {
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
-            // Check if 'query_filter' is present and iterate through its keys
+            // Source for user based on deviceid
+            val sharedPrefs: SharedPreferences = this@MainActivity.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
+            val uniqueID = sharedPrefs.getString("deviceid", null)
+            put("source", uniqueID)
+
+            // Time based filters
             if (queryResultJSON.has("query_filter")) {
                 val queryFilters = queryResultJSON.getJSONObject("query_filter")
                 queryFilters.keys().forEach { key ->

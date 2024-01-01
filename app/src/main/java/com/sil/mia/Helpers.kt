@@ -1,6 +1,5 @@
 package com.sil.mia
 
-import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -8,11 +7,7 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.BatteryManager
 import android.util.Log
-import android.util.Log.WARN
-import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
-import androidx.recyclerview.widget.RecyclerView
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
@@ -24,6 +19,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -187,7 +183,7 @@ class Helpers {
         // endregion
 
         // region Cloud Related
-        fun uploadToS3(context: Context, audioFile: File?, metadataJson: JSONObject) {
+        fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
             Log.i("AudioRecord", "Uploading to S3...")
 
             try {
@@ -218,6 +214,7 @@ class Helpers {
                         audioMetadata.addUserMetadata(key, value)
                     }
 
+                    // Start upload
                     FileInputStream(it).use { fileInputStream ->
                         val audioRequest = PutObjectRequest(bucketName, audioKeyName, fileInputStream, audioMetadata)
                         try {
@@ -228,11 +225,22 @@ class Helpers {
                             Log.e("AudioRecord", "Error in S3 upload: ${e.localizedMessage}")
                         }
                     }
+
+                    // Delete the file after upload
+                    if (it.delete()) {
+                        Log.i("AudioRecord", "Deleted audio file after upload: ${it.name}")
+                    } else {
+                        Log.e("AudioRecord", "Failed to delete audio file after upload: ${it.name}")
+                    }
                 }
             }
-            catch (e: AmazonServiceException) {
+            catch (e: Exception) {
+                when (e) {
+                    is AmazonServiceException -> Log.e("AudioRecord", "Error uploading to S3: ${e.message}")
+                    is FileNotFoundException -> Log.e("AudioRecord", "File not found: ${e.message}")
+                    else -> Log.e("AudioRecord", "Error in S3 upload: ${e.localizedMessage}")
+                }
                 e.printStackTrace()
-                Log.e("AudioRecord", "Error uploading to S3: ${e.message}")
             }
         }
         private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }

@@ -69,7 +69,6 @@ class AudioRelated : Service() {
     // endregion
 
     // region Listening and Recording Related
-    // Listening Related
     private fun startListening() {
         Log.i("AudioRecord", "Started Listening!")
 
@@ -99,7 +98,7 @@ class AudioRelated : Service() {
             setAudioSamplingRate(44100) // Set CD quality sampling rate
             setAudioEncodingBitRate(128000) // Set a higher bit rate for better quality
             setAudioChannels(2) // Set for stereo recording
-            setMaxDuration(maxRecordingTimeInMin * 1000)
+            setMaxDuration(maxRecordingTimeInMin * 60 * 1000)
             setOutputFile(audioFile.absolutePath)
             prepare()
 
@@ -150,7 +149,7 @@ class AudioRelated : Service() {
         CoroutineScope(Dispatchers.IO).launch {
             val context = this@AudioRelated
             val metadataJson = Helpers.pullDeviceData(context)
-            Helpers.uploadToS3(context, audioFile, metadataJson)
+            Helpers.uploadToS3AndDelete(context, audioFile, metadataJson)
         }
     }
     // endregion
