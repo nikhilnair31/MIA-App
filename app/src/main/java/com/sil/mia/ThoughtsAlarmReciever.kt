@@ -30,7 +30,6 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         Using this data decide if there's anything helpful to message the user. If not respond with "null"
     """
     private var contextMain: Context? = null
-    data class Message(val content: String, val isUser: Boolean)
     private val channelId = "MIAThoughtChannel"
     // endregion
 
@@ -67,7 +66,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         val systemPrompt = createSystemPrompt()
 
         val wakePayload = JSONObject().apply {
-            put("model", "gpt-3.5-turbo-16k")
+            put("model", "gpt-3.5-turbo")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -93,8 +92,8 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
     private suspend fun createSystemPrompt(): String {
         val deviceData = contextMain?.let { Helpers.pullDeviceData(it) }
-        val messageHistory = pullConversationHistory()
         val latestRecordings = pullLatestRecordings()
+        val messageHistory = pullConversationHistory()
 
         return "$systemPromptBase\nCurrent Device Data:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
     }
@@ -115,7 +114,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4")
+            put("model", "gpt-3.5-turbo")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -190,7 +189,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         val contextPayload = JSONObject().apply {
             put("query_text", queryText)
             put("query_filter", filterJSONObject)
-            put("query_top_k", 20)
+            put("query_top_k", 5)
             put("show_log", "True")
         }
         Log.i("ThoughtsAlarm", "pullLatestRecordings contextPayload: $contextPayload")

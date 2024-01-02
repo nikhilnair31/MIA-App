@@ -23,7 +23,11 @@
         >
         <receiver
             android:name=".ThoughtsAlarmReceiver"
-        />
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.sil.mia.THOUGHT_ALARM_RECEIVER_ACTION"/>
+            </intent-filter>
+        </receiver>
         <service
             android:name=".AudioRelated"
             android:label="Audio listening..."

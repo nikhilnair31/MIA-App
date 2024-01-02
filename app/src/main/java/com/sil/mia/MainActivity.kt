@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messagesUiSharedPref: SharedPreferences
     private lateinit var messagesDataSharedPref: SharedPreferences
 
-    private val alarmIntervalInMin: Double = 5.0
+    private val alarmIntervalInMin: Double = 20.05
     // endregion
 
     // region Common
