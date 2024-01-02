@@ -20,10 +20,6 @@ import java.io.File
 
 class AudioRelated : Service() {
     // region Vars
-    companion object {
-        const val AUDIO_SERVICE_UPDATE = "com.sil.mia.AUDIO_SERVICE_UPDATE"
-    }
-
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
     private val maxRecordingTimeInMin = 20

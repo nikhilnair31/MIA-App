@@ -8,6 +8,7 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.os.*
 import android.provider.Settings
+import android.telephony.TelephonyManager
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -32,12 +33,11 @@ class MainActivity : AppCompatActivity() {
     private var userMessage: String = ""
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var loudnessTextView: TextView
     private lateinit var editText: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var toggleButton: ToggleButton
 
-    private lateinit var audioUpdateReceiver: BroadcastReceiver
+    // TODO: Update the logic here to remove mutableListOf and use JSONArray
     private lateinit var adapter: MessagesAdapter
     private val messagesListUI = mutableListOf<JSONObject>()
     private val messagesListData = mutableListOf<JSONObject>()
@@ -62,12 +62,11 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         Log.i("AudioRecord", "onDestroy")
         super.onDestroy()
-
-        unregisterReceiver(audioUpdateReceiver)
     }
     // endregion
 
     // region Initial
+    // TODO: Update this to use a user defined ID
     private fun initRelated() {
         val sharedPrefs: SharedPreferences = this.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
         var uniqueID = sharedPrefs.getString("deviceid", null)
@@ -75,7 +74,6 @@ class MainActivity : AppCompatActivity() {
             uniqueID = UUID.randomUUID().toString()
             sharedPrefs.edit().putString("deviceid", uniqueID).apply()
         }
-        sharedPrefs.edit().putString("deviceid", "4193f1b0-46ee-49ae-9927-894be3cad631").apply()
         Log.i("AudioRecord", "initRelated uniqueID: $uniqueID")
     }
     // endregion
@@ -156,26 +154,6 @@ class MainActivity : AppCompatActivity() {
                 stopService(Intent(this, AudioRelated::class.java))
             }
         }
-
-        setupAudioUpdateReceiver()
-    }
-    private fun setupAudioUpdateReceiver() {
-        Log.i("AudioRecord", "setupAudioUpdateReceiver")
-
-        // Reference the loudness TextView and update its value using the BroadcastReceiver
-        loudnessTextView = findViewById(R.id.textView)
-        audioUpdateReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val formattedRmsValue = intent.getStringExtra("formattedRmsValue")
-                runOnUiThread {
-                    loudnessTextView.text = getString(R.string.loudness, formattedRmsValue)
-                }
-            }
-        }
-
-        // Create an intent filter and register the receiver. It's good practice to define the action string as a constant somewhere
-        val filter = IntentFilter(AudioRelated.AUDIO_SERVICE_UPDATE)
-        registerReceiver(audioUpdateReceiver, filter)
     }
     // endregion
 

@@ -67,7 +67,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         val systemPrompt = createSystemPrompt()
 
         val wakePayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
+            put("model", "gpt-3.5-turbo-16k")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -99,32 +99,15 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         return "$systemPromptBase\nCurrent Device Data:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
     }
 
-    // TODO: Fix this logic it's still using the Message data type
     private fun pullConversationHistory(): JSONArray {
+        val messagesListData = mutableListOf<JSONObject>()
         val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
         val messagesDataJson = messagesDataSharedPref?.getString("messagesdata", null)
         if(messagesDataJson != null) {
             val type = object : TypeToken<List<JSONObject>>() {}.type
-            val messagesListData = mutableListOf<JSONObject>()
             messagesListData.addAll(Gson().fromJson(messagesDataJson, type))
         }
-
-        val messageArray = JSONArray()
-        val sharedPref = contextMain?.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
-        val messagesJson = sharedPref?.getString("messages", null)
-        if (messagesJson != null) {
-            val type = object : TypeToken<List<Message>>() {}.type
-            val messagesFromJson = Gson().fromJson<List<Message>>(messagesJson, type)
-            for (message in messagesFromJson) {
-                val role = if (message.isUser) "user" else "assistant"
-                val messageJson = JSONObject().apply {
-                    put("role", role)
-                    put("content", message.content)
-                }
-                messageArray.put(messageJson)
-            }
-        }
-        return messageArray
+        return JSONArray(messagesListData)
     }
     private suspend fun pullLatestRecordings(): String {
         val contextData = contextMain?.let { Helpers.pullDeviceData(it) }
