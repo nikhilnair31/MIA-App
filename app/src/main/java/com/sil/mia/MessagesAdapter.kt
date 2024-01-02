@@ -9,9 +9,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import org.json.JSONArray
 import org.json.JSONObject
 
-class MessagesAdapter(private val messagesList: List<JSONObject>) :
+class MessagesAdapter(private val messagesList: JSONArray) :
     RecyclerView.Adapter<MessagesAdapter.MessageViewHolder>() {
 
     class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -26,8 +27,8 @@ class MessagesAdapter(private val messagesList: List<JSONObject>) :
     }
 
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
-        val message = messagesList[position]
-        holder.textView.text = message["content"] as CharSequence?
+        val message = messagesList[position] as JSONObject
+        holder.textView.text = message.getString("content")
 
         // Adjust gravity and text alignment
         val context = holder.textView.context
@@ -57,5 +58,5 @@ class MessagesAdapter(private val messagesList: List<JSONObject>) :
         holder.textView.maxWidth = 800
     }
 
-    override fun getItemCount() = messagesList.size
+    override fun getItemCount() = messagesList.length()
 }

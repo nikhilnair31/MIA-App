@@ -39,8 +39,8 @@ class MainActivity : AppCompatActivity() {
 
     // TODO: Update the logic here to remove mutableListOf and use JSONArray
     private lateinit var adapter: MessagesAdapter
-    private val messagesListUI = mutableListOf<JSONObject>()
-    private val messagesListData = mutableListOf<JSONObject>()
+    private var messagesListUI = JSONArray()
+    private var messagesListData = JSONArray()
     private lateinit var messagesUiSharedPref: SharedPreferences
     private lateinit var messagesDataSharedPref: SharedPreferences
 
@@ -203,7 +203,7 @@ class MainActivity : AppCompatActivity() {
                     """
                 )
             }
-            messagesListData.add(initSystemJson)
+            messagesListData.put(initSystemJson)
             val firstAssistantJson = JSONObject().apply {
                 put("role", "assistant")
                 put(
@@ -215,16 +215,26 @@ class MainActivity : AppCompatActivity() {
                     """.trimIndent()
                 )
             }
-            messagesListData.add(firstAssistantJson)
-            messagesListUI.add(firstAssistantJson)
+            messagesListData.put(firstAssistantJson)
+            messagesListUI.put(firstAssistantJson)
         }
         // If saved messages exist then pull and populate messages
         else {
-            val type = object : TypeToken<List<JSONObject>>() {}.type
-            messagesListData.addAll(Gson().fromJson(messagesDataJson, type))
-            messagesListUI.addAll(Gson().fromJson(messagesUiJson, type))
+            val inputJsonObjectUi = JSONObject(messagesUiJson)
+            val valuesArrayUi = inputJsonObjectUi.getJSONArray("values")
+            for (i in 0 until valuesArrayUi.length()) {
+                val nameValuePairsObject = valuesArrayUi.getJSONObject(i).getJSONObject("nameValuePairs")
+                messagesListUI.put(nameValuePairsObject)
+            }
+
+            val inputJsonObjectData = JSONObject(messagesUiJson)
+            val valuesArrayData = inputJsonObjectData.getJSONArray("values")
+            for (i in 0 until valuesArrayData.length()) {
+                val nameValuePairsObject = valuesArrayData.getJSONObject(i).getJSONObject("nameValuePairs")
+                messagesListData.put(nameValuePairsObject)
+            }
         }
-        adapter.notifyItemInserted(messagesListUI.size - 1)
+        adapter.notifyItemInserted(messagesListUI.length() - 1)
         recyclerView.scrollToPosition(adapter.itemCount - 1)
         saveMessages()
     }
@@ -238,8 +248,8 @@ class MainActivity : AppCompatActivity() {
                 put("role", "user")
                 put("content", userMessage)
             }
-            messagesListUI.add(userJSON)
-            adapter.notifyItemInserted(messagesListUI.size - 1)
+            messagesListUI.put(userJSON)
+            adapter.notifyItemInserted(messagesListUI.length() - 1)
             recyclerView.scrollToPosition(adapter.itemCount - 1)
             editText.text.clear()
             saveMessages()
@@ -253,9 +263,9 @@ class MainActivity : AppCompatActivity() {
                     put("role", "assistant")
                     put("content", assistantMessage)
                 }
-                messagesListUI.add(assistantJSON)
-                messagesListData.add(assistantJSON)
-                adapter.notifyItemInserted(messagesListUI.size - 1)
+                messagesListUI.put(assistantJSON)
+                messagesListData.put(assistantJSON)
+                adapter.notifyItemInserted(messagesListUI.length() - 1)
                 recyclerView.scrollToPosition(adapter.itemCount - 1)
                 saveMessages()
 
@@ -265,8 +275,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private suspend fun createMiaResponse(): String {
-        val messagesListDataCopy = messagesListData.toMutableList()
-        messagesListDataCopy.add(JSONObject().apply {
+        val messagesListDataCopy = JSONArray(messagesListData.toString())
+        messagesListDataCopy.put(JSONObject().apply {
             put("role", "user")
             put("content", userMessage)
         })
@@ -287,12 +297,12 @@ class MainActivity : AppCompatActivity() {
             put("role", "user")
             put("content", finalUserMessage)
         }
-        messagesListData.add(userJSON)
+        messagesListData.put(userJSON)
 
         // Generate response from user's message
         val replyPayload = JSONObject().apply {
             put("model", "gpt-4-1106-preview")
-            put("messages", JSONArray(messagesListData))
+            put("messages", messagesListData)
             put("seed", 48)
             put("max_tokens", 1024)
             put("temperature", 0)
@@ -341,7 +351,7 @@ class MainActivity : AppCompatActivity() {
     private suspend fun lookingExternally(conversationHistoryText: String): String {
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-4")
+            put("model", "gpt-3.5-turbo")
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
