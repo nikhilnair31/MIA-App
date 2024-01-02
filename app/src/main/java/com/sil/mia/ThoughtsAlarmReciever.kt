@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.*
 
 class ThoughtsAlarmReceiver : BroadcastReceiver() {
     // region Vars
@@ -43,8 +44,13 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
                 Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
             }
             else {
-                Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
-                createMiaThought()
+                // Check if it's within the allowed notification time
+                if (isNotificationAllowed()) {
+                    Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
+                    createMiaThought()
+                } else {
+                    Log.i("ThoughtsAlarm", "Do Not Disturb time. Not showing notification.")
+                }
             }
         }
     }
@@ -56,6 +62,11 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         return appProcesses.any { processInfo ->
             (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
         }
+    }
+    // TODO: Update to use actual Do Not Disturb system timings if available
+    private fun isNotificationAllowed(): Boolean {
+        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        return currentHour !in 0..5 // Do Not Disturb between 12 AM and 6 AM
     }
     // endregion
 

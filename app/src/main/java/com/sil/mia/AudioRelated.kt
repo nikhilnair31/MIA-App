@@ -144,7 +144,7 @@ class AudioRelated : Service() {
         CoroutineScope(Dispatchers.IO).launch {
             val context = this@AudioRelated
             val metadataJson = Helpers.pullDeviceData(context)
-            Helpers.uploadToS3AndDelete(context, audioFile, metadataJson)
+            Helpers.scheduleUploadWork(context, audioFile, metadataJson)
         }
     }
     // endregion

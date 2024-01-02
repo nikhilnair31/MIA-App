@@ -8,6 +8,9 @@ import android.location.LocationManager
 import android.os.BatteryManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.*
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
@@ -25,6 +28,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
+
 
 class Helpers {
     companion object {
@@ -183,7 +187,42 @@ class Helpers {
         // endregion
 
         // region Cloud Related
-        fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
+        class UploadWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
+            override fun doWork(): Result {
+                val audioFilePath = inputData.getString("audioFile")
+                val metadataJsonString = inputData.getString("metadataJson")
+
+                if (!audioFilePath.isNullOrEmpty() && !metadataJsonString.isNullOrEmpty()) {
+                    val audioFile = File(audioFilePath)
+                    val metadataJson = JSONObject(metadataJsonString)
+
+                    uploadToS3AndDelete(applicationContext, audioFile, metadataJson)
+
+                    return Result.success()
+                }
+
+                return Result.failure()
+            }
+        }
+        fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val inputData = workDataOf(
+                "audioFile" to audioFile?.absolutePath,
+                "metadataJson" to metadataJson.toString()
+            )
+
+            val uploadWorkRequest = OneTimeWorkRequestBuilder<UploadWorker>()
+                .setConstraints(constraints)
+                .setInputData(inputData)
+                .build()
+
+            val appContext = context.applicationContext // Use the application context
+            WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
+        }
+        private fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
             Log.i("Helpers", "Uploading to S3...")
 
             try {
@@ -361,13 +400,6 @@ class Helpers {
         fun pullTimeFormattedString(): String {
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
             return dateFormat.format(Date())
-        }
-        fun removeKeyFromJsonList(jsonList: MutableList<JSONObject>): JSONArray {
-            jsonList.forEach { jsonObject ->
-                jsonObject.remove("time")
-                jsonObject.remove("metadata")
-            }
-            return JSONArray(jsonList)
         }
         // endregion
     }
