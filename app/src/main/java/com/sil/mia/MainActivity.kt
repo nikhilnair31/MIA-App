@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.*
 import android.content.pm.PackageManager
+import android.content.res.Resources
 import android.os.*
 import android.provider.Settings
 import android.telephony.TelephonyManager
@@ -44,7 +45,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messagesDataSharedPref: SharedPreferences
 
     private val maxMessages: Int = 20
-    private val alarmIntervalInMin: Double = 20.05
+    private val alarmIntervalInMin: Double = 30.05
     // endregion
 
     // region Common
@@ -239,7 +240,7 @@ class MainActivity : AppCompatActivity() {
 
         // Generate response from user's message
         val replyPayload = JSONObject().apply {
-            put("model", "gpt-3.5-turbo")
+            put("model", Resources.getSystem().getString(R.string.gpt3_5turbo))
             put("messages", messagesListData)
             put("seed", 48)
             put("max_tokens", 256)
@@ -254,7 +255,7 @@ class MainActivity : AppCompatActivity() {
     }
     private suspend fun shouldMiaLookExternally(conversationHistoryText: String): Boolean {
         val taskPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
+            put("model", Resources.getSystem().getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -289,7 +290,7 @@ class MainActivity : AppCompatActivity() {
     private suspend fun lookingExternally(conversationHistoryText: String): String {
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-3.5-turbo")
+            put("model", Resources.getSystem().getString(R.string.gpt3_5turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")

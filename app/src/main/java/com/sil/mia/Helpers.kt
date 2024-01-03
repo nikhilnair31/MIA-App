@@ -17,6 +17,7 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -44,10 +45,10 @@ class Helpers {
 
         // region API Call Related
         suspend fun callContextAPI(payload: JSONObject): String {
-            return withContext(Dispatchers.IO) {
-                try {
-                    Log.d("Helper", "callContextAPI payload: $payload")
+            var lastException: IOException? = null
 
+            repeat(3) { attempt ->
+                try {
                     val url = URL(awsApiEndpoint)
                     val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
                         requestMethod = "POST"
@@ -57,31 +58,36 @@ class Helpers {
                     }
 
                     val responseCode = httpURLConnection.responseCode
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                    return if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONArray(responseJson)
-                        Log.d("Helper", "callContextAPI API Response: $jsonResponse")
+                        Log.d("Helper", "callContextAPI Response: $jsonResponse")
                         val content = jsonResponse.toString()
                         content
-                    }
-                    else {
+                    } else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
                         Log.e("Helper", "callContextAPI Error Response: $errorResponse")
                         ""
                     }
-                }
-                catch (e: IOException) {
-                    Log.e("Helper", "IO Exception: ${e.message}")
-                    ""
-                }
-                catch (e: Exception) {
-                    Log.e("Helper", "Exception: ${e.message}")
-                    ""
+                } catch (e: IOException) {
+                    Log.e("Helper", "callContextAPI IO Exception on attempt $attempt: ${e.message}")
+                    lastException = e
+                    // Delay before retrying
+                    delay(1000L * (attempt + 1)) // Exponential back-off
+                } catch (e: Exception) {
+                    Log.e("Helper", "callContextAPI Unexpected Exception: ${e.message}")
+                    return ""
                 }
             }
+            lastException?.let {
+                throw it // Re-throw the last IO exception if all retries fail
+            }
+            return ""
         }
         suspend fun callOpenaiAPI(payload: JSONObject): String {
-            return withContext(Dispatchers.IO) {
+            var lastException: IOException? = null
+
+            repeat(3) { attempt ->
                 try {
                     val url = URL("https://api.openai.com/v1/chat/completions")
                     val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
@@ -93,29 +99,32 @@ class Helpers {
                     }
 
                     val responseCode = httpURLConnection.responseCode
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                    return if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
                         val jsonResponse = JSONObject(responseJson)
                         Log.d("Helper", "callOpenaiAPI Response: $jsonResponse")
                         val content = jsonResponse.getJSONArray("choices").getJSONObject(0)
                             .getJSONObject("message").getString("content")
                         content
-                    }
-                    else {
+                    } else {
                         val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
                         Log.e("Helper", "callOpenaiAPI Error Response: $errorResponse")
                         ""
                     }
-                }
-                catch (e: IOException) {
-                    Log.e("Helper", "IO Exception: ${e.message}")
-                    ""
-                }
-                catch (e: Exception) {
-                    Log.e("Helper", "Exception: ${e.message}")
-                    ""
+                } catch (e: IOException) {
+                    Log.e("Helper", "callOpenaiAPI IO Exception on attempt $attempt: ${e.message}")
+                    lastException = e
+                    // Delay before retrying
+                    delay(1000L * (attempt + 1)) // Exponential back-off
+                } catch (e: Exception) {
+                    Log.e("Helper", "callOpenaiAPI Unexpected Exception: ${e.message}")
+                    return ""
                 }
             }
+            lastException?.let {
+                throw it // Re-throw the last IO exception if all retries fail
+            }
+            return ""
         }
         private suspend fun callGeocodingAPI(latitude: Double, longitude: Double): String {
             return withContext(Dispatchers.IO) {

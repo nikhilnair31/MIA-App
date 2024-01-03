@@ -8,6 +8,7 @@ import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.gson.Gson
@@ -27,7 +28,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
         You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
         Use the context of their prior conversation and the metadata of their real world live audio recordings. 
-        Using this data decide if there's anything helpful to message the user. If not respond with "null"
+        Using this data message the user with something; conversational, helpful, factual etc. If not respond with "null"
     """
     private var contextMain: Context? = null
 
@@ -83,7 +84,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         val systemPrompt = createSystemPrompt()
 
         val wakePayload = JSONObject().apply {
-            put("model", "gpt-3.5-turbo")
+            put("model", contextMain?.getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -91,7 +92,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
                 })
             })
             put("seed", 48)
-            put("max_tokens", 256)
+            put("max_tokens", 128)
             put("temperature", 0.9)
         }
         Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever wakePayload: $wakePayload")
@@ -108,29 +109,30 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
     }
 
     private suspend fun createSystemPrompt(): String {
+        Log.i("ThoughtsAlarm", "createSystemPrompt")
+
         val deviceData = contextMain?.let { Helpers.pullDeviceData(it) }
+        Log.i("ThoughtsAlarm", "createSystemPrompt deviceData\n$deviceData")
         val latestRecordings = pullLatestRecordings()
+        Log.i("ThoughtsAlarm", "createSystemPrompt latestRecordings\n$latestRecordings")
         val messageHistory = pullConversationHistory()
+        Log.i("ThoughtsAlarm", "createSystemPrompt messageHistory\n$messageHistory")
 
-        return "$systemPromptBase\nCurrent Device Data:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
+        val finalPrompt = "$systemPromptBase\nCurrent Device Data:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
+        Log.i("ThoughtsAlarm", "createSystemPrompt finalPrompt\n$finalPrompt")
+
+        return finalPrompt
     }
 
-    private fun pullConversationHistory(): JSONArray {
-        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
-        val messagesDataString = messagesDataSharedPref?.getString("messagesdata", null)
-        Log.i("ThoughtsAlarm", "messagesDataString\n$messagesDataString")
-
-        val messagesDataArray = JSONArray(messagesDataString)
-        Log.i("ThoughtsAlarm", "messagesDataArray\n$messagesDataArray")
-        return messagesDataArray
-    }
     private suspend fun pullLatestRecordings(): String {
+        Log.i("ThoughtsAlarm", "pullLatestRecordings")
+
         val contextData = contextMain?.let { Helpers.pullDeviceData(it) }
         val finalUserMessage = "Context:\n$contextData"
 
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", "gpt-3.5-turbo")
+            put("model", contextMain?.getString(R.string.gpt3_5turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -215,29 +217,48 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
         return contextMemory
     }
+    private fun pullConversationHistory(): JSONArray {
+        Log.i("ThoughtsAlarm", "pullConversationHistory")
+
+        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
+        val messagesDataString = messagesDataSharedPref?.getString("messagesdata", null)
+        Log.i("ThoughtsAlarm", "messagesDataString\n$messagesDataString")
+
+        val messagesDataArray = JSONArray(messagesDataString)
+        Log.i("ThoughtsAlarm", "messagesDataArray\n$messagesDataArray")
+        return messagesDataArray
+    }
 
     private fun saveMessages(assistantMessage: String) {
-        val typeUi = R.string.dataUi.toString()
-        val messagesListUI = JSONArray()
+        val typeUi = contextMain?.getString(R.string.dataUi)
+        // Log.i("ThoughtsAlarm", "saveMessages typeUi: $typeUi")
         val messagesUiSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$typeUi", Context.MODE_PRIVATE)
+        var messagesUiString = messagesUiSharedPref?.getString(typeUi, null)
+        // Log.i("ThoughtsAlarm", "saveMessages old messagesUiString: $messagesUiString")
+        val messagesListUI = JSONArray(messagesUiString)
         val messagesUiEditor = messagesUiSharedPref?.edit()
         messagesListUI.put(JSONObject().apply {
             put("role", "assistant")
             put("content", assistantMessage)
         })
-        val messagesUiString = messagesListUI.toString()
+        messagesUiString = messagesListUI.toString()
+        // Log.i("ThoughtsAlarm", "saveMessages NEW messagesUiString: $messagesUiString")
         messagesUiEditor?.putString(typeUi, messagesUiString)
         messagesUiEditor?.apply()
 
-        val typeData = R.string.dataData.toString()
-        val messagesListData = JSONArray()
+        val typeData = contextMain?.getString(R.string.dataData)
+        // Log.i("ThoughtsAlarm", "saveMessages typeData: $typeData")
         val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$typeData", Context.MODE_PRIVATE)
+        var messagesDataString = messagesDataSharedPref?.getString(typeData, null)
+        // Log.i("ThoughtsAlarm", "saveMessages old messagesDataString: $messagesDataString")
+        val messagesListData = JSONArray(messagesDataString)
         val messagesDataEditor = messagesDataSharedPref?.edit()
         messagesListData.put(JSONObject().apply {
             put("role", "assistant")
             put("content", assistantMessage)
         })
-        val messagesDataString = messagesListData.toString()
+        messagesDataString = messagesListData.toString()
+        // Log.i("ThoughtsAlarm", "saveMessages NEW messagesDataString: $messagesDataString")
         messagesDataEditor?.putString(typeData, messagesDataString)
         messagesDataEditor?.apply()
     }
