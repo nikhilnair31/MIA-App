@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="roundedCorners">48dp</dimen>
+    <dimen name="lineThickness">2dp</dimen>
+</resources>

@@ -30,7 +30,14 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         Using this data decide if there's anything helpful to message the user. If not respond with "null"
     """
     private var contextMain: Context? = null
-    private val channelId = "MIAThoughtChannel"
+
+    private val thoughtChannelId = "MIAThoughtChannel"
+    private val thoughtChannelName = "MIA Thoughts Channel"
+    private val thoughtChannelGroup = "MIA Thoughts Channel"
+    private val thoughtChannelImportance = NotificationManager.IMPORTANCE_DEFAULT
+    private val thoughtNotificationTitle = "MIA"
+    private val thoughtNotificationIcon = R.drawable.mia_stat_name
+    private val thoughtNotificationId = 2
     // endregion
 
     // region Initial
@@ -212,10 +219,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
     // region Notification
     private fun showNotification(content: String) {
-        val title = "MIA"
-        val channelName = "MIA Thoughts Channel"
-        val importance = NotificationManager.IMPORTANCE_DEFAULT
-        val channel = NotificationChannel(channelId, channelName, importance)
+        val channel = NotificationChannel(thoughtChannelId, thoughtChannelName, thoughtChannelImportance)
 
         val notificationManager = contextMain?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
@@ -226,17 +230,17 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         val pendingIntent = PendingIntent.getActivity(contextMain, 0, intent, FLAG_IMMUTABLE)
 
         val notification = contextMain?.let {
-            NotificationCompat.Builder(it, channelId)
-                .setSmallIcon(R.drawable.mia_stat_name)
-                .setContentTitle(title)
+            NotificationCompat.Builder(it, thoughtChannelId)
+                .setContentTitle(thoughtNotificationTitle)
+                .setSmallIcon(thoughtNotificationIcon)
+                .setGroup(thoughtChannelGroup)
                 .setContentText(content)
-                // .setStyle(NotificationCompat.BigTextStyle().bigText(content))
                 .setContentIntent(pendingIntent)
-                .setAutoCancel(true) // Remove the notification once tapped
+                .setAutoCancel(true)
                 .build()
         }
 
-        notificationManager.notify(2, notification)
+        notificationManager.notify(thoughtNotificationId, notification)
     }
     // endregion
 

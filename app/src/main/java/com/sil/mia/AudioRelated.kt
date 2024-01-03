@@ -1,10 +1,7 @@
 package com.sil.mia
 
 import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.Service
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -24,14 +21,21 @@ class AudioRelated : Service() {
     private var latestAudioFile: File? = null
     private val maxRecordingTimeInMin = 20
 
-    private val channelId = "AudioRecordingServiceChannel"
+    private val listeningChannelId = "AudioRecordingServiceChannel"
+    private val listeningChannelName = "MIA Listening Channel"
+    private val listeningChannelGroup = "MIA Listening Group"
+    private val listeningChannelImportance = NotificationManager.IMPORTANCE_LOW
+    private val listeningNotificationTitle = "MIA Listening..."
+    private val listeningNotificationText = "MIA is active"
+    private val listeningNotificationIcon = R.drawable.mia_stat_name
+    private val listeningNotificationId = 1
     // endregion
 
     // region Common
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.i("AudioRecord", "onStartCommand")
 
-        startForeground(1, createNotification())
+        startForeground(listeningNotificationId, createNotification())
         startListening()
         return START_STICKY
     }
@@ -50,15 +54,22 @@ class AudioRelated : Service() {
     private fun createNotification(): Notification {
         Log.i("AudioRecord", "Creating notification channel")
 
-        val channel = NotificationChannel(channelId, "MIA Listening Channel", NotificationManager.IMPORTANCE_LOW)
         val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(listeningChannelId, listeningChannelName, listeningChannelImportance)
         notificationManager.createNotificationChannel(channel)
 
-        return Notification.Builder(this, channelId)
-            .setContentTitle("MIA Listening...")
-            .setContentText("MIA is active")  // Set a brief single-line message here
+        // Intent to open the main activity
+        val intent = Intent(this@AudioRelated, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val pendingIntent = PendingIntent.getActivity(this@AudioRelated, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+
+        return Notification.Builder(this, listeningChannelId)
+            .setContentTitle(listeningNotificationTitle)
+            .setContentText(listeningNotificationText)
+            .setSmallIcon(listeningNotificationIcon)
+            .setGroup(listeningChannelGroup)
+            .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setSmallIcon(R.drawable.mia_stat_name)
             .build()
     }
     // endregion

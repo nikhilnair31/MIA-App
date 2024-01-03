@@ -3,4 +3,5 @@
     <string name="send">send</string>
     <string name="toggleButton">ToggleButton</string>
     <string name="talkToMIA">Talk to MIA...</string>
+    <string name="buttonUser">user button</string>
 </resources>

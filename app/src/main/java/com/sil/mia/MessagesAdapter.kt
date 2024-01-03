@@ -27,7 +27,7 @@ class MessagesAdapter(private var messagesList: JSONArray) :
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
-        Log.i("MessagesAdapter", "onCreateViewHolder")
+        // Log.i("MessagesAdapter", "onCreateViewHolder")
 
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.message_item, parent, false)
@@ -35,10 +35,9 @@ class MessagesAdapter(private var messagesList: JSONArray) :
     }
 
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
-        Log.i("MessagesAdapter", "onBindViewHolder")
+        // Log.i("MessagesAdapter", "onBindViewHolder")
 
         val message = messagesList[position] as JSONObject
-        Log.i("MessagesAdapter", "onBindViewHolder message: $message")
         holder.textView.text = message.getString("content")
 
         // Adjust gravity and text alignment
