@@ -248,6 +248,11 @@ class Helpers {
 
                     // Convert JSONObject to Map and add to metadata
                     val metadataMap = metadataJson.toMap()
+
+                    // TODO: Check if this works. If yes then we can add extra variables defining each variable's type
+                    val metadataSize = calculateMetadataSize(metadataMap)
+                    Log.i("Helper", "User-defined metadata size: $metadataSize")
+
                     metadataMap.forEach { (key, value) ->
                         // Log.d("Helper", "Metadata - Key: $key, Value: $value")
                         audioMetadata.addUserMetadata(key, value)
@@ -283,6 +288,13 @@ class Helpers {
             }
         }
         private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
+        private fun calculateMetadataSize(metadataMap: Map<String, Any>): Int {
+            // Calculate the UTF-8 encoded size of each key and value
+            val size = metadataMap.entries.sumBy { entry ->
+                entry.key.toByteArray(Charsets.UTF_8).size + entry.value.toString().toByteArray(Charsets.UTF_8).size
+            }
+            return size
+        }
         // endregion
 
         // region Data Related
@@ -400,6 +412,21 @@ class Helpers {
         fun pullTimeFormattedString(): String {
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
             return dateFormat.format(Date())
+        }
+        fun messageDataWindow(fullJsonString: String?, maxMessages: Int?): JSONArray {
+            val fullJsonArray = JSONArray(fullJsonString)
+
+            val systemObjects = (0 until fullJsonArray.length())
+                .map { fullJsonArray.getJSONObject(it) }
+                .filter { it.getString("role") == "system" }
+
+            val lastSystemObjects = if (maxMessages != null) {
+                systemObjects.takeLast(maxMessages)
+            } else {
+                systemObjects
+            }
+
+            return JSONArray(lastSystemObjects)
         }
         // endregion
     }

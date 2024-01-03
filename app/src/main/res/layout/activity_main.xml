@@ -35,13 +35,14 @@
         <ImageButton
             android:id="@+id/buttonUser"
             android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_height="0dp"
             android:layout_marginEnd="16dp"
             android:background="@drawable/rounded_user_button"
             android:contentDescription="@string/buttonUser"
             android:text=""
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -49,7 +50,7 @@
         android:id="@+id/constraintLayout2"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="72dp"
+        android:layout_marginTop="64dp"
         android:layout_marginBottom="72dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -117,8 +118,8 @@
 
         <ImageButton
             android:id="@+id/buttonSend"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="56dp"
+            android:layout_height="0dp"
             android:layout_marginEnd="16dp"
             android:background="@drawable/rounded_send_button_selector"
             android:contentDescription="@string/send"

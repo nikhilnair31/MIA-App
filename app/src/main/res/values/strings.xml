@@ -2,6 +2,8 @@
     <string name="app_name">MIA</string>
     <string name="send">send</string>
     <string name="toggleButton">ToggleButton</string>
-    <string name="talkToMIA">Talk to MIA...</string>
+    <string name="talkToMIA">Talk to MIA…</string>
     <string name="buttonUser">user button</string>
+    <string name="dataData">messagesdata</string>
+    <string name="dataUi">messagesui</string>
 </resources>

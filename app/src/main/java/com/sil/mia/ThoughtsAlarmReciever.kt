@@ -215,6 +215,32 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
         return contextMemory
     }
+
+    private fun saveMessages(assistantMessage: String) {
+        val typeUi = R.string.dataUi.toString()
+        val messagesListUI = JSONArray()
+        val messagesUiSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$typeUi", Context.MODE_PRIVATE)
+        val messagesUiEditor = messagesUiSharedPref?.edit()
+        messagesListUI.put(JSONObject().apply {
+            put("role", "assistant")
+            put("content", assistantMessage)
+        })
+        val messagesUiString = messagesListUI.toString()
+        messagesUiEditor?.putString(typeUi, messagesUiString)
+        messagesUiEditor?.apply()
+
+        val typeData = R.string.dataData.toString()
+        val messagesListData = JSONArray()
+        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$typeData", Context.MODE_PRIVATE)
+        val messagesDataEditor = messagesDataSharedPref?.edit()
+        messagesListData.put(JSONObject().apply {
+            put("role", "assistant")
+            put("content", assistantMessage)
+        })
+        val messagesDataString = messagesListData.toString()
+        messagesDataEditor?.putString(typeData, messagesDataString)
+        messagesDataEditor?.apply()
+    }
     // endregion
 
     // region Notification
@@ -241,42 +267,6 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         }
 
         notificationManager.notify(thoughtNotificationId, notification)
-    }
-    // endregion
-
-    // region Message Data
-    private fun saveMessages(assistantMessage: String) {
-        val type = object : TypeToken<List<JSONObject>>() {}.type
-
-        val uitype = "messagesui"
-        val messagesListUI = mutableListOf<JSONObject>()
-        val messagesUiSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$uitype", Context.MODE_PRIVATE)
-        val messagesUiJson = messagesUiSharedPref?.getString(uitype, null)
-        messagesListUI.addAll(Gson().fromJson(messagesUiJson, type))
-        messagesListUI.add(JSONObject().apply {
-            put("role", "assistant")
-            put("content", assistantMessage)
-            put("time", Helpers.pullTimeFormattedString())
-        })
-        messagesUiSharedPref?.edit()?.apply {
-            putString(uitype, Gson().toJson(messagesListUI))
-            apply()
-        }
-
-        val datatype = "messagesdata"
-        val messagesListData = mutableListOf<JSONObject>()
-        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$datatype", Context.MODE_PRIVATE)
-        val messagesDataJson = messagesDataSharedPref?.getString(datatype, null)
-        messagesListData.addAll(Gson().fromJson(messagesDataJson, type))
-        messagesListData.add(JSONObject().apply {
-            put("role", "assistant")
-            put("content", assistantMessage)
-            put("time", Helpers.pullTimeFormattedString())
-        })
-        messagesDataSharedPref?.edit()?.apply {
-            putString(datatype, Gson().toJson(messagesListData))
-            apply()
-        }
     }
     // endregion
 }

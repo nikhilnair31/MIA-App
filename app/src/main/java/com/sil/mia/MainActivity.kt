@@ -43,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messagesUiSharedPref: SharedPreferences
     private lateinit var messagesDataSharedPref: SharedPreferences
 
+    private val maxMessages: Int = 20
     private val alarmIntervalInMin: Double = 20.05
     // endregion
 
@@ -173,60 +174,6 @@ class MainActivity : AppCompatActivity() {
         // Load messages and update RecyclerView
         loadMessages()
         adapter.updateMessages(messagesListUI)
-        recyclerView.scrollToPosition(adapter.itemCount - 1)
-    }
-    private fun loadMessages() {
-        // Log.i("MainActivity", "loadMessages")
-
-        messagesUiSharedPref = getSharedPreferences("com.sil.mia.messagesui", Context.MODE_PRIVATE)
-        messagesDataSharedPref = getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
-        val messagesUiString = messagesUiSharedPref.getString("messagesui", null)
-        val messagesDataString = messagesDataSharedPref.getString("messagesdata", null)
-
-        // If saved messages are empty then add a message from MIA and save it
-        if (messagesUiString == null && messagesDataString == null) {
-            Log.i("MainActivity", "no messages saved")
-            val initSystemJson = JSONObject().apply {
-                put("role", "system")
-                put(
-                    "content",
-                    """
-                    Your name is MIA and you're an AI companion of the user. Keep your responses short. Reply in a casual texting style and lingo. 
-                    Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. 
-                    Do not patronize the user but adapt to how they behave with you. NEVER explicitly mention your personality or that you're an AI.
-                    You have access to the user's histories and memories through an external database. Be honest and admit if you don't know something by saying you don't remember.
-                    The user's message may or may not contain:
-                    - Some historical conversation transcript as context. 
-                    - Extra data like their current location, battery level etc.
-                    Do not call these out but use if needed. You help the user with all their requests, questions and tasks. 
-                    Reply like a close friend would in a conversational manner without any formatting, bullet points etc.
-                    """
-                )
-            }
-            messagesListData.put(initSystemJson)
-            val firstAssistantJson = JSONObject().apply {
-                put("role", "assistant")
-                put(
-                    "content",
-                    """
-                    Hello! I'm MIA, your freshly booted AI companion. 
-                    I'm here to assist you, charm you with my sarcasm, and perhaps occasionally make you roll your eyes. 
-                    Let's skip the awkward silences and jump right in—what's your name?
-                    """.trimIndent()
-                )
-            }
-            messagesListData.put(firstAssistantJson)
-            messagesListUI.put(firstAssistantJson)
-            adapter.notifyItemInserted(messagesListUI.length() - 1)
-            saveMessages()
-        }
-        // If saved messages exist then pull and populate messages
-        else {
-            Log.i("MainActivity", "messages exist!")
-            messagesListUI = JSONArray(messagesUiString)
-            messagesListData = JSONArray(messagesDataString)
-            adapter.notifyDataSetChanged()
-        }
         recyclerView.scrollToPosition(adapter.itemCount - 1)
     }
 
@@ -440,17 +387,79 @@ class MainActivity : AppCompatActivity() {
         return userMessage
     }
 
+    private fun loadMessages() {
+        // Log.i("MainActivity", "loadMessages")
+
+        messagesUiSharedPref = getSharedPreferences("com.sil.mia.messagesui", Context.MODE_PRIVATE)
+        messagesDataSharedPref = getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
+        val messagesUiString = messagesUiSharedPref.getString("messagesui", null)
+        val messagesDataString = messagesDataSharedPref.getString("messagesdata", null)
+        Log.i("MainActivity", "messagesDataString\n$messagesDataString\nmessagesUiString\n$messagesUiString")
+
+        // If saved messages are empty then add a message from MIA and save it
+        if (messagesUiString == null && messagesDataString == null) {
+            Log.i("MainActivity", "no messages saved")
+            val initSystemJson = JSONObject().apply {
+                put("role", "system")
+                put(
+                    "content",
+                    """
+                    Your name is MIA and you're an AI companion of the user. Keep your responses short. Reply in a casual texting style and lingo. 
+                    Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. 
+                    Do not patronize the user but adapt to how they behave with you. NEVER explicitly mention your personality or that you're an AI.
+                    You have access to the user's histories and memories through an external database. Be honest and admit if you don't know something by saying you don't remember.
+                    The user's message may or may not contain:
+                    - Some historical conversation transcript as context. 
+                    - Extra data like their current location, battery level etc.
+                    Do not call these out but use if needed. You help the user with all their requests, questions and tasks. 
+                    Reply like a close friend would in a conversational manner without any formatting, bullet points etc.
+                    """
+                )
+            }
+            messagesListData.put(initSystemJson)
+            val firstAssistantJson = JSONObject().apply {
+                put("role", "assistant")
+                put(
+                    "content",
+                    """
+                    Hello! I'm MIA, your freshly booted AI companion. 
+                    I'm here to assist you, charm you with my sarcasm, and perhaps occasionally make you roll your eyes. 
+                    Let's skip the awkward silences and jump right in—what's your name?
+                    """.trimIndent()
+                )
+            }
+            messagesListData.put(firstAssistantJson)
+            messagesListUI.put(firstAssistantJson)
+            Log.i("MainActivity", "messagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
+            adapter.notifyItemInserted(messagesListUI.length() - 1)
+            saveMessages()
+        }
+        // If saved messages exist then pull and populate messages
+        else {
+            Log.i("MainActivity", "messages exist!")
+
+            // TODO: Update this to avoid the no messages visible issue
+            // messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
+            // messagesListData = Helpers.messageDataWindow(messagesDataString, maxMessages)
+
+            messagesListUI = JSONArray(messagesUiString)
+            messagesListData = JSONArray(messagesDataString)
+            Log.i("MainActivity", "messagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
+            adapter.notifyDataSetChanged()
+        }
+        recyclerView.scrollToPosition(adapter.itemCount - 1)
+    }
     private fun saveMessages() {
         // Log.i("MainActivity", "saveMessages")
 
         val messagesUiEditor = messagesUiSharedPref.edit()
         val messagesUiString = messagesListUI.toString()
-        messagesUiEditor.putString("messagesui", messagesUiString)
+        messagesUiEditor.putString(R.string.dataUi.toString(), messagesUiString)
         messagesUiEditor.apply()
 
         val messagesDataEditor = messagesDataSharedPref.edit()
         val messagesDataString = messagesListData.toString()
-        messagesDataEditor.putString("messagesdata", messagesDataString)
+        messagesDataEditor.putString(R.string.dataData.toString(), messagesDataString)
         messagesDataEditor.apply()
     }
     // endregion
