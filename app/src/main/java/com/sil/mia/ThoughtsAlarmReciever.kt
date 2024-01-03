@@ -5,7 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
-import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -110,14 +109,13 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
     }
 
     private fun pullConversationHistory(): JSONArray {
-        val messagesListData = mutableListOf<JSONObject>()
         val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
-        val messagesDataJson = messagesDataSharedPref?.getString("messagesdata", null)
-        if(messagesDataJson != null) {
-            val type = object : TypeToken<List<JSONObject>>() {}.type
-            messagesListData.addAll(Gson().fromJson(messagesDataJson, type))
-        }
-        return JSONArray(messagesListData)
+        val messagesDataString = messagesDataSharedPref?.getString("messagesdata", null)
+        Log.i("ThoughtsAlarm", "messagesDataString\n$messagesDataString")
+
+        val messagesDataArray = JSONArray(messagesDataString)
+        Log.i("ThoughtsAlarm", "messagesDataArray\n$messagesDataArray")
+        return messagesDataArray
     }
     private suspend fun pullLatestRecordings(): String {
         val contextData = contextMain?.let { Helpers.pullDeviceData(it) }
@@ -172,6 +170,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         }
         Log.i("ThoughtsAlarm", "pullLatestRecordings queryGeneratorPayload: $queryGeneratorPayload")
         val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
+        Log.i("ThoughtsAlarm", "pullLatestRecordings queryResponse: $queryResponse")
         val queryResultJSON = JSONObject(queryResponse)
         Log.i("ThoughtsAlarm", "pullLatestRecordings queryResultJSON: $queryResultJSON")
 

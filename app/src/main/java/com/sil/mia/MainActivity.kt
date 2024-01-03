@@ -37,7 +37,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sendButton: ImageButton
     private lateinit var toggleButton: ToggleButton
 
-    // TODO: Update the logic here to remove mutableListOf and use JSONArray
     private lateinit var adapter: MessagesAdapter
     private var messagesListUI = JSONArray()
     private var messagesListData = JSONArray()
@@ -49,7 +48,8 @@ class MainActivity : AppCompatActivity() {
 
     // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.i("AudioRecord", "onCreate")
+        // Log.i("MainActivity", "onCreate")
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -58,10 +58,6 @@ class MainActivity : AppCompatActivity() {
         audioRelated()
         chatRelated()
         thoughtsRelated()
-    }
-    override fun onDestroy() {
-        Log.i("AudioRecord", "onDestroy")
-        super.onDestroy()
     }
     // endregion
 
@@ -74,13 +70,14 @@ class MainActivity : AppCompatActivity() {
             uniqueID = UUID.randomUUID().toString()
             sharedPrefs.edit().putString("deviceid", uniqueID).apply()
         }
-        Log.i("AudioRecord", "initRelated uniqueID: $uniqueID")
+        Log.i("MainActivity", "initRelated uniqueID: $uniqueID")
     }
     // endregion
 
     // region Permissions Related
     private fun permissionRelated() {
-        // Get all the permissions needed
+        // Log.i("MainActivity", "Requesting initial permissions")
+        
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
             || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             || ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED
@@ -94,19 +91,21 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.ACCESS_COARSE_LOCATION,
             )
             ActivityCompat.requestPermissions(this, permList, initRequestCode)
-            Log.i("AudioRecord", "Requesting permissions: $permList")
         }
     }
     private fun getBackgroundLocationPermission() {
+        // Log.i("MainActivity", "Requesting getBackgroundLocationPermission")
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             val permList = arrayOf(
                 Manifest.permission.ACCESS_BACKGROUND_LOCATION
             )
             ActivityCompat.requestPermissions(this, permList, backgroundLocationRequestCode)
-            Log.i("AudioRecord", "Requesting permissions: $permList")
         }
     }
     private fun getBatteryUnrestrictedPermission() {
+        // Log.i("MainActivity", "Requesting getBatteryUnrestrictedPermission")
+        
         if (!(this.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(this.packageName)) {
             val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             startActivity(intent)
@@ -119,23 +118,14 @@ class MainActivity : AppCompatActivity() {
             initRequestCode -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     getBackgroundLocationPermission()
-                } else {
-                    // showToast("Permission denied")
-                    // toggleButton.isChecked = false
                 }
                 return
             }
             backgroundLocationRequestCode -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     getBatteryUnrestrictedPermission()
-                } else {
-                    // showToast("Permission denied")
-                    // toggleButton.isChecked = false
                 }
                 return
-            }
-            else -> {
-                // Ignore all other requests.
             }
         }
     }
@@ -143,14 +133,16 @@ class MainActivity : AppCompatActivity() {
 
     // region Audio Related Functions
     private fun audioRelated() {
+        // Log.i("MainActivity", "audioRelated")
+        
         toggleButton = findViewById(R.id.toggleButton)
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                Log.i("AudioRecord", "startService")
+                Log.i("MainActivity", "startService")
                 startForegroundService(Intent(this, AudioRelated::class.java))
             }
             else {
-                Log.i("AudioRecord", "stopService")
+                Log.i("MainActivity", "stopService")
                 stopService(Intent(this, AudioRelated::class.java))
             }
         }
@@ -159,6 +151,8 @@ class MainActivity : AppCompatActivity() {
 
     // region Chat Related Functions
     private fun chatRelated() {
+        // Log.i("MainActivity", "chatRelated")
+
         setupChat()
 
         editText = findViewById(R.id.editText)
@@ -168,24 +162,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun setupChat() {
+        // Log.i("MainActivity", "setupChat")
+
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         adapter = MessagesAdapter(messagesListUI)
         recyclerView.adapter = adapter
-        recyclerView.scrollToPosition(adapter.itemCount - 1)
 
-        CoroutineScope(Dispatchers.Main).launch {
-            loadMessages()
-        }
+        // Load messages and update RecyclerView
+        loadMessages()
+        adapter.updateMessages(messagesListUI)
+        recyclerView.scrollToPosition(adapter.itemCount - 1)
     }
     private fun loadMessages() {
+        // Log.i("MainActivity", "loadMessages")
+
         messagesUiSharedPref = getSharedPreferences("com.sil.mia.messagesui", Context.MODE_PRIVATE)
         messagesDataSharedPref = getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
-        val messagesUiJson = messagesUiSharedPref.getString("messagesui", null)
-        val messagesDataJson = messagesDataSharedPref.getString("messagesdata", null)
+        val messagesUiString = messagesUiSharedPref.getString("messagesui", null)
+        val messagesDataString = messagesDataSharedPref.getString("messagesdata", null)
+
         // If saved messages are empty then add a message from MIA and save it
-        if (messagesUiJson == null || messagesDataJson == null) {
+        if (messagesUiString == null && messagesDataString == null) {
+            Log.i("MainActivity", "no messages saved")
             val initSystemJson = JSONObject().apply {
                 put("role", "system")
                 put(
@@ -217,26 +217,17 @@ class MainActivity : AppCompatActivity() {
             }
             messagesListData.put(firstAssistantJson)
             messagesListUI.put(firstAssistantJson)
+            adapter.notifyItemInserted(messagesListUI.length() - 1)
+            saveMessages()
         }
         // If saved messages exist then pull and populate messages
         else {
-            val inputJsonObjectUi = JSONObject(messagesUiJson)
-            val valuesArrayUi = inputJsonObjectUi.getJSONArray("values")
-            for (i in 0 until valuesArrayUi.length()) {
-                val nameValuePairsObject = valuesArrayUi.getJSONObject(i).getJSONObject("nameValuePairs")
-                messagesListUI.put(nameValuePairsObject)
-            }
-
-            val inputJsonObjectData = JSONObject(messagesUiJson)
-            val valuesArrayData = inputJsonObjectData.getJSONArray("values")
-            for (i in 0 until valuesArrayData.length()) {
-                val nameValuePairsObject = valuesArrayData.getJSONObject(i).getJSONObject("nameValuePairs")
-                messagesListData.put(nameValuePairsObject)
-            }
+            Log.i("MainActivity", "messages exist!")
+            messagesListUI = JSONArray(messagesUiString)
+            messagesListData = JSONArray(messagesDataString)
+            adapter.notifyDataSetChanged()
         }
-        adapter.notifyItemInserted(messagesListUI.length() - 1)
         recyclerView.scrollToPosition(adapter.itemCount - 1)
-        saveMessages()
     }
 
     private fun sendMessage() {
@@ -301,15 +292,15 @@ class MainActivity : AppCompatActivity() {
 
         // Generate response from user's message
         val replyPayload = JSONObject().apply {
-            put("model", "gpt-4-1106-preview")
+            put("model", "gpt-3.5-turbo")
             put("messages", messagesListData)
             put("seed", 48)
-            put("max_tokens", 1024)
+            put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "createMiaResponse replyPayload: $replyPayload")
+        Log.i("MainActivity", "createMiaResponse replyPayload: $replyPayload")
         val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
-        Log.i("AudioRecord", "createMiaResponse assistantMessage: $assistantMessage")
+        Log.i("MainActivity", "createMiaResponse assistantMessage: $assistantMessage")
 
         // Return
         return assistantMessage
@@ -341,10 +332,10 @@ class MainActivity : AppCompatActivity() {
             put("max_tokens", 24)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "shouldMiaLookExternally taskPayload: $taskPayload")
+        Log.i("MainActivity", "shouldMiaLookExternally taskPayload: $taskPayload")
 
         val taskGuess = Helpers.callOpenaiAPI(taskPayload)
-        Log.i("AudioRecord", "shouldMiaLookExternally taskGuess: $taskGuess")
+        Log.i("MainActivity", "shouldMiaLookExternally taskGuess: $taskGuess")
 
         return taskGuess == "ext"
     }
@@ -401,10 +392,10 @@ class MainActivity : AppCompatActivity() {
             put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("AudioRecord", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
+        Log.i("MainActivity", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
         val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
         val queryResultJSON = JSONObject(queryResponse)
-        Log.i("AudioRecord", "lookingExternally queryResultJSON: $queryResultJSON")
+        Log.i("MainActivity", "lookingExternally queryResultJSON: $queryResultJSON")
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
@@ -429,7 +420,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        Log.i("AudioRecord", "lookingExternally filterJSONObject: $filterJSONObject")
+        Log.i("MainActivity", "lookingExternally filterJSONObject: $filterJSONObject")
 
         // Pull relevant data using a query
         val queryText = queryResultJSON.optString("query", userMessage)
@@ -439,9 +430,9 @@ class MainActivity : AppCompatActivity() {
             put("query_top_k", 5)
             put("show_log", "True")
         }
-        Log.i("AudioRecord", "lookingExternally contextPayload: $contextPayload")
+        Log.i("MainActivity", "lookingExternally contextPayload: $contextPayload")
         val contextMemory = Helpers.callContextAPI(contextPayload)
-        Log.i("AudioRecord", "lookingExternally contextMemory: $contextMemory")
+        Log.i("MainActivity", "lookingExternally contextMemory: $contextMemory")
 
         return "$userMessage\nContext:\n$contextMemory"
     }
@@ -450,14 +441,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveMessages() {
+        // Log.i("MainActivity", "saveMessages")
+
         val messagesUiEditor = messagesUiSharedPref.edit()
-        val messagesUiJson = Gson().toJson(messagesListUI)
-        messagesUiEditor.putString("messagesui", messagesUiJson)
+        val messagesUiString = messagesListUI.toString()
+        messagesUiEditor.putString("messagesui", messagesUiString)
         messagesUiEditor.apply()
 
         val messagesDataEditor = messagesDataSharedPref.edit()
-        val messagesDataJson = Gson().toJson(messagesListData)
-        messagesDataEditor.putString("messagesdata", messagesDataJson)
+        val messagesDataString = messagesListData.toString()
+        messagesDataEditor.putString("messagesdata", messagesDataString)
         messagesDataEditor.apply()
     }
     // endregion
