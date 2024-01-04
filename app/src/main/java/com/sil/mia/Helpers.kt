@@ -92,7 +92,7 @@ class Helpers {
                     val url = URL("https://api.openai.com/v1/chat/completions")
                     val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
                         requestMethod = "POST"
-                        setRequestProperty("Authorization", "Bearer ${openaiApiKey}")
+                        setRequestProperty("Authorization", "Bearer $openaiApiKey")
                         setRequestProperty("Content-Type", "application/json")
                         doOutput = true
                         outputStream.use { it.write(payload.toString().toByteArray()) }
@@ -117,7 +117,7 @@ class Helpers {
                     // Delay before retrying
                     delay(1000L * (attempt + 1)) // Exponential back-off
                 } catch (e: Exception) {
-                    Log.e("Helper", "callOpenaiAPI Unexpected Exception: ${e.message}")
+                    Log.e("Helper", "callOpenaiAPI Unexpected Exception: ${e}")
                     return ""
                 }
             }

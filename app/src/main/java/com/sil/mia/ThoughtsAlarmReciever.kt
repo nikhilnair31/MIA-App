@@ -132,7 +132,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.gpt3_5turbo))
+            put("model",  contextMain?.getString(R.string.gpt3_5turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")

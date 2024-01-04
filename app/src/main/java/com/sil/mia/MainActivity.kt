@@ -9,7 +9,6 @@ import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.*
 import android.provider.Settings
-import android.telephony.TelephonyManager
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -17,15 +16,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
-import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
     // region Vars
@@ -240,14 +237,16 @@ class MainActivity : AppCompatActivity() {
 
         // Generate response from user's message
         val replyPayload = JSONObject().apply {
-            put("model", Resources.getSystem().getString(R.string.gpt3_5turbo))
+            put("model", getString(R.string.gpt4turbo))
             put("messages", messagesListData)
             put("seed", 48)
             put("max_tokens", 256)
             put("temperature", 0)
         }
         Log.i("MainActivity", "createMiaResponse replyPayload: $replyPayload")
-        val assistantMessage = Helpers.callOpenaiAPI(replyPayload)
+        val assistantMessage = withContext(Dispatchers.IO) {
+            Helpers.callOpenaiAPI(replyPayload)
+        }
         Log.i("MainActivity", "createMiaResponse assistantMessage: $assistantMessage")
 
         // Return
@@ -255,21 +254,11 @@ class MainActivity : AppCompatActivity() {
     }
     private suspend fun shouldMiaLookExternally(conversationHistoryText: String): Boolean {
         val taskPayload = JSONObject().apply {
-            put("model", Resources.getSystem().getString(R.string.gpt4turbo))
+            put("model", getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
-                    put(
-                        "content",
-                        """
-                        You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
-                        Depending on the user's messages determine where to look to reply. Answer with "int" if internal and "ext" if external else "none". 
-                        Examples: 
-                        Example #1: user: help me make a crème caramel assistant: "int"
-                        Example #2: user: what did they discuss about the marketing project? assistant: "ext"
-                        Example #3: user: who is steve jobs? assistant: "int" user: no i heard something about him i'm sure assistant: "ext"
-                        """
-                    )
+                    put("content", "You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. Depending on the user's messages determine where to look to reply. Answer with 'int' if internal and 'ext' if external else 'none'. Examples: Example #1: user: help me make a crème caramel assistant: 'int' Example #2: user: what did they discuss about the marketing project? assistant: 'ext' Example #3: user: who is steve jobs? assistant: 'int' user: no i heard something about him i'm sure assistant: 'ext'")
                 })
                 put(JSONObject().apply {
                     put("role", "user")
@@ -282,15 +271,18 @@ class MainActivity : AppCompatActivity() {
         }
         Log.i("MainActivity", "shouldMiaLookExternally taskPayload: $taskPayload")
 
-        val taskGuess = Helpers.callOpenaiAPI(taskPayload)
+        var taskGuess = withContext(Dispatchers.IO) {
+            Helpers.callOpenaiAPI(taskPayload)
+        }
+        taskGuess = taskGuess.replace("'", "").trim()
         Log.i("MainActivity", "shouldMiaLookExternally taskGuess: $taskGuess")
 
-        return taskGuess == "ext"
+        return taskGuess.contains("ext")
     }
     private suspend fun lookingExternally(conversationHistoryText: String): String {
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", Resources.getSystem().getString(R.string.gpt3_5turbo))
+            put("model", getString(R.string.gpt3_5turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -341,7 +333,10 @@ class MainActivity : AppCompatActivity() {
             put("temperature", 0)
         }
         Log.i("MainActivity", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
-        val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
+
+        val queryResponse = withContext(Dispatchers.IO) {
+            Helpers.callOpenaiAPI(queryGeneratorPayload)
+        }
         val queryResultJSON = JSONObject(queryResponse)
         Log.i("MainActivity", "lookingExternally queryResultJSON: $queryResultJSON")
 
@@ -379,7 +374,9 @@ class MainActivity : AppCompatActivity() {
             put("show_log", "True")
         }
         Log.i("MainActivity", "lookingExternally contextPayload: $contextPayload")
-        val contextMemory = Helpers.callContextAPI(contextPayload)
+        val contextMemory = withContext(Dispatchers.IO) {
+            Helpers.callContextAPI(contextPayload)
+        }
         Log.i("MainActivity", "lookingExternally contextMemory: $contextMemory")
 
         return "$userMessage\nContext:\n$contextMemory"
@@ -453,14 +450,16 @@ class MainActivity : AppCompatActivity() {
     private fun saveMessages() {
         // Log.i("MainActivity", "saveMessages")
 
+        val typeUi = getString(R.string.dataUi)
         val messagesUiEditor = messagesUiSharedPref.edit()
         val messagesUiString = messagesListUI.toString()
-        messagesUiEditor.putString(R.string.dataUi.toString(), messagesUiString)
+        messagesUiEditor.putString(typeUi, messagesUiString)
         messagesUiEditor.apply()
 
+        val typeData = getString(R.string.dataData)
         val messagesDataEditor = messagesDataSharedPref.edit()
         val messagesDataString = messagesListData.toString()
-        messagesDataEditor.putString(R.string.dataData.toString(), messagesDataString)
+        messagesDataEditor.putString(typeData, messagesDataString)
         messagesDataEditor.apply()
     }
     // endregion
