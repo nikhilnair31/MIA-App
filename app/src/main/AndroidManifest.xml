@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
-    <uses-permission android:name="android.permission.BODY_SENSORS"/>
-    <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
 
     <application
         android:allowBackup="true"
@@ -19,25 +20,27 @@
         android:icon="@mipmap/mia_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MIA"
-        >
+        android:theme="@style/Theme.MIA">
+
         <receiver
             android:name=".ThoughtsAlarmReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.sil.mia.THOUGHT_ALARM_RECEIVER_ACTION"/>
+                <action android:name="com.sil.mia.THOUGHT_ALARM_RECEIVER_ACTION" />
             </intent-filter>
         </receiver>
+
         <service
             android:name=".AudioRelated"
-            android:label="Audio listening..."
             android:foregroundServiceType="microphone"
-        />
+            android:label="Audio listening..." />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
@@ -45,6 +48,10 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+
+        <activity
+            android:name=".SecondActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

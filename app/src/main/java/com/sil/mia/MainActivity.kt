@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.*
 import android.content.pm.PackageManager
-import android.content.res.Resources
 import android.os.*
 import android.provider.Settings
 import android.util.Log
@@ -24,6 +23,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 
+
 class MainActivity : AppCompatActivity() {
     // region Vars
     private val initRequestCode = 100
@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var editText: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var toggleButton: ToggleButton
+    private lateinit var userButton: ImageButton
 
     private lateinit var adapter: MessagesAdapter
     private var messagesListUI = JSONArray()
@@ -70,6 +71,12 @@ class MainActivity : AppCompatActivity() {
             sharedPrefs.edit().putString("deviceid", uniqueID).apply()
         }
         Log.i("MainActivity", "initRelated uniqueID: $uniqueID")
+
+        userButton = findViewById(R.id.buttonUser)
+        userButton.setOnClickListener {
+            val intent = Intent(this@MainActivity, SecondActivity::class.java)
+            startActivity(intent)
+        }
     }
     // endregion
 
