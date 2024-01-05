@@ -9,7 +9,6 @@ import android.location.LocationManager
 import android.os.BatteryManager
 import android.util.Log
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.NetworkType
@@ -119,7 +118,7 @@ class Helpers {
                     // Delay before retrying
                     delay(1000L * (attempt + 1)) // Exponential back-off
                 } catch (e: Exception) {
-                    Log.e("Helper", "callOpenaiAPI Unexpected Exception: ${e}")
+                    Log.e("Helper", "callOpenaiAPI Unexpected Exception: $e")
                     return ""
                 }
             }
@@ -301,7 +300,7 @@ class Helpers {
         private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
         private fun calculateMetadataSize(metadataMap: Map<String, Any>): Int {
             // Calculate the UTF-8 encoded size of each key and value
-            val size = metadataMap.entries.sumBy { entry ->
+            val size = metadataMap.entries.sumOf { entry ->
                 entry.key.toByteArray(Charsets.UTF_8).size + entry.value.toString().toByteArray(Charsets.UTF_8).size
             }
             return size

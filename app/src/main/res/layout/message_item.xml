@@ -12,7 +12,8 @@
         android:layout_margin="4dp"
         android:background="@drawable/message_background"
         android:padding="10dp"
+        android:fontFamily="@font/rubik_mono_one"
         android:textColor="@color/gray_70"
         android:layout_gravity="start"
-        android:textSize="16sp" />
+        android:textSize="12sp" />
 </LinearLayout>

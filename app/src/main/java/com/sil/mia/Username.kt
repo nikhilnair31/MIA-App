@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.EditText
 import android.widget.ImageButton
-import java.util.UUID
 
 class Username : AppCompatActivity() {
     private lateinit var sharedPreferences: SharedPreferences

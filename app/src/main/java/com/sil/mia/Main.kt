@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.*
 
 
 class Main : AppCompatActivity() {
@@ -94,7 +93,6 @@ Do not call these out but use if needed. You help the user with all their reques
 hey i'm MIA. what's up?
     """
 
-    private val maxMessages: Int = 20
     private val alarmIntervalInMin: Double = 30.05
     // endregion
 
@@ -304,10 +302,10 @@ hey i'm MIA. what's up?
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
-            // Source for user based on deviceId
-            val sharedPrefs: SharedPreferences = this@Main.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
-            val uniqueID = sharedPrefs.getString("userName", null)
-            put("source", uniqueID)
+            // Source for user based on userName
+            val sharedPrefs: SharedPreferences = this@Main.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val userName = sharedPrefs.getString("userName", null)
+            put("source", userName)
 
             // Time based filters
             if (queryResultJSON.has("query_filter")) {
@@ -343,7 +341,7 @@ hey i'm MIA. what's up?
 
         return "$userMessage\nContext:\n$contextMemory"
     }
-    private suspend fun lookingInternally(): String {
+    private fun lookingInternally(): String {
         return userMessage
     }
 
