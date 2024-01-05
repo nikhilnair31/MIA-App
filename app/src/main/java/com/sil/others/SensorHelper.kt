@@ -1,4 +1,4 @@
-package com.sil.mia
+package com.sil.others
 
 import android.content.Context
 import android.hardware.Sensor

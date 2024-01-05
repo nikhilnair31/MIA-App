@@ -1,4 +1,4 @@
-package com.sil.mia
+package com.sil.others
 
 import android.app.Activity
 import android.content.Context
@@ -18,6 +18,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.sil.mia.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.EditText
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
+import com.sil.others.Helpers
 
 class Settings : AppCompatActivity() {
     private lateinit var sharedPref: SharedPreferences

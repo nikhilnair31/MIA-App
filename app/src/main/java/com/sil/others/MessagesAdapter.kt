@@ -1,7 +1,6 @@
-package com.sil.mia
+package com.sil.others
 
 import android.graphics.drawable.GradientDrawable
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -10,8 +9,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.sil.mia.R
 import org.json.JSONArray
-import org.json.JSONObject
 
 class MessagesAdapter(private var messagesList: JSONArray) :
     RecyclerView.Adapter<MessagesAdapter.MessageViewHolder>() {

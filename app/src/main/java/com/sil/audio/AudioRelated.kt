@@ -1,4 +1,4 @@
-package com.sil.mia
+package com.sil.audio
 
 import android.Manifest
 import android.app.*
@@ -10,6 +10,9 @@ import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.sil.mia.Main
+import com.sil.mia.R
+import com.sil.others.Helpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

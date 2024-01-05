@@ -1,4 +1,4 @@
-package com.sil.mia
+package com.sil.thoughts
 
 import android.app.ActivityManager
 import android.app.NotificationChannel
@@ -10,6 +10,9 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.sil.mia.Main
+import com.sil.mia.R
+import com.sil.others.Helpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
