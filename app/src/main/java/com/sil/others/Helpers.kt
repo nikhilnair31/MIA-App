@@ -312,13 +312,6 @@ class Helpers {
         suspend fun pullDeviceData(context: Context): JSONObject {
             val finalOutput = JSONObject()
 
-            // region Source
-            val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-            val userName = sharedPrefs.getString("userName", null)
-            finalOutput.apply {
-                put("source", userName)
-            }
-            // endregion
             // region Time
             // Pulling system time in ms
             val currentSystemTime = pullSystemTime()
@@ -336,7 +329,7 @@ class Helpers {
             val minutes = calendar.get(Calendar.MINUTE)
             // Adding values to finalOutput
             finalOutput.apply {
-                put("systemTime", currentSystemTime)
+                // put("systemTime", currentSystemTime)
                 put("currentTimeFormattedString", currentTimeFormattedString)
                 put("day", day)
                 put("month", month)
@@ -400,8 +393,8 @@ class Helpers {
                 }
             }
             finalOutput.apply {
-                put("latitude", latitude)
-                put("longitude", longitude)
+                // put("latitude", latitude)
+                // put("longitude", longitude)
                 put("address", address)
                 put("firstWeatherDescription", firstWeatherDescription)
                 put("feelsLike", feelsLike)

@@ -8,6 +8,7 @@ import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.sil.mia.Main
@@ -198,6 +199,11 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
                     put(key, timeFilterJSONObject)
                 }
             }
+
+            // Source for user based on userName
+            val sharedPrefs: SharedPreferences? = contextMain?.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val userName = sharedPrefs?.getString("userName", null)
+            put("userName", userName)
         }
         Log.i("ThoughtsAlarm", "pullLatestRecordings filterJSONObject: $filterJSONObject")
 

@@ -10,8 +10,6 @@ import androidx.appcompat.app.AppCompatActivity
 import com.sil.others.Helpers
 
 class Settings : AppCompatActivity() {
-    private lateinit var sharedPref: SharedPreferences
-    private lateinit var editText: EditText
     private lateinit var backButton: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,27 +24,9 @@ class Settings : AppCompatActivity() {
         finish()
     }
     private fun buttonSetup() {
-        editText = findViewById(R.id.editText)
-        sharedPref = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-        val currentUsername: String? = sharedPref.getString("userName", "")
-        editText.setText(currentUsername)
-
         backButton = findViewById(R.id.buttonBack)
         backButton.setOnClickListener {
-            updateUsernameAndBack()
-        }
-    }
-
-    private fun updateUsernameAndBack() {
-        val userNameText = editText.text.toString()
-        if (userNameText.isNotEmpty()) {
-            sharedPref.edit().putString("userName", userNameText).apply()
-            Log.i("Username", "updateUsernameAndBack userName: $userNameText")
-
             onBackPressed()
-        }
-        else {
-            Helpers.showToast(this, "Not a a valid username :(")
         }
     }
 }

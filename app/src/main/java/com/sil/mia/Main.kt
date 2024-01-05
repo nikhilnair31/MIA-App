@@ -309,7 +309,7 @@ hey i'm MIA. what's up?
             // Source for user based on userName
             val sharedPrefs: SharedPreferences = this@Main.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
             val userName = sharedPrefs.getString("userName", null)
-            put("source", userName)
+            put("userName", userName)
 
             // Time based filters
             if (queryResultJSON.has("query_filter")) {

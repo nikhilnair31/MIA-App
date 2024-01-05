@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Environment
@@ -157,7 +158,14 @@ class AudioRelated : Service() {
     private fun uploadAudioFileAndMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
             val context = this@AudioRelated
+            // Pull system data for metadata
             val metadataJson = Helpers.pullDeviceData(context)
+            // Add username and audio related metadata
+            val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val userName = sharedPrefs.getString("userName", null)
+            metadataJson.put("userName", userName)
+            metadataJson.put("fileName", audioFile.name)
+            // Start upload process
             Helpers.scheduleUploadWork(context, audioFile, metadataJson)
         }
     }
