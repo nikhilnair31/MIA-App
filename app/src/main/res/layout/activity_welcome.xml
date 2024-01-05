@@ -1,0 +1,53 @@
+<!-- activity_second.xml -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Settings">
+
+    <TextView
+        android:id="@+id/appName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/imageView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:fontFamily="@font/rubik_mono_one"
+        android:textColor="@color/accent_0"
+        android:text="@string/app_name"
+        android:textSize="48sp"
+        android:gravity="center" />
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="256dp"
+        android:layout_height="256dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:contentDescription="@string/appLogo"
+        android:src="@mipmap/mia_launcher_foreground"
+        android:scaleType="centerCrop"
+        android:scaleX="1.2"
+        android:scaleY="1.2" />
+
+    <ImageButton
+        android:id="@+id/buttonNext"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageView"
+        android:background="@drawable/baseline_arrow_back_ios_new_24"
+        android:contentDescription="@string/nextButton"
+        android:text=""
+        android:scaleType="centerCrop"
+        android:scaleX="0.7"
+        android:scaleY="0.6"
+        android:rotation="180" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

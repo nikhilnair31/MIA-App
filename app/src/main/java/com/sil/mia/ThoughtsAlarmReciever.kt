@@ -8,11 +8,8 @@ import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -24,11 +21,39 @@ import java.util.*
 class ThoughtsAlarmReceiver : BroadcastReceiver() {
     // region Vars
     private val systemPromptBase: String = """
-        Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
-        Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
-        You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
-        Use the context of their prior conversation and the metadata of their real world live audio recordings. 
-        Using this data message the user with something; conversational, helpful, factual etc. If not respond with "null"
+Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
+Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
+You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
+Use the context of their prior conversation and the metadata of their real world live audio recordings. Don't just repeat something you've already said.
+Using this data message the user with something; conversational, helpful, factual etc. If not respond with "null"
+    """
+    private val queryGeneratorSystemPrompt: String = """
+You are a system that takes system data context as a JSON and outputs a JSON payload to query a vector database.
+
+The input contains:
+- systemTime (Unix timestamp in milliseconds) 
+- currentTimeFormattedString (in format '2023-12-28T12:02:00')
+- day (1-31)
+- month (1-12)
+- year (in format 20XX)
+- hours (in 24h format)
+- minutes (0-59)
+The output should contain:
+- empty query text ""
+- any of the time filters with a $\gte and $\lte value based on user's request
+
+Create a JSON payload best suited to help the user. Output only the filter JSON.
+
+Examples:
+Example #1:
+Input:
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
+Output: {"query": "", "query_filter": {"day": { "$\gte": 27, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
+
+Example #2:
+Input:
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
+Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "$\eq": 2023 }}}
     """
     private var contextMain: Context? = null
 
@@ -136,37 +161,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
-                    put(
-                        "content",
-                        """
-                    You are a system that takes system data context as a JSON and outputs a JSON payload to query a vector database.
-
-                    The input contains:
-                    - systemTime (Unix timestamp in milliseconds) 
-                    - currentTimeFormattedString (in format '2023-12-28T12:02:00')
-                    - day (1-31)
-                    - month (1-12)
-                    - year (in format 20XX)
-                    - hours (in 24h format)
-                    - minutes (0-59)
-                    The output should contain:
-                    - empty query text ""
-                    - any of the time filters with a $\gte and $\lte value based on user's request
-                    
-                    Create a JSON payload best suited to help the user. Output only the filter JSON.
-                    
-                    Examples:
-                    Example #1:
-                    Input:
-                    Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
-                    Output: {"query": "", "query_filter": {"day": { "$\gte": 27, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
-                    
-                    Example #2:
-                    Input:
-                    Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
-                    Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "$\eq": 2023 }}}
-                    """
-                    )
+                    put("content", queryGeneratorSystemPrompt)
                 })
                 put(JSONObject().apply {
                     put("role", "user")
@@ -272,7 +267,7 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
         notificationManager.createNotificationChannel(channel)
 
         // Intent to open the main activity
-        val intent = Intent(contextMain, MainActivity::class.java)
+        val intent = Intent(contextMain, Main::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         val pendingIntent = PendingIntent.getActivity(contextMain, 0, intent, FLAG_IMMUTABLE)
 

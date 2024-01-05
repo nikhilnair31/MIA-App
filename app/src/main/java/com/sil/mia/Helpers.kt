@@ -1,5 +1,6 @@
 package com.sil.mia
 
+import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -7,6 +8,8 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.BatteryManager
 import android.util.Log
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.NetworkType
@@ -29,7 +32,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
-
 
 class Helpers {
     companion object {
@@ -246,9 +248,9 @@ class Helpers {
                     }
 
                     // Upload audio file
-                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
-                    val uniqueID = sharedPrefs.getString("deviceid", null)
-                    val audioKeyName = "$uniqueID/recordings/${it.name}"
+                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = sharedPrefs.getString("userName", null)
+                    val audioKeyName = "$userName/recordings/${it.name}"
 
                     // Metadata
                     val audioMetadata = ObjectMetadata()
@@ -258,7 +260,7 @@ class Helpers {
                     // Convert JSONObject to Map and add to metadata
                     val metadataMap = metadataJson.toMap()
 
-                    // TODO: Check if this works. If yes then we can add extra variables defining each variable's type
+                    // TODO: Add extra variables defining each variable's type
                     val metadataSize = calculateMetadataSize(metadataMap)
                     Log.i("Helper", "User-defined metadata size: $metadataSize")
 
@@ -311,10 +313,10 @@ class Helpers {
             val finalOutput = JSONObject()
 
             // region Source
-            val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.deviceid", Context.MODE_PRIVATE)
-            val uniqueID = sharedPrefs.getString("deviceid", null)
+            val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val userName = sharedPrefs.getString("userName", null)
             finalOutput.apply {
-                put("source", uniqueID)
+                put("source", userName)
             }
             // endregion
             // region Time
@@ -418,7 +420,7 @@ class Helpers {
         private fun pullSystemTime(): Long {
             return System.currentTimeMillis()
         }
-        fun pullTimeFormattedString(): String {
+        private fun pullTimeFormattedString(): String {
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
             return dateFormat.format(Date())
         }
@@ -436,6 +438,19 @@ class Helpers {
             }
 
             return JSONArray(lastSystemObjects)
+        }
+        // endregion
+
+        // region UI Related
+        fun showToast(context: Context, message: String) {
+            if (context is Activity) {
+                context.runOnUiThread {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }
+            }
+            else {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
         }
         // endregion
     }

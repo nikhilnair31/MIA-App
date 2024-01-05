@@ -59,7 +59,7 @@ class AudioRelated : Service() {
         notificationManager.createNotificationChannel(channel)
 
         // Intent to open the main activity
-        val intent = Intent(this@AudioRelated, MainActivity::class.java)
+        val intent = Intent(this@AudioRelated, Main::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         val pendingIntent = PendingIntent.getActivity(this@AudioRelated, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 

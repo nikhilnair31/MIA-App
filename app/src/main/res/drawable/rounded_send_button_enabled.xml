@@ -2,10 +2,12 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item>
-        <shape>
-            <solid android:color="@color/gray_5"/>
-            <corners android:radius="@dimen/roundedCorners"/>
-            <stroke android:color="@color/accent_1" android:width="@dimen/lineThickness"/>
+        <shape
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <solid android:color="@color/accent_0" />
+            <corners android:radius="@dimen/roundedCorners" />
+            <!--            <stroke android:color="@color/accent_0" android:width="@dimen/lineThickness"/>-->
         </shape>
     </item>
 

@@ -1,13 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">MIA</string>
     <string name="send">send</string>
-    <string name="toggleButton">ToggleButton</string>
     <string name="talkToMIA">Talk to MIA…</string>
     <string name="buttonUser">user button</string>
     <string name="dataData">messagesdata</string>
     <string name="dataUi">messagesui</string>
-    <string name="gpt4">gpt-4</string>
     <string name="gpt4turbo" tools:ignore="TypographyDashes">gpt-4-1106-preview</string>
     <string name="gpt3_5turbo">gpt-3.5-turbo</string>
     <string name="settings">SETTINGS</string>
+    <string name="userName">username</string>
+    <string name="appLogo">app logo</string>
+    <string name="nextButton">back button</string>
+    <string name="usernameSetting">SET A USERNAME</string>
+    <string name="givePermissions">give permissions</string>
+    <string name="permissions">permissions</string>
+    <!-- Strings used for fragments for navigation -->
+
 </resources>
