@@ -163,6 +163,8 @@ class AudioRelated : Service() {
             // Add username and audio related metadata
             val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
             val userName = sharedPrefs.getString("userName", null)
+            // TODO: Change "source" to change depending on if audio or chat
+            metadataJson.put("source", "audio")
             metadataJson.put("userName", userName)
             metadataJson.put("fileName", audioFile.name)
             // Start upload process

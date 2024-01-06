@@ -19,6 +19,8 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.sil.mia.BuildConfig
+import com.sil.workers.ApiCallWorker
+import com.sil.workers.UploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -46,6 +48,23 @@ class Helpers {
         // endregion
 
         // region API Call Related
+        fun scheduleApiCallWork(context: Context, payload: JSONObject) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val inputData = workDataOf(
+                "payloadJson" to payload.toString()
+            )
+
+            val apiCallWorkRequest = OneTimeWorkRequestBuilder<ApiCallWorker>()
+                .setConstraints(constraints)
+                .setInputData(inputData)
+                .build()
+
+            val appContext = context.applicationContext
+            WorkManager.getInstance(appContext).enqueue(apiCallWorkRequest)
+        }
         suspend fun callContextAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
@@ -53,6 +72,8 @@ class Helpers {
                 try {
                     val url = URL(awsApiEndpoint)
                     val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 15000
+                        readTimeout = 15000
                         requestMethod = "POST"
                         setRequestProperty("Content-Type", "application/json")
                         doOutput = true
@@ -72,7 +93,11 @@ class Helpers {
                         ""
                     }
                 } catch (e: IOException) {
-                    Log.e("Helper", "callContextAPI IO Exception on attempt $attempt: ${e.message}")
+                    val message = e.message ?: "Unknown IO exception"
+                    Log.e("Helper", "callContextAPI IO Exception on attempt $attempt: $message", e)
+                    if (e is java.net.SocketException) {
+                        Log.e("Helper", "SocketException details: ", e)
+                    }
                     lastException = e
                     // Delay before retrying
                     delay(1000L * (attempt + 1)) // Exponential back-off
@@ -198,23 +223,6 @@ class Helpers {
         // endregion
 
         // region Cloud Related
-        class UploadWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
-            override fun doWork(): Result {
-                val audioFilePath = inputData.getString("audioFile")
-                val metadataJsonString = inputData.getString("metadataJson")
-
-                if (!audioFilePath.isNullOrEmpty() && !metadataJsonString.isNullOrEmpty()) {
-                    val audioFile = File(audioFilePath)
-                    val metadataJson = JSONObject(metadataJsonString)
-
-                    uploadToS3AndDelete(applicationContext, audioFile, metadataJson)
-
-                    return Result.success()
-                }
-
-                return Result.failure()
-            }
-        }
         fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -230,10 +238,10 @@ class Helpers {
                 .setInputData(inputData)
                 .build()
 
-            val appContext = context.applicationContext // Use the application context
+            val appContext = context.applicationContext
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
-        private fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
+        fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
             Log.i("Helpers", "Uploading to S3...")
 
             try {

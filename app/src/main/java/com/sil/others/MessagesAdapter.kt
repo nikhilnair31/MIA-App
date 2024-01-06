@@ -44,7 +44,7 @@ class MessagesAdapter(private var messagesList: JSONArray) :
         holder.textView.layoutParams = layoutParams
 
         // Max and Min width for messages
-        holder.textView.minWidth = 300
+        holder.textView.minWidth = 100
         holder.textView.maxWidth = 800
 
         val message = messagesList.getJSONObject(position)

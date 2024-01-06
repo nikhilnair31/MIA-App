@@ -11,17 +11,22 @@ import android.widget.ImageButton
 import com.sil.others.Helpers
 
 class Username : AppCompatActivity() {
+    // region Vars
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var editText: EditText
     private lateinit var updateAndNextButton: ImageButton
+    // endregion
 
+    // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_username)
 
         usernameRelated()
     }
+    // endregion
 
+    // region Username Related
     private fun usernameRelated() {
         Log.i("Main", "usernameRelated")
 
@@ -47,4 +52,5 @@ class Username : AppCompatActivity() {
             Helpers.showToast(this, "Not a a valid username :(")
         }
     }
+    // endregion
 }

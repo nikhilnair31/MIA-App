@@ -24,12 +24,14 @@ class Permissions : AppCompatActivity() {
     private lateinit var updateAndNextButton: ImageButton
     // endregion
 
+    // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_permissions)
 
         buttonSetup()
     }
+    // endregion
 
     // region Buttons Related
     private fun buttonSetup() {

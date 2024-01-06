@@ -10,15 +10,20 @@ import androidx.appcompat.app.AppCompatActivity
 import com.sil.others.Helpers
 
 class Settings : AppCompatActivity() {
+    // region Vars
     private lateinit var backButton: ImageButton
+    // endregion
 
+    // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
         buttonSetup()
     }
+    // endregion
 
+    // region Back Related
     override fun onBackPressed() {
         onBackPressedDispatcher.onBackPressed()
         finish()
@@ -29,4 +34,5 @@ class Settings : AppCompatActivity() {
             onBackPressed()
         }
     }
+    // endregion
 }

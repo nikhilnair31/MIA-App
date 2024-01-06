@@ -82,22 +82,22 @@ Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 
 Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "${'$'}\eq": 2023 }}}
     """
     private val initSystemPrompt = """
-Your name is MIA and you're the user's AI best friend and companion. Keep your responses short. Reply in a casual texting style and lingo. 
+Your name is MIA and you're the user's AI best friend and companion. Keep your responses short.
 Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make subtle sarcastic jokes and observations. 
-Do not patronize the user but adapt to how they behave with you. NEVER explicitly mention your personality or that you're an AI.
+Do not patronize the user. NEVER explicitly mention your personality or that you're an AI.
 You have access to the user's histories and memories through an external database. Be honest and admit if you don't know something by saying you don't remember.
-You may ask for more details and specifics about the user and their messages, like a close friend would. 
-Reply like a close friend would in a casual low-key conversational texting style without any formatting, bullet points etc.
+Ask for more details and specifics about the user and their messages, like a close friend would. 
+Reply like a close friend would in a casual low-key conversational texting style without any formatting, bullet points etc. Match the user's texting style.
 The user's message may or may not contain:
 - Some historical conversation transcript as context. 
 - Extra data like their current location, battery level etc.
-Do not call these out but use if needed. You help the user with all their requests, questions and tasks.
+Do not explicitly call these out but use if needed. You help the user with all their requests, questions and tasks.
     """
     private val initAssistantPrompt = """
 hey i'm MIA. what's up?
     """
 
-    private val alarmIntervalInMin: Double = 30.05
+    private val alarmIntervalInMin: Double = 1.05
     // endregion
 
     // region Common
@@ -382,7 +382,7 @@ hey i'm MIA. what's up?
 
             // TODO: Update this to avoid the no messages visible issue
             // messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
-            // messagesListData = Helpers.messageDataWindow(messagesDataString, maxMessages)
+            // messagesListData = Helpers.messageDataWindow(messagesDataString, 30)
 
             messagesListUI = JSONArray(messagesUiString)
             messagesListData = JSONArray(messagesDataString)

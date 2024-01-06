@@ -9,16 +9,21 @@ import android.util.Log
 import android.widget.ImageButton
 
 class Welcome : AppCompatActivity() {
+    // region Vars
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var nextButton: ImageButton
+    // endregion
 
+    // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_welcome)
 
         firstLaunchCheck()
     }
+    // endregion
 
+    // region First Launch Related
     private fun firstLaunchCheck() {
         sharedPreferences = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
@@ -31,7 +36,6 @@ class Welcome : AppCompatActivity() {
             launchNextActivity(Main::class.java)
         }
     }
-
     private fun usernamePageButtonSetup() {
         nextButton = findViewById(R.id.buttonNext)
         nextButton.setOnClickListener {
@@ -43,4 +47,5 @@ class Welcome : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
+    // endregion
 }

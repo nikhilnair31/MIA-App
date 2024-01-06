@@ -12,9 +12,9 @@ class SensorHelper(private val context: Context) : SensorEventListener {
     private var accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
     private var lastUpdate: Long = 0
-    private var last_x: Float = 0.0f
-    private var last_y: Float = 0.0f
-    private var last_z: Float = 0.0f
+    private var lastX: Float = 0.0f
+    private var lastY: Float = 0.0f
+    private var lastZ: Float = 0.0f
 
     init {
         accelerometer?.also {
@@ -35,12 +35,12 @@ class SensorHelper(private val context: Context) : SensorEventListener {
                 val z = event.values[2]
 
                 val speed = kotlin.math.sqrt(
-                    (x - last_x).pow(2) + (y - last_y).pow(2) + (z - last_z).pow(2)
+                    (x - lastX).pow(2) + (y - lastY).pow(2) + (z - lastZ).pow(2)
                 ) / diffTime * 10000
 
-                last_x = x
-                last_y = y
-                last_z = z
+                lastX = x
+                lastY = y
+                lastZ = z
 
                 // Process the speed to determine the device status
                 val deviceStatus = when {
