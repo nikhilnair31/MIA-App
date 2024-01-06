@@ -1,4 +1,4 @@
-package com.sil.thoughts
+package com.sil.receivers
 
 import android.app.ActivityManager
 import android.app.NotificationChannel
@@ -113,7 +113,7 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
         val systemPrompt = createSystemPrompt()
 
         val wakePayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.gpt3_5turbo))
+            put("model", contextMain?.getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -124,9 +124,9 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
             put("max_tokens", 128)
             put("temperature", 0.9)
         }
-        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever wakePayload: $wakePayload")
+        // Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakePayload: $wakePayload")
         val wakeResponse = Helpers.callOpenaiAPI(wakePayload)
-        Log.i("ThoughtsAlarm", "ThoughtsAlarmReciever wakeResponse: $wakeResponse")
+        Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakeResponse: $wakeResponse")
 
         if(wakeResponse != "null") {
             saveMessages(wakeResponse)
@@ -141,11 +141,11 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
         Log.i("ThoughtsAlarm", "createSystemPrompt")
 
         val deviceData = contextMain?.let { Helpers.pullDeviceData(it) }
-        Log.i("ThoughtsAlarm", "createSystemPrompt deviceData\n$deviceData")
+        // Log.i("ThoughtsAlarm", "createSystemPrompt deviceData\n$deviceData")
         val latestRecordings = pullLatestRecordings()
-        Log.i("ThoughtsAlarm", "createSystemPrompt latestRecordings\n$latestRecordings")
+        // Log.i("ThoughtsAlarm", "createSystemPrompt latestRecordings\n$latestRecordings")
         val messageHistory = pullConversationHistory()
-        Log.i("ThoughtsAlarm", "createSystemPrompt messageHistory\n$messageHistory")
+        // Log.i("ThoughtsAlarm", "createSystemPrompt messageHistory\n$messageHistory")
 
         val finalPrompt = "$systemPromptBase\nCurrent Device Data:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
         Log.i("ThoughtsAlarm", "createSystemPrompt finalPrompt\n$finalPrompt")
@@ -176,11 +176,11 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
             put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("ThoughtsAlarm", "pullLatestRecordings queryGeneratorPayload: $queryGeneratorPayload")
+        // Log.i("ThoughtsAlarm", "pullLatestRecordings queryGeneratorPayload: $queryGeneratorPayload")
         val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
-        Log.i("ThoughtsAlarm", "pullLatestRecordings queryResponse: $queryResponse")
+        // Log.i("ThoughtsAlarm", "pullLatestRecordings queryResponse: $queryResponse")
         val queryResultJSON = JSONObject(queryResponse)
-        Log.i("ThoughtsAlarm", "pullLatestRecordings queryResultJSON: $queryResultJSON")
+        // Log.i("ThoughtsAlarm", "pullLatestRecordings queryResultJSON: $queryResultJSON")
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
@@ -205,7 +205,7 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
             val userName = sharedPrefs?.getString("userName", null)
             put("userName", userName)
         }
-        Log.i("ThoughtsAlarm", "pullLatestRecordings filterJSONObject: $filterJSONObject")
+        // Log.i("ThoughtsAlarm", "pullLatestRecordings filterJSONObject: $filterJSONObject")
 
         // Pull relevant data using a query
         val queryText = queryResultJSON.optString("query", "")
@@ -215,21 +215,21 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
             put("query_top_k", 5)
             put("show_log", "True")
         }
-        Log.i("ThoughtsAlarm", "pullLatestRecordings contextPayload: $contextPayload")
+        // Log.i("ThoughtsAlarm", "pullLatestRecordings contextPayload: $contextPayload")
         val contextMemory = Helpers.callContextAPI(contextPayload)
-        Log.i("ThoughtsAlarm", "pullLatestRecordings contextMemory: $contextMemory")
+        // Log.i("ThoughtsAlarm", "pullLatestRecordings contextMemory: $contextMemory")
 
         return contextMemory
     }
     private fun pullConversationHistory(): JSONArray {
         Log.i("ThoughtsAlarm", "pullConversationHistory")
 
-        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
-        val messagesDataString = messagesDataSharedPref?.getString("messagesdata", null)
-        Log.i("ThoughtsAlarm", "messagesDataString\n$messagesDataString")
+        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesui", Context.MODE_PRIVATE)
+        val messagesDataString = messagesDataSharedPref?.getString("messagesui", null)
+        // Log.i("ThoughtsAlarm", "messagesDataString\n$messagesDataString")
 
         val messagesDataArray = JSONArray(messagesDataString)
-        Log.i("ThoughtsAlarm", "messagesDataArray\n$messagesDataArray")
+        // Log.i("ThoughtsAlarm", "messagesDataArray\n$messagesDataArray")
         return messagesDataArray
     }
 

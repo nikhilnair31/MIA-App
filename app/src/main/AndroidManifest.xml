@@ -23,7 +23,7 @@
         android:theme="@style/Theme.MIA">
 
         <receiver
-            android:name="com.sil.thoughts.ThoughtsAlarmReceiver"
+            android:name="com.sil.receivers.ThoughtsAlarmReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.sil.mia.THOUGHT_ALARM_RECEIVER_ACTION" />
@@ -31,7 +31,7 @@
         </receiver>
 
         <service
-            android:name="com.sil.audio.AudioRelated"
+            android:name="com.sil.services.AudioRelated"
             android:foregroundServiceType="microphone"
             android:label="Audio listening..." />
 

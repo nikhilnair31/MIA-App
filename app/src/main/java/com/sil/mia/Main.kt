@@ -10,10 +10,10 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.sil.audio.AudioRelated
+import com.sil.services.AudioRelated
 import com.sil.others.Helpers
 import com.sil.others.MessagesAdapter
-import com.sil.thoughts.ThoughtsAlarmReceiver
+import com.sil.receivers.ThoughtsAlarmReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -97,7 +97,8 @@ Do not explicitly call these out but use if needed. You help the user with all t
 hey i'm MIA. what's up?
     """
 
-    private val alarmIntervalInMin: Double = 1.05
+    private val alarmIntervalInMin: Double = 30.05
+    private val maxDataMessages: Int = 30
     // endregion
 
     // region Common
@@ -281,7 +282,7 @@ hey i'm MIA. what's up?
     private suspend fun lookingExternally(conversationHistoryText: String): String {
         // Use GPT to create a filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", getString(R.string.gpt3_5turbo))
+            put("model", getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -309,7 +310,7 @@ hey i'm MIA. what's up?
             // Source for user based on userName
             val sharedPrefs: SharedPreferences = this@Main.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
             val userName = sharedPrefs.getString("userName", null)
-            put("userName", userName)
+            put("username", userName)
 
             // Time based filters
             if (queryResultJSON.has("query_filter")) {
@@ -356,7 +357,7 @@ hey i'm MIA. what's up?
         messagesDataSharedPref = getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
         val messagesUiString = messagesUiSharedPref.getString("messagesui", null)
         val messagesDataString = messagesDataSharedPref.getString("messagesdata", null)
-        Log.i("Main", "messagesDataString\n$messagesDataString\nmessagesUiString\n$messagesUiString")
+        // Log.i("Main", "messagesDataString\n$messagesDataString\nmessagesUiString\n$messagesUiString")
 
         // If saved messages are empty then add a message from MIA and save it
         if (messagesUiString == null && messagesDataString == null) {
@@ -380,13 +381,9 @@ hey i'm MIA. what's up?
         else {
             Log.i("Main", "messages exist!")
 
-            // TODO: Update this to avoid the no messages visible issue
-            // messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
-            // messagesListData = Helpers.messageDataWindow(messagesDataString, 30)
-
-            messagesListUI = JSONArray(messagesUiString)
-            messagesListData = JSONArray(messagesDataString)
-            Log.i("Main", "messagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
+            messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
+            messagesListData = Helpers.messageDataWindow(messagesDataString, maxDataMessages)
+            // Log.i("Main", "messagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
             adapter.notifyDataSetChanged()
         }
         recyclerView.scrollToPosition(adapter.itemCount - 1)

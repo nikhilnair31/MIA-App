@@ -426,19 +426,36 @@ class Helpers {
             return dateFormat.format(Date())
         }
         fun messageDataWindow(fullJsonString: String?, maxMessages: Int?): JSONArray {
+            // Log.i("Helpers", "messageDataWindow")
+
             val fullJsonArray = JSONArray(fullJsonString)
+            // Log.i("Helpers", "fullJsonArray\n$fullJsonArray")
 
-            val systemObjects = (0 until fullJsonArray.length())
-                .map { fullJsonArray.getJSONObject(it) }
-                .filter { it.getString("role") == "system" }
+            // Filter out system JSON objects
+            val nonSystemJsonArray = JSONArray()
+            for (i in 0 until fullJsonArray.length()) {
+                val jsonObject = fullJsonArray.getJSONObject(i)
+                if (jsonObject.getString("role") != "system") {
+                    nonSystemJsonArray.put(jsonObject)
+                }
+            }
+            // Log.i("Helpers", "system-free fullJsonArray\n$nonSystemJsonArray")
 
-            val lastSystemObjects = if (maxMessages != null) {
-                systemObjects.takeLast(maxMessages)
-            } else {
-                systemObjects
+            // Return full JSON array if maxMessages is null
+            if (maxMessages == null) {
+                // Log.i("Helpers", "Returning full JSON array")
+                return nonSystemJsonArray
             }
 
-            return JSONArray(lastSystemObjects)
+            // Return last maxMessages JSON objects otherwise
+            val lastNObjects = JSONArray()
+            val startIndex = maxOf(nonSystemJsonArray.length() - maxMessages, 0)
+            for (i in startIndex until nonSystemJsonArray.length()) {
+                lastNObjects.put(nonSystemJsonArray.getJSONObject(i))
+            }
+            // Log.i("Helpers", "lastNObjects\n$lastNObjects")
+
+            return lastNObjects
         }
         // endregion
 
