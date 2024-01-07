@@ -3,8 +3,9 @@
     <string name="send">send</string>
     <string name="talkToMIA">Talk to MIA…</string>
     <string name="buttonUser">user button</string>
-    <string name="dataData">messagesdata</string>
-    <string name="dataUi">messagesui</string>
+    <string name="dataComplete">complete</string>
+    <string name="dataData">data</string>
+    <string name="dataUi">ui</string>
     <string name="gpt4turbo" tools:ignore="TypographyDashes">gpt-4-1106-preview</string>
     <string name="gpt3_5turbo">gpt-3.5-turbo</string>
     <string name="settings">SETTINGS</string>

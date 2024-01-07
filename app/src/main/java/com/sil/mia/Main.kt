@@ -1,5 +1,6 @@
 package com.sil.mia
 
+import android.app.ActivityManager
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
@@ -10,7 +11,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.sil.services.AudioRelated
+import com.sil.services.AudioService
 import com.sil.others.Helpers
 import com.sil.others.MessagesAdapter
 import com.sil.receivers.ThoughtsAlarmReceiver
@@ -20,7 +21,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-
 
 class Main : AppCompatActivity() {
     // region Vars
@@ -33,12 +33,12 @@ class Main : AppCompatActivity() {
     private lateinit var userButton: ImageButton
 
     private lateinit var generalSharedPref: SharedPreferences
-    private lateinit var messagesUiSharedPref: SharedPreferences
-    private lateinit var messagesDataSharedPref: SharedPreferences
+    private lateinit var messagesSharedPref: SharedPreferences
 
     private lateinit var adapter: MessagesAdapter
-    private var messagesListUI = JSONArray()
+    private var messagesListComplete = JSONArray()
     private var messagesListData = JSONArray()
+    private var messagesListUI = JSONArray()
 
     private val lookExtSystemPrompt = """
 You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
@@ -46,7 +46,9 @@ Depending on the user's messages determine where to look to reply. Answer with '
 Examples: 
 Example #1: user: help me make a crème caramel assistant: 'int' 
 Example #2: user: what did they discuss about the marketing project? assistant: 'ext' 
-Example #3: user: who is steve jobs? assistant: 'int' user: no i heard something about him i'm sure assistant: 'ext'
+Example #3: assistant: My apologies if the response seemed robotic. I'm here to chat more naturally. What's on your mind? user: bruhhh where's the personality at assistant: 'int'
+Example #4: user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him assistant: 'ext'
+Example #5: user: what is my opinion on niche music assistant: 'int'
     """
     private val queryGeneratorSystemPrompt = """
 You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
@@ -66,7 +68,7 @@ The output should contain:
 
 The query text can be empty if no particular factual topic specified. 
 Create a JSON payload best suited to answer the user's message. 
-Output only the filter JSON.
+NEVER output like ```json\n{}\n```, it should just be {}. Output only the filter JSON.
 
 Examples:
 Example #1:
@@ -98,7 +100,7 @@ hey i'm MIA. what's up?
     """
 
     private val alarmIntervalInMin: Double = 30.05
-    private val maxDataMessages: Int = 30
+    private val maxDataMessages: Int = 100
     // endregion
 
     // region Common
@@ -135,16 +137,28 @@ hey i'm MIA. what's up?
         // Log.i("Main", "audioRelated")
         
         toggleButton = findViewById(R.id.toggleButton)
+        if (isServiceRunning(AudioService::class.java)) {
+            Log.i("Main", "Service IS Running")
+            toggleButton.isChecked = true
+        }
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 Log.i("Main", "startService")
-                startForegroundService(Intent(this, AudioRelated::class.java))
-            }
-            else {
+                startForegroundService(Intent(this, AudioService::class.java))
+            } else {
                 Log.i("Main", "stopService")
-                stopService(Intent(this, AudioRelated::class.java))
+                stopService(Intent(this, AudioService::class.java))
             }
         }
+    }
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
     }
     // endregion
 
@@ -199,8 +213,9 @@ hey i'm MIA. what's up?
                     put("role", "assistant")
                     put("content", assistantMessage)
                 }
-                messagesListUI.put(assistantJSON)
+                messagesListComplete.put(assistantJSON)
                 messagesListData.put(assistantJSON)
+                messagesListUI.put(assistantJSON)
                 adapter.notifyItemInserted(messagesListUI.length() - 1)
                 recyclerView.scrollToPosition(adapter.itemCount - 1)
                 saveMessages()
@@ -211,12 +226,12 @@ hey i'm MIA. what's up?
         }
     }
     private suspend fun createMiaResponse(): String {
-        val messagesListDataCopy = JSONArray(messagesListData.toString())
-        messagesListDataCopy.put(JSONObject().apply {
+        val messagesListUiCopy = JSONArray(messagesListUI.toString())
+        messagesListUiCopy.put(JSONObject().apply {
             put("role", "user")
             put("content", userMessage)
         })
-        val conversationHistoryText = messagesListDataCopy.toString()
+        val conversationHistoryText = messagesListUiCopy.toString()
 
         // If MIA should should look into Pinecone or reply directly
         val userMessageWithOrWithoutContext =
@@ -225,7 +240,7 @@ hey i'm MIA. what's up?
             else
                 lookingInternally()
 
-        val systemData = Helpers.pullDeviceData(this@Main)
+        val systemData = Helpers.pullDeviceData(this@Main, null)
         val finalUserMessage = "$userMessageWithOrWithoutContext\nExtra Data:\n$systemData"
 
         // Append JSON for user's message with/without context
@@ -233,6 +248,7 @@ hey i'm MIA. what's up?
             put("role", "user")
             put("content", finalUserMessage)
         }
+        messagesListComplete.put(userJSON)
         messagesListData.put(userJSON)
 
         // Generate response from user's message
@@ -335,7 +351,7 @@ hey i'm MIA. what's up?
         val contextPayload = JSONObject().apply {
             put("query_text", queryText)
             put("query_filter", filterJSONObject)
-            put("query_top_k", 5)
+            put("query_top_k", 3)
             put("show_log", "True")
         }
         Log.i("Main", "lookingExternally contextPayload: $contextPayload")
@@ -353,27 +369,31 @@ hey i'm MIA. what's up?
     private fun loadMessages() {
         // Log.i("Main", "loadMessages")
 
-        messagesUiSharedPref = getSharedPreferences("com.sil.mia.messagesui", Context.MODE_PRIVATE)
-        messagesDataSharedPref = getSharedPreferences("com.sil.mia.messagesdata", Context.MODE_PRIVATE)
-        val messagesUiString = messagesUiSharedPref.getString("messagesui", null)
-        val messagesDataString = messagesDataSharedPref.getString("messagesdata", null)
-        // Log.i("Main", "messagesDataString\n$messagesDataString\nmessagesUiString\n$messagesUiString")
+        messagesSharedPref = getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
+
+        val messagesCompleteString = messagesSharedPref.getString("complete", null)
+        val messagesDataString = messagesSharedPref.getString("data", null)
+        val messagesUiString = messagesSharedPref.getString("ui", null)
+        // Log.i("Main", "messagesCompleteString\n$messagesCompleteString\nmessagesDataString\n$messagesDataString\nmessagesUiString\n$messagesUiString")
 
         // If saved messages are empty then add a message from MIA and save it
         if (messagesUiString == null && messagesDataString == null) {
             Log.i("Main", "no messages saved")
+
             val initSystemJson = JSONObject().apply {
                 put("role", "system")
                 put("content", initSystemPrompt)
             }
+            messagesListComplete.put(initSystemJson)
             messagesListData.put(initSystemJson)
             val firstAssistantJson = JSONObject().apply {
                 put("role", "assistant")
                 put("content", initAssistantPrompt)
             }
+            messagesListComplete.put(firstAssistantJson)
             messagesListData.put(firstAssistantJson)
             messagesListUI.put(firstAssistantJson)
-            Log.i("Main", "messagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
+            // Log.i("Main", "messagesListComplete\n$messagesListComplete\nmessagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
             adapter.notifyItemInserted(messagesListUI.length() - 1)
             saveMessages()
         }
@@ -381,9 +401,10 @@ hey i'm MIA. what's up?
         else {
             Log.i("Main", "messages exist!")
 
-            messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
+            messagesListComplete = Helpers.messageDataWindow(messagesCompleteString, null)
             messagesListData = Helpers.messageDataWindow(messagesDataString, maxDataMessages)
-            // Log.i("Main", "messagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
+            messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
+            // Log.i("Main", "messagesListComplete\n$messagesListComplete\nmessagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
             adapter.notifyDataSetChanged()
         }
         recyclerView.scrollToPosition(adapter.itemCount - 1)
@@ -391,11 +412,14 @@ hey i'm MIA. what's up?
     private fun saveMessages() {
         // Log.i("Main", "saveMessages")
 
-        val messagesUiString = messagesListUI.toString()
-        messagesUiSharedPref.edit().putString(getString(R.string.dataUi), messagesUiString).apply()
+        val messagesCompleteString = messagesListComplete.toString()
+        messagesSharedPref.edit().putString(getString(R.string.dataComplete), messagesCompleteString).apply()
 
         val messagesDataString = messagesListData.toString()
-        messagesDataSharedPref.edit().putString(getString(R.string.dataData), messagesDataString).apply()
+        messagesSharedPref.edit().putString(getString(R.string.dataData), messagesDataString).apply()
+
+        val messagesUiString = messagesListUI.toString()
+        messagesSharedPref.edit().putString(getString(R.string.dataUi), messagesUiString).apply()
     }
     // endregion
 

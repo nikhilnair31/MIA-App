@@ -317,7 +317,7 @@ class Helpers {
         // endregion
 
         // region Data Related
-        suspend fun pullDeviceData(context: Context): JSONObject {
+        suspend fun pullDeviceData(context: Context, sensorHelper: SensorHelper?): JSONObject {
             val finalOutput = JSONObject()
 
             // region Time
@@ -337,7 +337,6 @@ class Helpers {
             val minutes = calendar.get(Calendar.MINUTE)
             // Adding values to finalOutput
             finalOutput.apply {
-                // put("systemTime", currentSystemTime)
                 put("currentTimeFormattedString", currentTimeFormattedString)
                 put("day", day)
                 put("month", month)
@@ -412,7 +411,17 @@ class Helpers {
             }
             // endregion
             // region Motion
-            // TODO: Pull user's current movement (accelerometer/gyroscope)
+            val deviceSpeed = sensorHelper?.getDeviceStatus() ?: 0f
+            Log.i("Helper", "deviceSpeed: $deviceSpeed")
+            val deviceStatus = when {
+                deviceSpeed < 10 -> "idle"
+                deviceSpeed >= 10 && deviceSpeed < 150 -> "moving normal"
+                deviceSpeed >= 150 && deviceSpeed < 500 -> "moving fast"
+                else -> "unknown"
+            }
+            finalOutput.apply {
+                put("movementStatus", deviceStatus)
+            }
             // endregion
 
             // Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")

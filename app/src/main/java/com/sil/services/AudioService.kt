@@ -14,13 +14,18 @@ import androidx.core.app.ActivityCompat
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
+import com.sil.others.SensorHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-class AudioRelated : Service() {
+class AudioService : Service() {
     // region Vars
+    private lateinit var sensorHelper: SensorHelper
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
     private val maxRecordingTimeInMin = 20
@@ -39,6 +44,7 @@ class AudioRelated : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.i("AudioRecord", "onStartCommand")
 
+        sensorHelper = SensorHelper(this@AudioService)
         startForeground(listeningNotificationId, createNotification())
         startListening()
         return START_STICKY
@@ -46,6 +52,7 @@ class AudioRelated : Service() {
     override fun onDestroy() {
         Log.i("AudioRecord", "onDestroy")
 
+        sensorHelper.unregister()
         stopListening()
         super.onDestroy()
     }
@@ -63,9 +70,9 @@ class AudioRelated : Service() {
         notificationManager.createNotificationChannel(channel)
 
         // Intent to open the main activity
-        val intent = Intent(this@AudioRelated, Main::class.java)
+        val intent = Intent(this@AudioService, Main::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        val pendingIntent = PendingIntent.getActivity(this@AudioRelated, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getActivity(this@AudioService, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
         return Notification.Builder(this, listeningChannelId)
             .setContentTitle(listeningNotificationTitle)
@@ -125,7 +132,7 @@ class AudioRelated : Service() {
         Log.i("AudioRecord", "Stopped Listening")
 
         try {
-            val serviceIntent = Intent(this, AudioRelated::class.java)
+            val serviceIntent = Intent(this, AudioService::class.java)
             stopService(serviceIntent)
 
             mediaRecorder?.apply {
@@ -150,25 +157,25 @@ class AudioRelated : Service() {
     }
 
     private fun createAudioFile(): File {
-        val timeStamp = System.currentTimeMillis()
+        // val timeStamp = System.currentTimeMillis()
+        val timeStamp = SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault()).format(Date())
         val audioFileName = "recording_$timeStamp.m4a"
         Log.i("AudioRecord", "Created New Audio File: $audioFileName")
         return File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
     }
     private fun uploadAudioFileAndMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
-            val context = this@AudioRelated
             // Pull system data for metadata
-            val metadataJson = Helpers.pullDeviceData(context)
+            val metadataJson = Helpers.pullDeviceData(this@AudioService, sensorHelper)
             // Add username and audio related metadata
-            val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
             val userName = sharedPrefs.getString("userName", null)
             // TODO: Change "source" to change depending on if audio or chat
             metadataJson.put("source", "audio")
             metadataJson.put("userName", userName)
             metadataJson.put("fileName", audioFile.name)
             // Start upload process
-            Helpers.scheduleUploadWork(context, audioFile, metadataJson)
+            Helpers.scheduleUploadWork(this@AudioService, audioFile, metadataJson)
         }
     }
     // endregion

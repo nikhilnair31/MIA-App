@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
+import com.sil.others.SensorHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -59,7 +60,11 @@ Input:
 Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
 Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "$\eq": 2023 }}}
     """
+
+    private lateinit var sensorHelper: SensorHelper
     private var contextMain: Context? = null
+
+    private lateinit var messagesSharedPref: SharedPreferences
 
     private val thoughtChannelId = "MIAThoughtChannel"
     private val thoughtChannelName = "MIA Thoughts Channel"
@@ -75,6 +80,8 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
         Log.i("ThoughtsAlarm", "onReceive")
 
         contextMain = context
+        sensorHelper = SensorHelper(context)
+        messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
         CoroutineScope(Dispatchers.IO).launch {
             if (isAppInForeground()) {
                 Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
@@ -99,7 +106,7 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
             (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
         }
     }
-    // TODO: Update to use actual Do Not Disturb system timings if available
+    // TODO: Check if you can get user's Bedtime schedule
     private fun isNotificationAllowed(): Boolean {
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         return currentHour !in 0..5 // Do Not Disturb between 12 AM and 6 AM
@@ -125,7 +132,7 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
             put("temperature", 0.9)
         }
         // Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakePayload: $wakePayload")
-        val wakeResponse = Helpers.callOpenaiAPI(wakePayload)
+        val wakeResponse = Helpers.callOpenaiAPI(wakePayload).lowercase()
         Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakeResponse: $wakeResponse")
 
         if(wakeResponse != "null") {
@@ -135,12 +142,14 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
                 showNotification(wakeResponse)
             }
         }
+
+        sensorHelper.unregister()
     }
 
     private suspend fun createSystemPrompt(): String {
         Log.i("ThoughtsAlarm", "createSystemPrompt")
 
-        val deviceData = contextMain?.let { Helpers.pullDeviceData(it) }
+        val deviceData = contextMain?.let { Helpers.pullDeviceData(it, sensorHelper) }
         // Log.i("ThoughtsAlarm", "createSystemPrompt deviceData\n$deviceData")
         val latestRecordings = pullLatestRecordings()
         // Log.i("ThoughtsAlarm", "createSystemPrompt latestRecordings\n$latestRecordings")
@@ -156,7 +165,7 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
     private suspend fun pullLatestRecordings(): String {
         Log.i("ThoughtsAlarm", "pullLatestRecordings")
 
-        val contextData = contextMain?.let { Helpers.pullDeviceData(it) }
+        val contextData = contextMain?.let { Helpers.pullDeviceData(it, sensorHelper) }
         val finalUserMessage = "Context:\n$contextData"
 
         // Use GPT to create a filter
@@ -224,47 +233,26 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
     private fun pullConversationHistory(): JSONArray {
         Log.i("ThoughtsAlarm", "pullConversationHistory")
 
-        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.messagesui", Context.MODE_PRIVATE)
-        val messagesDataString = messagesDataSharedPref?.getString("messagesui", null)
-        // Log.i("ThoughtsAlarm", "messagesDataString\n$messagesDataString")
+        val messagesString = messagesSharedPref.getString("ui", null)
+        // Log.i("ThoughtsAlarm", "messagesString\n$messagesString")
 
-        val messagesDataArray = JSONArray(messagesDataString)
+        val messagesArray = JSONArray(messagesString)
         // Log.i("ThoughtsAlarm", "messagesDataArray\n$messagesDataArray")
-        return messagesDataArray
+        return messagesArray
     }
 
     private fun saveMessages(assistantMessage: String) {
-        val typeUi = contextMain?.getString(R.string.dataUi)
-        // Log.i("ThoughtsAlarm", "saveMessages typeUi: $typeUi")
-        val messagesUiSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$typeUi", Context.MODE_PRIVATE)
-        var messagesUiString = messagesUiSharedPref?.getString(typeUi, null)
-        // Log.i("ThoughtsAlarm", "saveMessages old messagesUiString: $messagesUiString")
-        val messagesListUI = JSONArray(messagesUiString)
-        val messagesUiEditor = messagesUiSharedPref?.edit()
-        messagesListUI.put(JSONObject().apply {
-            put("role", "assistant")
-            put("content", assistantMessage)
-        })
-        messagesUiString = messagesListUI.toString()
-        // Log.i("ThoughtsAlarm", "saveMessages NEW messagesUiString: $messagesUiString")
-        messagesUiEditor?.putString(typeUi, messagesUiString)
-        messagesUiEditor?.apply()
-
-        val typeData = contextMain?.getString(R.string.dataData)
-        // Log.i("ThoughtsAlarm", "saveMessages typeData: $typeData")
-        val messagesDataSharedPref = contextMain?.getSharedPreferences("com.sil.mia.$typeData", Context.MODE_PRIVATE)
-        var messagesDataString = messagesDataSharedPref?.getString(typeData, null)
-        // Log.i("ThoughtsAlarm", "saveMessages old messagesDataString: $messagesDataString")
-        val messagesListData = JSONArray(messagesDataString)
-        val messagesDataEditor = messagesDataSharedPref?.edit()
-        messagesListData.put(JSONObject().apply {
-            put("role", "assistant")
-            put("content", assistantMessage)
-        })
-        messagesDataString = messagesListData.toString()
-        // Log.i("ThoughtsAlarm", "saveMessages NEW messagesDataString: $messagesDataString")
-        messagesDataEditor?.putString(typeData, messagesDataString)
-        messagesDataEditor?.apply()
+        val keysList = listOf("complete", "data", "ui")
+        for (key in keysList) {
+            val messagesString = messagesSharedPref.getString(key, null)
+            val messagesList = JSONArray(messagesString)
+            messagesList.put(JSONObject().apply {
+                put("role", "assistant")
+                put("content", assistantMessage)
+            })
+            val messagesStringNew = messagesList.toString()
+            messagesSharedPref.edit().putString(key, messagesStringNew).apply()
+        }
     }
     // endregion
 
