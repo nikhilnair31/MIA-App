@@ -28,9 +28,8 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
     private val systemPromptBase: String = """
 Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
 Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
-You help the user with all their requests, questions and tasks. Be honest and admit if you don't know something when asked.
 Use the context of their real world live audio recording transcripts and its metadata. Remember that the transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
-Don't just repeat something you've already said. Using this data message the user with something; conversational, helpful, factual etc. If not respond with "null"
+Don't just repeat something you've already said. Using this data message the user with something; conversational, helpful, factual, morning greeting, suggestion to sleep on time etc. If not respond with "null"
     """
     private val queryGeneratorSystemPrompt: String = """
 You are a system that takes system data context as a JSON and outputs a JSON payload to query a vector database.
@@ -52,13 +51,29 @@ Create a JSON payload best suited to help the user. Output only the filter JSON.
 Examples:
 Example #1:
 Input:
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
-Output: {"query": "", "query_filter": {"day": { "$\gte": 27, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
+summarize my marketing project's presentation from last week for me
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/2023 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
+Output: {"query": "marketing project presentation", "query_filter": {"day": { "$\gte": 22, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
 
 Example #2:
 Input:
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
-Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "$\eq": 2023 }}}
+what were the highlights of last month
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 02/02/2024 06:00", "day": 2, "month": 2, "year": 2024, "hours": 6, "minutes": 0}
+Output: {"query": "", "query_filter": {"month": { "$\gte": 1, "$\lte": 2 }, "year": { "$\eq": 2024 }}}
+Input:
+hmm what about the last hour?
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 02/02/2024 06:03", "day": 13, "month": 2, "year": 2024, "hours": 6, "minutes": 3}
+Output: {"query": "", "query_filter": {"hours": { "\gte": 5, "\lte": 6 }, "day": { "\eq": 2 }, "month": { "\eq": 2 }, "year": { "\eq": 2024 }}}
+
+Example #3:
+Input:
+recap my day
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 22, "minutes": 48}
+Output: {"query": "", "query_filter": {"day": { "$\eq": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
+Input:
+give me more details about the first point early in the day
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:50", "day": 29, "month": 12, "year": 2023, "hours": 22, "minutes": 50}
+Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day": { "\eq": 29 }, "month": { "\eq": 12 }, "year": { "\eq": 2023 }}}
     """
 
     private lateinit var sensorHelper: SensorHelper
@@ -212,7 +227,7 @@ Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "y
             // Source for user based on userName
             val sharedPrefs: SharedPreferences? = contextMain?.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
             val userName = sharedPrefs?.getString("userName", null)
-            put("userName", userName)
+            put("username", userName)
         }
         // Log.i("ThoughtsAlarm", "pullLatestRecordings filterJSONObject: $filterJSONObject")
 

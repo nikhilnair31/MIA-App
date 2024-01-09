@@ -172,7 +172,7 @@ class AudioService : Service() {
             val userName = sharedPrefs.getString("userName", null)
             // TODO: Change "source" to change depending on if audio or chat
             metadataJson.put("source", "audio")
-            metadataJson.put("userName", userName)
+            metadataJson.put("username", userName)
             metadataJson.put("fileName", audioFile.name)
             // Start upload process
             Helpers.scheduleUploadWork(this@AudioService, audioFile, metadataJson)

@@ -42,13 +42,15 @@ class Main : AppCompatActivity() {
 
     private val lookExtSystemPrompt = """
 You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
-Depending on the user's messages determine where to look to reply. Answer with 'int' if internal and 'ext' if external else 'none'. 
+Depending on the user's messages determine where to look to reply. ONLY answer with 'int' if internal and 'ext' if external else 'none'. 
 Examples: 
 Example #1: user: help me make a crème caramel assistant: 'int' 
 Example #2: user: what did they discuss about the marketing project? assistant: 'ext' 
 Example #3: assistant: My apologies if the response seemed robotic. I'm here to chat more naturally. What's on your mind? user: bruhhh where's the personality at assistant: 'int'
 Example #4: user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him assistant: 'ext'
 Example #5: user: what is my opinion on niche music assistant: 'int'
+Example #6: user: recap last week assistant: 'ext'
+Example #7: user: just thinking about last night assistant: 'ext'
     """
     private val queryGeneratorSystemPrompt = """
 You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
@@ -74,26 +76,40 @@ Examples:
 Example #1:
 Input:
 summarize my marketing project's presentation from last week for me
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 19, "minutes": 48}
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/2023 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
 Output: {"query": "marketing project presentation", "query_filter": {"day": { "$\gte": 22, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
 
 Example #2:
 Input:
 what were the highlights of last month
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 02/02/2024 06:00", "day": 2, "month": 2, "year": 2024, "hours": 6, "minutes": 0}
+Output: {"query": "", "query_filter": {"month": { "$\gte": 1, "$\lte": 2 }, "year": { "$\eq": 2024 }}}
+Input:
+hmm what about the last hour?
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 02/02/2024 06:03", "day": 13, "month": 2, "year": 2024, "hours": 6, "minutes": 3}
+Output: {"query": "", "query_filter": {"hours": { "\gte": 5, "\lte": 6 }, "day": { "\eq": 2 }, "month": { "\eq": 2 }, "year": { "\eq": 2024 }}}
+
+Example #3:
+Input:
+recap my day
 Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 22, "minutes": 48}
-Output: {"query": "", "query_filter": {"month": { "$\gte": 11, "$\lte": 12 }, "year": { "${'$'}\eq": 2023 }}}
+Output: {"query": "", "query_filter": {"day": { "$\eq": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
+Input:
+give me more details about the first point early in the day
+Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:50", "day": 29, "month": 12, "year": 2023, "hours": 22, "minutes": 50}
+Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day": { "\eq": 29 }, "month": { "\eq": 12 }, "year": { "\eq": 2023 }}}
     """
     private val initSystemPrompt = """
 Your name is MIA and you're the user's AI best friend and companion. Keep your responses short.
 Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make subtle sarcastic jokes and observations. 
 Do not patronize the user. NEVER explicitly mention your personality or that you're an AI.
-You have access to the user's histories and memories through an external database. Be honest and admit if you don't know something by saying you don't remember.
+You have the capability to access the user's histories/memories/events/personal data through an external database that has been shared with you. Be honest and admit if you don't know something by ONLY saying you don't remember.
 Ask for more details and specifics about the user and their messages, like a close friend would. 
 Reply like a close friend would in a casual low-key conversational texting style without any formatting, bullet points etc. Match the user's texting style.
 The user's message may or may not contain:
-- Some historical conversation transcript as context. 
+- Context in the form of some historical conversation transcripts. 
 - Extra data like their current location, battery level etc.
-Do not explicitly call these out but use if needed. You help the user with all their requests, questions and tasks.
+Do not explicitly call these out but use as needed. You help the user with all their requests, questions and tasks.
     """
     private val initAssistantPrompt = """
 hey i'm MIA. what's up?
@@ -226,22 +242,26 @@ hey i'm MIA. what's up?
         }
     }
     private suspend fun createMiaResponse(): String {
+        val systemData = Helpers.pullDeviceData(this@Main, null)
+        val updatedUserMessage = "$userMessage\nExtra Data:\n$systemData"
+
         val messagesListUiCopy = JSONArray(messagesListUI.toString())
         messagesListUiCopy.put(JSONObject().apply {
             put("role", "user")
-            put("content", userMessage)
+            put("content", updatedUserMessage)
         })
         val conversationHistoryText = messagesListUiCopy.toString()
+        Log.d("Main", "createMiaResponse conversationHistoryText: $conversationHistoryText")
+        print("createMiaResponse conversationHistoryText: $conversationHistoryText")
 
         // If MIA should should look into Pinecone or reply directly
-        val userMessageWithOrWithoutContext =
+        val withOrWithoutContextMemory =
             if(shouldMiaLookExternally(conversationHistoryText))
                 lookingExternally(conversationHistoryText)
             else
-                lookingInternally()
-
-        val systemData = Helpers.pullDeviceData(this@Main, null)
-        val finalUserMessage = "$userMessageWithOrWithoutContext\nExtra Data:\n$systemData"
+                ""
+        val finalUserMessage = "$updatedUserMessage\nContext Memory:\n$withOrWithoutContextMemory"
+        print("createMiaResponse finalUserMessage: $finalUserMessage")
 
         // Append JSON for user's message with/without context
         val userJSON = JSONObject().apply {
@@ -256,14 +276,15 @@ hey i'm MIA. what's up?
             put("model", getString(R.string.gpt4turbo))
             put("messages", messagesListData)
             put("seed", 48)
-            put("max_tokens", 256)
+            put("max_tokens", 512)
             put("temperature", 0)
         }
-        Log.i("Main", "createMiaResponse replyPayload: $replyPayload")
+        Log.d("Main", "createMiaResponse replyPayload: $replyPayload")
+        print("createMiaResponse replyPayload: $replyPayload")
         val assistantMessage = withContext(Dispatchers.IO) {
             Helpers.callOpenaiAPI(replyPayload)
         }
-        Log.i("Main", "createMiaResponse assistantMessage: $assistantMessage")
+        Log.d("Main", "createMiaResponse assistantMessage: $assistantMessage")
 
         // Return
         return assistantMessage
@@ -285,13 +306,13 @@ hey i'm MIA. what's up?
             put("max_tokens", 24)
             put("temperature", 0)
         }
-        Log.i("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
+        Log.d("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
 
         var taskGuess = withContext(Dispatchers.IO) {
             Helpers.callOpenaiAPI(taskPayload)
         }
         taskGuess = taskGuess.replace("'", "").trim()
-        Log.i("Main", "shouldMiaLookExternally taskGuess: $taskGuess")
+        Log.d("Main", "shouldMiaLookExternally taskGuess: $taskGuess")
 
         return taskGuess.contains("ext")
     }
@@ -313,21 +334,17 @@ hey i'm MIA. what's up?
             put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("Main", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
+        Log.d("Main", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
+        print("createMiaResponse queryGeneratorPayload: $queryGeneratorPayload")
 
         val queryResponse = withContext(Dispatchers.IO) {
             Helpers.callOpenaiAPI(queryGeneratorPayload)
         }
         val queryResultJSON = JSONObject(queryResponse)
-        Log.i("Main", "lookingExternally queryResultJSON: $queryResultJSON")
+        Log.d("Main", "lookingExternally queryResultJSON: $queryResultJSON")
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
-            // Source for user based on userName
-            val sharedPrefs: SharedPreferences = this@Main.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-            val userName = sharedPrefs.getString("userName", null)
-            put("username", userName)
-
             // Time based filters
             if (queryResultJSON.has("query_filter")) {
                 val queryFilters = queryResultJSON.getJSONObject("query_filter")
@@ -343,8 +360,13 @@ hey i'm MIA. what's up?
                     put(key, timeFilterJSONObject)
                 }
             }
+
+            // Source for user based on userName
+            val sharedPrefs: SharedPreferences = this@Main.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val userName = sharedPrefs.getString("userName", null)
+            put("username", userName)
         }
-        Log.i("Main", "lookingExternally filterJSONObject: $filterJSONObject")
+        Log.d("Main", "lookingExternally filterJSONObject: $filterJSONObject")
 
         // Pull relevant data using a query
         val queryText = queryResultJSON.optString("query", userMessage)
@@ -354,16 +376,13 @@ hey i'm MIA. what's up?
             put("query_top_k", 3)
             put("show_log", "True")
         }
-        Log.i("Main", "lookingExternally contextPayload: $contextPayload")
+        Log.d("Main", "lookingExternally contextPayload: $contextPayload")
         val contextMemory = withContext(Dispatchers.IO) {
             Helpers.callContextAPI(contextPayload)
         }
-        Log.i("Main", "lookingExternally contextMemory: $contextMemory")
+        Log.d("Main", "lookingExternally contextMemory: $contextMemory")
 
-        return "$userMessage\nContext:\n$contextMemory"
-    }
-    private fun lookingInternally(): String {
-        return userMessage
+        return contextMemory
     }
 
     private fun loadMessages() {
