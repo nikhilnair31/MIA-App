@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "683120350912",
+    "project_id": "project-mia1",
+    "storage_bucket": "project-mia1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:683120350912:android:830e91c6f4240c4f2abf25",
+        "android_client_info": {
+          "package_name": "com.sil.mia"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "683120350912-r8uui64l12h7o8rqgkepi3m9o2hj9omu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAg6CSISfhJHhtzHBodhOiSPCmU6F1czhc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "683120350912-r8uui64l12h7o8rqgkepi3m9o2hj9omu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
