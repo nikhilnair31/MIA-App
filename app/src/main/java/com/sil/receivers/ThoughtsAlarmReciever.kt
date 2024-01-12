@@ -178,7 +178,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         val messageHistory = pullConversationHistory()
         // Log.i("ThoughtsAlarm", "createSystemPrompt messageHistory\n$messageHistory")
 
-        val finalPrompt = "$systemPromptBase\nCurrent Device Data:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
+        val finalPrompt = "$systemPromptBase\nCurrent Device DataDump:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
         Log.i("ThoughtsAlarm", "createSystemPrompt finalPrompt\n$finalPrompt")
 
         return finalPrompt

@@ -32,15 +32,15 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageButton
-            android:id="@+id/buttonUser"
+            android:id="@+id/dataButton"
             android:layout_width="48dp"
             android:layout_height="0dp"
             android:layout_marginEnd="8dp"
             android:scaleType="centerCrop"
             android:scaleX="1.2"
             android:scaleY="1.2"
-            android:background="@drawable/rounded_user_button"
-            android:contentDescription="@string/buttonUser"
+            android:background="@drawable/rounded_data_button"
+            android:contentDescription="@string/dataButton"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -110,6 +110,7 @@
             android:inputType="textMultiLine"
             android:padding="8dp"
             android:paddingStart="64dp"
+            android:paddingEnd="16dp"
             android:textColor="@color/gray_70"
             android:textColorHint="@color/gray_15"
             android:textCursorDrawable="@drawable/cursor_color"

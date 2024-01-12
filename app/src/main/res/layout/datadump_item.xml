@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/indivData"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:background="@drawable/message_background">
+
+        <ImageButton
+            android:id="@+id/deleteButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/baseline_delete_24"
+            android:contentDescription="@string/deleteButton"
+            android:scaleType="centerCrop"
+            android:scaleX="0.5"
+            android:scaleY="0.5"
+            android:text=""
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/vectorIdAndFilenameTextView"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_gravity="start"
+            android:layout_margin="4dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:gravity="center_vertical|start"
+            android:background="@drawable/message_background"
+            android:padding="8dp"
+
+            android:textSize="12sp"
+            android:hint="2024-01-12 13:49:00\nrecording_12012024134023.m4a"
+            android:textColor="@color/accent_0"
+            android:textColorHint="@color/accent_0"
+            android:fontFamily="@font/rubik_mono_one"
+
+            app:layout_constraintEnd_toStartOf="@+id/deleteButton"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/textTextView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:layout_margin="4dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/message_background"
+            android:padding="10dp"
+
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:textSize="12sp"
+            android:hint="S0: Another test. \nS1: Just browsing. S0: Another test. \nS1: Just browsing."
+            android:textColor="@color/gray_50"
+            android:textColorHint="@color/gray_50"
+            android:fontFamily="@font/rubik_mono_one"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/vectorIdAndFilenameTextView" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -25,6 +25,10 @@ android {
         buildConfigField "String", "AWS_API_ENDPOINT", "\"${AWS_API_ENDPOINT}\""
         buildConfigField "String", "WEATHER_API_KEY", "\"${WEATHER_API_KEY}\""
         buildConfigField "String", "GEOLOCATION_API_KEY", "\"${GEOLOCATION_API_KEY}\""
+        buildConfigField "String", "PINECONE_API_ENDPOINT", "\"${PINECONE_API_ENDPOINT}\""
+        buildConfigField "String", "PINECONE_API_KEY", "\"${PINECONE_API_KEY}\""
+        buildConfigField "String", "PINECONE_ENV_KEY", "\"${PINECONE_ENV_KEY}\""
+        buildConfigField "String", "PINECONE_INDEX_NAME", "\"${PINECONE_INDEX_NAME}\""
     }
 
     buildTypes {

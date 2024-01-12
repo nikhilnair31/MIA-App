@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sil.services.AudioService
 import com.sil.others.Helpers
-import com.sil.others.MessagesAdapter
+import com.sil.adapters.MessagesAdapter
 import com.sil.receivers.ThoughtsAlarmReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,15 +30,17 @@ class Main : AppCompatActivity() {
     private lateinit var editText: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var toggleButton: ToggleButton
-    private lateinit var userButton: ImageButton
+    private lateinit var dataButton: ImageButton
 
     private lateinit var generalSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
+    private lateinit var dataSharedPref: SharedPreferences
 
     private lateinit var adapter: MessagesAdapter
     private var messagesListComplete = JSONArray()
     private var messagesListData = JSONArray()
     private var messagesListUI = JSONArray()
+    private var dataDumpListUI = JSONArray()
 
     private val lookExtSystemPrompt = """
 You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
@@ -140,10 +142,13 @@ hey i'm MIA. what's up?
         val userName = generalSharedPref.getString("userName", null)
         Log.i("Main", "initRelated userName: $userName")
 
-        userButton = findViewById(R.id.buttonUser)
-        userButton.setOnClickListener {
-            val intent = Intent(this, Settings::class.java)
-            startActivity(intent)
+        dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
+        dataSharedPref.edit().putString("dataDump", dataDumpListUI.toString()).apply()
+
+        dataButton = findViewById(R.id.dataButton)
+        dataButton.setOnClickListener {
+            val intent = Intent(this, DataDump::class.java)
+            this.startActivity(intent)
         }
     }
     // endregion
@@ -243,7 +248,7 @@ hey i'm MIA. what's up?
     }
     private suspend fun createMiaResponse(): String {
         val systemData = Helpers.pullDeviceData(this@Main, null)
-        val updatedUserMessage = "$userMessage\nExtra Data:\n$systemData"
+        val updatedUserMessage = "$userMessage\nExtra DataDump:\n$systemData"
 
         val messagesListUiCopy = JSONArray(messagesListUI.toString())
         messagesListUiCopy.put(JSONObject().apply {

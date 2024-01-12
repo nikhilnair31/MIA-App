@@ -16,6 +16,9 @@ import androidx.work.*
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.model.DeleteObjectRequest
+import com.amazonaws.services.s3.model.GetObjectRequest
+import com.amazonaws.services.s3.model.ListObjectsRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.sil.mia.BuildConfig
@@ -26,10 +29,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
@@ -45,6 +51,10 @@ class Helpers {
         private const val awsApiEndpoint = BuildConfig.AWS_API_ENDPOINT
         private const val weatherApiEndpoint = BuildConfig.WEATHER_API_KEY
         private const val locationApiEndpoint = BuildConfig.GEOLOCATION_API_KEY
+        private const val pineconeApiEndpoint = BuildConfig.PINECONE_API_ENDPOINT
+        private const val pineconeApiKey = BuildConfig.PINECONE_API_KEY
+        private const val pineconeEnvKey = BuildConfig.PINECONE_ENV_KEY
+        private const val pineconeIndexName = BuildConfig.PINECONE_INDEX_NAME
         // endregion
 
         // region API Call Related
@@ -223,6 +233,128 @@ class Helpers {
         // endregion
 
         // region Cloud Related
+        fun deleteVectorById(vectorId: String, callback: (Boolean) -> Unit) {
+            Thread {
+                var connection: HttpURLConnection? = null
+                try {
+                    val url = URL("$pineconeApiEndpoint/vectors/delete")
+                    Log.i("Helper", "deleteVectorById url: $url")
+
+                    connection = url.openConnection() as HttpURLConnection
+                    connection.apply {
+                        requestMethod = "POST"
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                        setRequestProperty("Accept", "application/json")
+                        setRequestProperty("Api-Key", pineconeApiKey)
+
+                        // Create JSON payload
+                        val jsonPayload = JSONObject().apply {
+                            put("deleteAll", false)
+                            put("ids", JSONArray().put(vectorId))
+                        }
+                        Log.i("Helper", "deleteVectorById jsonPayload: $jsonPayload")
+
+                        // Write JSON payload to body
+                        OutputStreamWriter(outputStream).use { writer ->
+                            writer.write(jsonPayload.toString())
+                            writer.flush()
+                        }
+
+                        connect()
+
+                        Log.i("Helper", "deleteVectorById responseCode: $responseCode")
+                        if (responseCode == HttpURLConnection.HTTP_OK) {
+                            Log.i("Helper", "Vector deleted successfully!")
+                            callback(true)
+                        } else {
+                            // Server returned non-successful status code
+                            callback(false)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Helper", "Error making Pinecone request: ", e)
+                    e.printStackTrace()
+                    callback(false)
+                } finally {
+                    connection?.disconnect()
+                }
+            }.start()
+        }
+        fun deleteS3ObjectByFilename(context: Context, fileName: String, callback: (Boolean) -> Unit) {
+            Thread {
+                try {
+                    val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
+                    val s3Client = AmazonS3Client(credentials)
+
+                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = sharedPrefs.getString("userName", null)
+                    val dataKeyName = "$userName/data/$fileName"
+                    Log.i("Helper", "deleteS3ObjectByFilename dataKeyName: $dataKeyName")
+
+                    // Create a delete object request
+                    val deleteObjectRequest = DeleteObjectRequest(bucketName, dataKeyName)
+
+                    // Execute the delete operation
+                    s3Client.deleteObject(deleteObjectRequest)
+
+                    // Notify the callback that the deletion was successful
+                    Log.i("Helper", "S3 object deleted successfully!")
+                    callback(true)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    callback(false)
+                }
+            }.start()
+        }
+        fun getObjectsInS3(context: Context): JSONArray {
+            val jsonArray = JSONArray()
+            Log.i("Helpers", "Reading objects in S3...")
+
+            try {
+                val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
+                val s3 = AmazonS3Client(credentials)
+
+                val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                val userName = sharedPrefs.getString("userName", null)
+                val dataKeyName = "$userName/data/"
+
+                // List objects in the specified bucket and with the given object key prefix
+                val listObjectsRequest = ListObjectsRequest()
+                    .withBucketName(bucketName)
+                    .withPrefix(dataKeyName)
+
+                val objectsResponse = s3.listObjects(listObjectsRequest)
+
+                // Iterate through the objects and read their data
+                for (s3ObjectSummary in objectsResponse.objectSummaries) {
+                    val objectKey = s3ObjectSummary.key
+
+                    // Get the object data
+                    val getObjectRequest = GetObjectRequest(bucketName, objectKey)
+                    val s3Object = s3.getObject(getObjectRequest)
+                    val inputStream = s3Object.objectContent
+                    BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                        // Convert FileReader to String
+                        val text = reader.readText()
+                        // Assuming each file contains a single JSON object
+                        val jsonObject = JSONObject(text)
+                        jsonArray.put(jsonObject)
+                        // Read and print the data
+                        Log.i("Helpers", "DataDump from file: $objectKey - $jsonObject")
+                    }
+                }
+            }
+            catch (e: Exception) {
+                when (e) {
+                    is AmazonServiceException -> Log.e("Helper", "Error reading from S3: ${e}")
+                    is FileNotFoundException -> Log.e("Helper", "File not found: ${e}")
+                    else -> Log.e("Helper", "Error in S3 read: ${e}")
+                }
+                e.printStackTrace()
+            }
+            return jsonArray
+        }
         fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -316,7 +448,7 @@ class Helpers {
         }
         // endregion
 
-        // region Data Related
+        // region DataDump Related
         suspend fun pullDeviceData(context: Context, sensorHelper: SensorHelper?): JSONObject {
             val finalOutput = JSONObject()
 

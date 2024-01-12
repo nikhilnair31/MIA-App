@@ -1,4 +1,4 @@
-package com.sil.others
+package com.sil.adapters
 
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
