@@ -18,7 +18,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:background="@drawable/message_background">
+        android:background="@drawable/data_background">
 
         <TextView
             android:id="@+id/addressTitleTextView"
@@ -32,33 +32,34 @@
 
             android:textSize="12sp"
             android:text="@string/address"
-            android:textColor="@color/accent_1"
-            android:textColorHint="@color/accent_1"
+            android:textColor="@color/accent_2"
+            android:textColorHint="@color/accent_2"
             android:fontFamily="@font/rubik_mono_one"
             android:gravity="center"
 
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-        <TextView
+        <EditText
             android:id="@+id/addressTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="start"
             android:layout_margin="4dp"
             android:layout_marginTop="4dp"
-            android:background="@drawable/message_background"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/addressTitleTextView"
             android:padding="10dp"
+
+            android:background="@android:color/transparent"
+            android:textCursorDrawable="@drawable/cursor_color"
 
             android:textSize="12sp"
             android:hint="1805, Pearl Street, Judge's Hill Historic District, Austin, Travis County, Texas, 78701, United States"
-            android:textColor="@color/gray_50"
-            android:textColorHint="@color/gray_50"
-            android:fontFamily="@font/rubik_mono_one"
-
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/addressTitleTextView" />
+            android:textColor="@color/gray_70"
+            android:textColorHint="@color/gray_70"
+            android:fontFamily="@font/rubik_mono_one" />
 
         <TextView
             android:id="@+id/weatherTitleTextView"
@@ -72,33 +73,34 @@
 
             android:textSize="12sp"
             android:text="@string/weather"
-            android:textColor="@color/accent_2"
-            android:textColorHint="@color/accent_2"
+            android:textColor="@color/accent_1"
+            android:textColorHint="@color/accent_1"
             android:fontFamily="@font/rubik_mono_one"
             android:gravity="center"
 
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/addressTextView" />
-        <TextView
+        <EditText
             android:id="@+id/weatherTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="start"
             android:layout_margin="4dp"
             android:layout_marginTop="4dp"
-            android:background="@drawable/message_background"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/weatherTitleTextView"
             android:padding="10dp"
+
+            android:background="@android:color/transparent"
+            android:textCursorDrawable="@drawable/cursor_color"
 
             android:textSize="12sp"
             android:hint="clear sky"
-            android:textColor="@color/gray_50"
-            android:textColorHint="@color/gray_50"
-            android:fontFamily="@font/rubik_mono_one"
-
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/weatherTitleTextView" />
+            android:textColor="@color/gray_70"
+            android:textColorHint="@color/gray_70"
+            android:fontFamily="@font/rubik_mono_one" />
 
         <TextView
             android:id="@+id/textTitleTextView"
@@ -120,25 +122,27 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/weatherTextView" />
-        <TextView
+        <EditText
             android:id="@+id/textTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="start"
             android:layout_margin="4dp"
             android:layout_marginTop="4dp"
-            android:background="@drawable/message_background"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/textTitleTextView"
             android:padding="10dp"
+
+            android:background="@android:color/transparent"
+            android:textCursorDrawable="@drawable/cursor_color"
 
             android:textSize="12sp"
             android:hint="S0: Testing at this part. EFT withdrawal. We're gonna switch it. We're gonna switch it.\n\nS1: When did we say that?\n\nS0: No, I remember that. That cannot be.\n\nS1: I don't remember what I was thinking. I think it was...\n\nS2: Gamers cannot afford this. If you're a gamer, you cannot afford this. I'm sorry."
-            android:textColor="@color/gray_50"
-            android:textColorHint="@color/gray_50"
-            android:fontFamily="@font/rubik_mono_one"
-
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/textTitleTextView" />
+            android:textColor="@color/gray_70"
+            android:textColorHint="@color/gray_70"
+            android:gravity="top|start"
+            android:fontFamily="@font/rubik_mono_one" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

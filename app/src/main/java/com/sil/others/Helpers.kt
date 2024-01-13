@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.BatteryManager
+import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -33,6 +34,7 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -438,17 +440,54 @@ class Helpers {
                 e.printStackTrace()
             }
         }
-        private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
-        private fun calculateMetadataSize(metadataMap: Map<String, Any>): Int {
-            // Calculate the UTF-8 encoded size of each key and value
-            val size = metadataMap.entries.sumOf { entry ->
-                entry.key.toByteArray(Charsets.UTF_8).size + entry.value.toString().toByteArray(Charsets.UTF_8).size
+        fun downloadFromS3(context: Context, fileName: String) {
+            Log.i("Helpers", "Downloading from S3...")
+
+            Thread {
+                try {
+                    val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
+                    val s3Client = AmazonS3Client(credentials)
+
+                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = sharedPrefs.getString("userName", null)
+                    val dataKeyName = "$userName/recordings/$fileName"
+                    Log.i("Helper", "downloadFromS3 dataKeyName: $dataKeyName")
+
+                    // Create GetObjectRequest
+                    val getObjectRequest = GetObjectRequest(bucketName, dataKeyName)
+
+                    // Download the S3 object
+                    val s3Object = s3Client.getObject(getObjectRequest)
+                    val inputStream = s3Object.objectContent
+
+                    // Write the S3 object content to a local file
+                    val outputFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+                    // val outputFile = File(fileName)
+                    val outputStream = FileOutputStream(outputFile)
+
+                    inputStream.use { input ->
+                        outputStream.use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+
+                    // Close the streams
+                    inputStream.close()
+                    outputStream.close()
+                }
+                catch (e: Exception) {
+                when (e) {
+                    is AmazonServiceException -> Log.e("Helper", "Error uploading to S3: ${e.message}")
+                    is FileNotFoundException -> Log.e("Helper", "File not found: ${e.message}")
+                    else -> Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
+                }
+                e.printStackTrace()
             }
-            return size
+            }.start()
         }
         // endregion
 
-        // region DataDump Related
+        // region Data Related
         suspend fun pullDeviceData(context: Context, sensorHelper: SensorHelper?): JSONObject {
             val finalOutput = JSONObject()
 
@@ -610,6 +649,17 @@ class Helpers {
             else {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
+        }
+        // endregion
+
+        // region Other
+        private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
+        private fun calculateMetadataSize(metadataMap: Map<String, Any>): Int {
+            // Calculate the UTF-8 encoded size of each key and value
+            val size = metadataMap.entries.sumOf { entry ->
+                entry.key.toByteArray(Charsets.UTF_8).size + entry.value.toString().toByteArray(Charsets.UTF_8).size
+            }
+            return size
         }
         // endregion
     }

@@ -5,7 +5,7 @@
         <shape
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-            <solid android:color="@color/accent_0" />
+            <solid android:color="@color/gray_8" />
             <corners android:radius="@dimen/roundedCorners" />
             <!--            <stroke android:color="@color/accent_0" android:width="@dimen/lineThickness"/>-->
         </shape>

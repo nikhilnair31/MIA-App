@@ -18,7 +18,7 @@ class IndivData : AppCompatActivity() {
     private lateinit var titleTextView: TextView
 
     private lateinit var adapter: DataIndivAdapter
-    private var dataListUI = JSONArray()
+    private var dataDumpList = JSONArray()
     // endregion
 
     // region Common
@@ -39,17 +39,17 @@ class IndivData : AppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerView)
 
         recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = DataIndivAdapter(dataListUI)
+        adapter = DataIndivAdapter(dataDumpList)
         recyclerView.adapter = adapter
 
         val receivedIntent = intent
         val jsonString = receivedIntent.getStringExtra("selectedData")
         if (jsonString != null) {
             val selectedData = JSONObject(jsonString)
-            dataListUI.put(selectedData)
+            dataDumpList.put(selectedData)
             titleTextView.text = "${selectedData.getString("currenttimeformattedstring")}" + "\n${selectedData.getString("filename")}\n" // + "\n${selectedData.getString("vector_id")}"
 
-            adapter.updateData(dataListUI)
+            adapter.updateData(dataDumpList)
             recyclerView.scrollToPosition(adapter.itemCount - 1)
         }
     }

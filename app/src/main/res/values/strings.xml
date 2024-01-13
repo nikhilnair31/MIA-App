@@ -23,6 +23,8 @@
     <string name="address">ADDRESS</string>
     <string name="weather">WEATHER</string>
     <string name="transcript">TRANSCRIPT</string>
+    <string name="refresh_button">refresh button</string>
+    <string name="back_button">back button</string>
     <!-- Strings used for fragments for navigation -->
 
 </resources>

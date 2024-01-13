@@ -137,13 +137,12 @@ hey i'm MIA. what's up?
 
     // region Initial
     private fun initRelated() {
+        dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         generalSharedPref = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+
         generalSharedPref.edit().putBoolean("isFirstRun", false).apply()
         val userName = generalSharedPref.getString("userName", null)
         Log.i("Main", "initRelated userName: $userName")
-
-        dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
-        dataSharedPref.edit().putString("dataDump", dataDumpListUI.toString()).apply()
 
         dataButton = findViewById(R.id.dataButton)
         dataButton.setOnClickListener {

@@ -3,13 +3,13 @@
 
     <item>
         <shape>
-            <solid android:color="@color/gray_8"/>
-            <corners android:radius="@dimen/roundedCorners"/>
+            <solid android:color="@color/accent_0"/>
+            <corners android:radius="8dp"/>
         </shape>
     </item>
 
     <item
-        android:drawable="@drawable/baseline_data_array_24"
+        android:drawable="@drawable/baseline_done_24"
         android:gravity="center"
     />
 

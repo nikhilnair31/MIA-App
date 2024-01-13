@@ -11,24 +11,24 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
-import com.sil.mia.DataDump
 import com.sil.mia.IndivData
 import com.sil.mia.R
 import com.sil.others.Helpers
 import org.json.JSONArray
 
-class DataDumpAdapter(private var dataList: JSONArray, private val context: Context) :
+class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: Context) :
     RecyclerView.Adapter<DataDumpAdapter.MessageViewHolder>() {
 
     class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val vectorIdAndFilenameTextView: TextView = view.findViewById(R.id.vectorIdAndFilenameTextView)
         val textTextView: TextView = view.findViewById(R.id.textTextView)
         val deleteButton: ImageButton = view.findViewById(R.id.deleteButton)
+        val downloadButton: ImageButton = view.findViewById(R.id.downloadButton)
         val dataIndivConstraintLayout: ConstraintLayout = view.findViewById(R.id.indivData)
     }
 
     fun updateData(newData: JSONArray) {
-        dataList = newData
+        dataDumpList = newData
         notifyDataSetChanged()
     }
 
@@ -44,7 +44,7 @@ class DataDumpAdapter(private var dataList: JSONArray, private val context: Cont
 
         val context = holder.textTextView.context
 
-        val data = dataList.getJSONObject(position)
+        val data = dataDumpList.getJSONObject(position)
         // Log.i("DataDumpAdapter", "data: $message")
         if (data != null) {
             holder.vectorIdAndFilenameTextView.text = "${data.getString("currenttimeformattedstring")}\n${data.getString("filename")}"
@@ -60,6 +60,9 @@ class DataDumpAdapter(private var dataList: JSONArray, private val context: Cont
         holder.deleteButton.setOnClickListener {
             handleDeleteButtonClick(position)
         }
+        holder.downloadButton.setOnClickListener {
+            handleDownloadButtonClick(position)
+        }
         holder.dataIndivConstraintLayout.setOnClickListener {
             val intent = Intent(context, IndivData::class.java)
             intent.putExtra("selectedData", data.toString())
@@ -70,7 +73,7 @@ class DataDumpAdapter(private var dataList: JSONArray, private val context: Cont
     private fun handleDeleteButtonClick(adapterPosition: Int) {
         Log.i("DataDumpAdapter", "handleDeleteButtonClick")
 
-        val dataItem = dataList.getJSONObject(adapterPosition) // Get the JSONObject from the JSONArray
+        val dataItem = dataDumpList.getJSONObject(adapterPosition)
         val vectorId: String? = dataItem.optString("vector_id")
         val fileName: String? = dataItem.optString("filename")
         Log.i("DataDumpAdapter", "$adapterPosition\n$dataItem\n$vectorId\n$fileName")
@@ -86,11 +89,23 @@ class DataDumpAdapter(private var dataList: JSONArray, private val context: Cont
         }
         if (context is Activity) {
             context.runOnUiThread {
-                dataList.remove(adapterPosition)
+                dataDumpList.remove(adapterPosition)
                 notifyItemRemoved(adapterPosition)
             }
         }
     }
+    private fun handleDownloadButtonClick(adapterPosition: Int) {
+        Log.i("DataDumpAdapter", "handleDownloadButtonClick")
 
-    override fun getItemCount() = dataList.length()
+        //TODO: Add code to download S3 object
+        val dataItem = dataDumpList.getJSONObject(adapterPosition)
+        val fileName: String? = dataItem.optString("filename")
+        Log.i("DataDumpAdapter", "$adapterPosition\n$dataItem\n$$fileName")
+
+        if (fileName != null) {
+            Helpers.downloadFromS3(context, fileName)
+        }
+    }
+
+    override fun getItemCount() = dataDumpList.length()
 }

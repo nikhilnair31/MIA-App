@@ -22,12 +22,13 @@ import org.json.JSONObject
 class DataDump : AppCompatActivity() {
     // region Vars
     private lateinit var recyclerView: RecyclerView
-    private lateinit var backButton: ImageButton
     private lateinit var loadingTextView: TextView
+    private lateinit var backButton: ImageButton
+    private lateinit var buttonRefresh: ImageButton
 
     private lateinit var dataSharedPref: SharedPreferences
     private lateinit var adapter: DataDumpAdapter
-    private var dataListUI = JSONArray()
+    private var dataDumpList = JSONArray()
     // endregion
 
     // region Common
@@ -40,47 +41,57 @@ class DataDump : AppCompatActivity() {
     }
     // endregion
 
-    // region DataDump Related
+    // region Data Related
     private fun dataRelated() {
         Log.i("DataDump", "DataDump dataRelated")
 
         loadingTextView = findViewById(R.id.loadingTextView)
+        buttonRefresh = findViewById(R.id.buttonRefresh)
         recyclerView = findViewById(R.id.recyclerView)
 
         dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         val dataDumpString = dataSharedPref.getString("dataDump", "")
-        dataListUI = JSONArray(dataDumpString)
-        Log.i("DataDump", "dataListUI\n$dataListUI")
+        dataDumpList = JSONArray(dataDumpString)
+        Log.i("DataDump", "dataDumpList\n$dataDumpList")
 
         recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = DataDumpAdapter(dataListUI, this)
+        adapter = DataDumpAdapter(dataDumpList, this)
         recyclerView.adapter = adapter
 
-        if (dataListUI.length() == 0) {
-            CoroutineScope(Dispatchers.Main).launch {
-                dataListUI = withContext(Dispatchers.IO) {
-                    Helpers.getObjectsInS3(this@DataDump)
-                }
-                dataSharedPref.edit().putString("dataDump", dataListUI.toString()).apply()
+        if (dataDumpList.length() == 0) pullS3ObjectsData() else dataPopulated()
 
-                if (dataListUI.length() > 0) {
-                    loadingTextView.text = ""
-                    loadingTextView.visibility = View.GONE
-                    recyclerView.visibility = View.VISIBLE
-                } else {
-                    loadingTextView.text = getString(R.string.noData)
-                    loadingTextView.visibility = View.VISIBLE
-                    recyclerView.visibility = View.GONE
-                }
-                adapter.updateData(dataListUI)
-                recyclerView.scrollToPosition(adapter.itemCount - 1)
+        buttonRefresh.setOnClickListener {
+            dataLoading()
+            pullS3ObjectsData()
+        }
+    }
+    private fun pullS3ObjectsData() {
+        CoroutineScope(Dispatchers.Main).launch {
+            dataDumpList = withContext(Dispatchers.IO) {
+                Helpers.getObjectsInS3(this@DataDump)
             }
+            dataSharedPref.edit().putString("dataDump", dataDumpList.toString()).apply()
+
+            if (dataDumpList.length() > 0) dataPopulated() else dataNotPopulated()
+
+            adapter.updateData(dataDumpList)
+            recyclerView.scrollToPosition(adapter.itemCount - 1)
         }
-        else {
-            loadingTextView.text = ""
-            loadingTextView.visibility = View.GONE
-            recyclerView.visibility = View.VISIBLE
-        }
+    }
+    private fun dataLoading() {
+        loadingTextView.text = getString(R.string.loading)
+        loadingTextView.visibility = View.VISIBLE
+        recyclerView.visibility = View.GONE
+    }
+    private fun dataPopulated() {
+        loadingTextView.text = ""
+        loadingTextView.visibility = View.GONE
+        recyclerView.visibility = View.VISIBLE
+    }
+    private fun dataNotPopulated() {
+        loadingTextView.text = getString(R.string.noData)
+        loadingTextView.visibility = View.VISIBLE
+        recyclerView.visibility = View.GONE
     }
     // endregion
 
