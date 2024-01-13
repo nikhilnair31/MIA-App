@@ -84,7 +84,10 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
         Log.i("DataDumpAdapter", "$adapterPosition\n$dataItem\n$vectorId")
 
         if (vectorId != null) {
-            Helpers.deletePineconeVectorById(vectorId)
+            Helpers.deletePineconeVectorById(
+                context,
+                vectorId
+            )
 
             if (context is Activity) {
                 context.runOnUiThread {

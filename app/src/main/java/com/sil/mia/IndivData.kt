@@ -2,25 +2,28 @@ package com.sil.mia
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.Editable
 import android.util.Log
+import android.view.View
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.sil.adapters.DataIndivAdapter
-import org.json.JSONArray
+import com.sil.others.Helpers
 import org.json.JSONObject
 
 class IndivData : AppCompatActivity() {
     // region Vars
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var backButton: ImageButton
-    private lateinit var updateButton: ImageButton
-    private lateinit var cancelButton: ImageButton
     private lateinit var titleTextView: TextView
 
-    private lateinit var adapter: DataIndivAdapter
-    private var dataDumpList = JSONArray()
+    private lateinit var backButton: ImageButton
+    private lateinit var updateButton: ImageButton
+
+    private lateinit var addressTextView: EditText
+    private lateinit var weatherTextView: EditText
+    private lateinit var sourceTextView: EditText
+    private lateinit var textTextView: EditText
+
+    private lateinit var selectedData: JSONObject
     // endregion
 
     // region Common
@@ -33,44 +36,68 @@ class IndivData : AppCompatActivity() {
     }
     // endregion
 
-    // region IndivData Related
+    // region Data Related
     private fun dataRelated() {
         Log.i("IndivData", "dataRelated")
 
         titleTextView = findViewById(R.id.titleTextView)
-        recyclerView = findViewById(R.id.recyclerView)
-
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = DataIndivAdapter(dataDumpList)
-        recyclerView.adapter = adapter
+        addressTextView = findViewById(R.id.addressTextView)
+        weatherTextView = findViewById(R.id.weatherTextView)
+        sourceTextView = findViewById(R.id.sourceTextView)
+        textTextView = findViewById(R.id.textTextView)
 
         val receivedIntent = intent
         val jsonString = receivedIntent.getStringExtra("selectedData")
         if (jsonString != null) {
-            val selectedData = JSONObject(jsonString)
-            dataDumpList.put(selectedData)
-            titleTextView.text = "${selectedData.getString("currenttimeformattedstring")}" + "\n${selectedData.getString("filename")}\n" // + "\n${selectedData.getString("vector_id")}"
+            selectedData = JSONObject(jsonString)
 
-            adapter.updateData(dataDumpList)
-            recyclerView.scrollToPosition(adapter.itemCount - 1)
+            val timeString = selectedData.getString("currenttimeformattedstring") ?: ""
+            val fileNameString = selectedData.getString("filename") ?: ""
+            titleTextView.text = "$timeString\n$fileNameString"
+
+            addressTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("address"))
+            weatherTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("firstweatherdescription"))
+            sourceTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("source"))
+            textTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("text"))
+        }
+        else {
+            addressTextView.visibility = View.GONE
+            weatherTextView.visibility = View.GONE
+            sourceTextView.visibility = View.GONE
+            textTextView.visibility = View.GONE
         }
     }
     // endregion
 
     // region Button Related
+    private fun buttonSetup() {
+        updateButton = findViewById(R.id.updateButton)
+        backButton = findViewById(R.id.buttonBack)
+
+        updateButton.setOnClickListener {
+            updateData()
+        }
+        backButton.setOnClickListener {
+            onBackPressed()
+        }
+    }
     override fun onBackPressed() {
         onBackPressedDispatcher.onBackPressed()
         finish()
     }
-    private fun buttonSetup() {
-        backButton = findViewById(R.id.buttonBack)
-        backButton.setOnClickListener {
-            onBackPressed()
-        }
+    private fun updateData() {
+        val vectorId = selectedData.optString("id") ?: ""
+        Log.i("IndivData", "vectorId: $vectorId")
 
-        //TODO: Do something with this to update Pinecone/AWS metadata
-        updateButton = findViewById(R.id.updateButton)
-        cancelButton = findViewById(R.id.cancelButton)
+        Helpers.updatePineconeVectorById(
+            this,
+            vectorId,
+            addressTextView.text.toString(),
+            weatherTextView.text.toString(),
+            sourceTextView.text.toString(),
+            textTextView.text.toString()
+        )
+        onBackPressed()
     }
     // endregion
 }

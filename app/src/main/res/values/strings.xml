@@ -25,6 +25,8 @@
     <string name="transcript">TRANSCRIPT</string>
     <string name="refresh_button">refresh button</string>
     <string name="back_button">back button</string>
+    <string name="source">SOURCE</string>
+    <string name="updated">Updated</string>
     <!-- Strings used for fragments for navigation -->
 
 </resources>

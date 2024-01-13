@@ -25,9 +25,11 @@ import com.sil.workers.UploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -208,7 +210,9 @@ class Helpers {
         // endregion
 
         // region Pinecone and S3 Related
-        suspend fun fetchPineconeVectorMetadata(): JSONArray {
+        suspend fun fetchPineconeVectorMetadata(): JSONObject {
+            Log.i("Helpers", "Fetching from Pinecone...")
+
             var lastException: IOException? = null
 
             repeat(3) { attempt ->
@@ -224,13 +228,14 @@ class Helpers {
 
                     val mediaType = "application/json".toMediaTypeOrNull()
                     val body = JSONObject().apply {
-                        put("filter", JSONObject().apply {
-                            put("year", 2024)
-                            put("month", 1)
-                        })
+                        // FIXME: Update this to use the generated filters (or not)
+                        // put("filter", JSONObject().apply {
+                        //     put("year", 2024)
+                        //     put("day", 13)
+                        // })
                         put("includeValues", false)
                         put("includeMetadata", true)
-                        put("topK", 5)
+                        put("topK", 50)
                         put("vector", vectorArrayJson)
                     }.toString().toRequestBody(mediaType)
 
@@ -247,26 +252,11 @@ class Helpers {
 
                     return if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseBody = response.body.string()
-
-                        // Doing this to get array in matches key and selecting only metadata object from it
-                        val bodyJsonArray = JSONObject(responseBody).getJSONArray("matches")
-                        val metadataArray = JSONArray()
-                        for (i in 0 until bodyJsonArray.length()) {
-                            val jsonObject = bodyJsonArray.getJSONObject(i)
-                            val metadataObject = jsonObject.optJSONObject("metadata")
-                            
-                            // Doing this to get ID of the vector which isn't in the metadata JSON object
-                            if (metadataObject != null) {
-                                val modifiedMetadataObject = JSONObject(metadataObject.toString())
-                                modifiedMetadataObject.put("id", jsonObject.getString("id"))
-                                metadataArray.put(modifiedMetadataObject)
-                            }
-                        }
-
-                        metadataArray
+                        val bodyJsonArray = JSONObject(responseBody)
+                        bodyJsonArray
                     } else {
                         Log.e("Helper", "Pinecone API Error Response: ${response.body.string()}")
-                        JSONArray()
+                        JSONObject()
                     }
                 }
                 catch (e: IOException) {
@@ -277,20 +267,22 @@ class Helpers {
                 }
                 catch (e: Exception) {
                     Log.e("Helper", "Pinecone API Unexpected Exception: $e")
-                    return JSONArray()
+                    return JSONObject()
                 }
             }
             lastException?.let {
                 throw it
             }
-            return JSONArray()
+            return JSONObject()
         }
-        fun deletePineconeVectorById(vectorId: String) {
+        fun deletePineconeVectorById(context: Context, vectorId: String) {
+            Log.i("Helpers", "Deleting from Pinecone...")
+
             Thread {
                 var connection: HttpURLConnection? = null
                 try {
                     val url = URL("$pineconeApiEndpoint/vectors/delete")
-                    Log.i("Helper", "deleteVectorById url: $url")
+                    Log.d("Helper", "deleteVectorById url: $url")
 
                     connection = url.openConnection() as HttpURLConnection
                     connection.apply {
@@ -305,7 +297,7 @@ class Helpers {
                             put("deleteAll", false)
                             put("ids", JSONArray().put(vectorId))
                         }
-                        Log.i("Helper", "deleteVectorById jsonPayload: $jsonPayload")
+                        Log.d("Helper", "deleteVectorById jsonPayload: $jsonPayload")
 
                         // Write JSON payload to body
                         OutputStreamWriter(outputStream).use { writer ->
@@ -315,18 +307,63 @@ class Helpers {
 
                         connect()
 
-                        Log.i("Helper", "deleteVectorById responseCode: $responseCode")
                         if (responseCode == HttpURLConnection.HTTP_OK) {
-                            Log.i("Helper", "Pinecone API Vector Delete: Successful!")
+                            showToast(context, "Pinecone Vector Delete: Successful!")
+                            Log.d("Helper", "Pinecone API Vector Delete: Successful!")
                         } else {
+                            showToast(context, "Pinecone Vector Delete: Error :(")
                             Log.e("Helper", "Pinecone API Vector Delete Error: $responseCode")
                         }
                     }
                 } catch (e: Exception) {
+                    showToast(context, "Pinecone Vector Delete: Error :(")
                     Log.e("Helper", "Pinecone API Vector Delete Error: Error making Pinecone request\n", e)
                     e.printStackTrace()
                 } finally {
                     connection?.disconnect()
+                }
+            }.start()
+        }
+        fun updatePineconeVectorById(context: Context, vectorId: String, addressText: String, weatherText: String, sourceText: String, textText: String) {
+            Log.i("Helpers", "Updating Pinecone Vector...")
+
+            Thread {
+                try {
+                    val client = OkHttpClient()
+
+                    val url = URL("$pineconeApiEndpoint/vectors/update")
+                    val mediaType = "application/json".toMediaTypeOrNull()
+                    val body = JSONObject().apply {
+                        put("setMetadata", JSONObject().apply {
+                            put("address", addressText)
+                            put("firstweatherdescription", weatherText)
+                            put("source", sourceText)
+                            put("text", textText)
+                        })
+                        put("id", vectorId)
+                    }.toString().toRequestBody(mediaType)
+
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(body)
+                        .addHeader("accept", "application/json")
+                        .addHeader("content-type", "application/json")
+                        .addHeader("Api-Key", pineconeApiKey)
+                        .build()
+
+                    val response = client.newCall(request).execute()
+
+                    if (response.isSuccessful) {
+                        showToast(context, "Pinecone Vector Update: Successful!")
+                        Log.d("Helpers", "Pinecone Vector Update: Successful!")
+                    } else {
+                        showToast(context, "Pinecone Vector Update Error :(")
+                        Log.e("Helpers", "Pinecone Vector Update Error: $response")
+                    }
+                } catch (e: Exception) {
+                    showToast(context, "Pinecone Vector Update Error :(")
+                    Log.e("Helpers", "Pinecone Vector Update Error: $e")
+                    e.printStackTrace()
                 }
             }.start()
         }
@@ -338,7 +375,7 @@ class Helpers {
                     val generalSharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
                     val userName = generalSharedPrefs.getString("userName", null)
                     val dataKeyName = "$userName/recordings/$fileName"
-                    Log.i("Helper", "downloadFromS3 dataKeyName: $dataKeyName")
+                    Log.d("Helper", "downloadFromS3 dataKeyName: $dataKeyName")
 
                     // Create GetObjectRequest
                     val getObjectRequest = GetObjectRequest(bucketName, dataKeyName)
@@ -355,7 +392,7 @@ class Helpers {
                             input.copyTo(output)
                         }
                         showToast(context, "S3 download complete!")
-                        Log.i("Helper", "S3 download complete!")
+                        Log.d("Helper", "S3 download complete!")
                     }
 
                     // Close the streams
@@ -372,24 +409,6 @@ class Helpers {
                     e.printStackTrace()
                 }
             }.start()
-        }
-        fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val inputData = workDataOf(
-                "audioFile" to audioFile?.absolutePath,
-                "metadataJson" to metadataJson.toString()
-            )
-
-            val uploadWorkRequest = OneTimeWorkRequestBuilder<UploadWorker>()
-                .setConstraints(constraints)
-                .setInputData(inputData)
-                .build()
-
-            val appContext = context.applicationContext
-            WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
         fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
             Log.i("Helpers", "Uploading to S3...")
@@ -417,7 +436,7 @@ class Helpers {
 
                     // TODO: Add extra variables defining each variable's type
                     val metadataSize = calculateMetadataSize(metadataMap)
-                    Log.i("Helper", "User-defined metadata size: $metadataSize")
+                    Log.d("Helper", "User-defined metadata size: $metadataSize")
 
                     metadataMap.forEach { (key, value) ->
                         // Log.d("Helper", "Metadata - Key: $key, Value: $value")
@@ -429,7 +448,7 @@ class Helpers {
                         val audioRequest = PutObjectRequest(bucketName, audioKeyName, fileInputStream, audioMetadata)
                         try {
                             s3Client.putObject(audioRequest)
-                            Log.i("Helper", "Uploaded to S3!")
+                            Log.d("Helper", "Uploaded to S3!")
                         }
                         catch (e: Exception) {
                             Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
@@ -438,7 +457,7 @@ class Helpers {
 
                     // Delete the file after upload
                     if (it.delete()) {
-                        Log.i("Helper", "Deleted audio file after upload: ${it.name}")
+                        Log.d("Helper", "Deleted audio file after upload: ${it.name}")
                     } else {
                         Log.e("Helper", "Failed to delete audio file after upload: ${it.name}")
                     }
@@ -452,6 +471,24 @@ class Helpers {
                 }
                 e.printStackTrace()
             }
+        }
+        fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val inputData = workDataOf(
+                "audioFile" to audioFile?.absolutePath,
+                "metadataJson" to metadataJson.toString()
+            )
+
+            val uploadWorkRequest = OneTimeWorkRequestBuilder<UploadWorker>()
+                .setConstraints(constraints)
+                .setInputData(inputData)
+                .build()
+
+            val appContext = context.applicationContext
+            WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
         // endregion
 
@@ -551,7 +588,7 @@ class Helpers {
             // endregion
             // region Motion
             val deviceSpeed = sensorHelper?.getDeviceStatus() ?: 0f
-            Log.i("Helper", "deviceSpeed: $deviceSpeed")
+            Log.d("Helper", "deviceSpeed: $deviceSpeed")
             val deviceStatus = when {
                 deviceSpeed < 10 -> "idle"
                 deviceSpeed >= 10 && deviceSpeed < 150 -> "moving normal"
@@ -577,7 +614,7 @@ class Helpers {
             // Log.i("Helpers", "messageDataWindow")
 
             val fullJsonArray = JSONArray(fullJsonString)
-            // Log.i("Helpers", "fullJsonArray\n$fullJsonArray")
+            // Log.d("Helpers", "fullJsonArray\n$fullJsonArray")
 
             // Filter out system JSON objects
             val nonSystemJsonArray = JSONArray()
@@ -587,11 +624,11 @@ class Helpers {
                     nonSystemJsonArray.put(jsonObject)
                 }
             }
-            // Log.i("Helpers", "system-free fullJsonArray\n$nonSystemJsonArray")
+            // Log.d("Helpers", "system-free fullJsonArray\n$nonSystemJsonArray")
 
             // Return full JSON array if maxMessages is null
             if (maxMessages == null) {
-                // Log.i("Helpers", "Returning full JSON array")
+                // Log.d("Helpers", "Returning full JSON array")
                 return nonSystemJsonArray
             }
 
@@ -601,7 +638,7 @@ class Helpers {
             for (i in startIndex until nonSystemJsonArray.length()) {
                 lastNObjects.put(nonSystemJsonArray.getJSONObject(i))
             }
-            // Log.i("Helpers", "lastNObjects\n$lastNObjects")
+            // Log.d("Helpers", "lastNObjects\n$lastNObjects")
 
             return lastNObjects
         }

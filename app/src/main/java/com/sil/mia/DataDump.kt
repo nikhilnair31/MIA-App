@@ -17,6 +17,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Collections
+import java.util.Locale
 
 class DataDump : AppCompatActivity() {
     // region Vars
@@ -51,7 +55,7 @@ class DataDump : AppCompatActivity() {
         dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         val dataDumpString = dataSharedPref.getString("dataDump", "")
         dataDumpList = if (!dataDumpString.isNullOrBlank()) JSONArray(dataDumpString) else JSONArray()
-        Log.i("DataDump", "dataDumpList\n$dataDumpList")
+        Log.i("DataDump", "dataDumpList.length: ${dataDumpList.length()}")
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = DataDumpAdapter(dataDumpList, this)
@@ -66,15 +70,54 @@ class DataDump : AppCompatActivity() {
     }
     private fun fetchVectorsMetadata() {
         CoroutineScope(Dispatchers.Main).launch {
-            dataDumpList = withContext(Dispatchers.IO) {
+            val responseJsonObject = withContext(Dispatchers.IO) {
                 Helpers.fetchPineconeVectorMetadata()
             }
+
+            // Doing this to get array in matches key
+            val bodyJsonArray = responseJsonObject.getJSONArray("matches")
+            // Selecting only metadata object from it
+            val metadataArray = JSONArray()
+            for (i in 0 until bodyJsonArray.length()) {
+                val jsonObject = bodyJsonArray.getJSONObject(i)
+                val metadataObject = jsonObject.optJSONObject("metadata")
+
+                // Doing this to include ID of the vector which isn't in the metadata JSON object
+                if (metadataObject != null) {
+                    val modifiedMetadataObject = JSONObject(metadataObject.toString())
+                    modifiedMetadataObject.put("id", jsonObject.getString("id"))
+                    metadataArray.put(modifiedMetadataObject)
+                }
+            }
+
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            // Create a comparator to compare JSONObjects based on the currenttimeformattedstring field
+            val comparator = Comparator<JSONObject> { json1, json2 ->
+                val id1 = json1.optString("id")
+                val id2 = json2.optString("id")
+                val timestamp1 = json1.optString("currenttimeformattedstring")
+                val timestamp2 = json2.optString("currenttimeformattedstring")
+                Log.i("DataDump", "id1: $id1\nid2: $id2\ntimestamp1: $timestamp1\ntimestamp2: $timestamp2")
+
+                // Convert timestamps to milliseconds
+                val millis1 = dateFormat.parse(timestamp1)
+                val millis2 = dateFormat.parse(timestamp2)
+
+                // Compare dates
+                millis2?.compareTo(millis1) ?: 0
+            }
+            // Convert JSONArray to a List of JSONObjects
+            val metadataList = (0 until metadataArray.length()).mapTo(mutableListOf()) { metadataArray.getJSONObject(it) }
+            // Sort the List using the comparator
+            Collections.sort(metadataList, comparator)
+
+            dataDumpList = JSONArray(metadataList)
             dataSharedPref.edit().putString("dataDump", dataDumpList.toString()).apply()
 
             if (dataDumpList.length() > 0) dataPopulated() else dataNotPopulated()
 
             adapter.updateData(dataDumpList)
-            recyclerView.scrollToPosition(adapter.itemCount - 1)
+            recyclerView.scrollToPosition(0)
         }
     }
     private fun dataLoading() {
