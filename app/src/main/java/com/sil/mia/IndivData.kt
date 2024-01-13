@@ -15,6 +15,8 @@ class IndivData : AppCompatActivity() {
     // region Vars
     private lateinit var recyclerView: RecyclerView
     private lateinit var backButton: ImageButton
+    private lateinit var updateButton: ImageButton
+    private lateinit var cancelButton: ImageButton
     private lateinit var titleTextView: TextView
 
     private lateinit var adapter: DataIndivAdapter
@@ -55,7 +57,7 @@ class IndivData : AppCompatActivity() {
     }
     // endregion
 
-    // region Back Related
+    // region Button Related
     override fun onBackPressed() {
         onBackPressedDispatcher.onBackPressed()
         finish()
@@ -65,6 +67,10 @@ class IndivData : AppCompatActivity() {
         backButton.setOnClickListener {
             onBackPressed()
         }
+
+        //TODO: Do something with this to update Pinecone/AWS metadata
+        updateButton = findViewById(R.id.updateButton)
+        cancelButton = findViewById(R.id.cancelButton)
     }
     // endregion
 }

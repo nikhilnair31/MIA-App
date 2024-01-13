@@ -17,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
-import org.json.JSONObject
 
 class DataDump : AppCompatActivity() {
     // region Vars
@@ -51,24 +50,24 @@ class DataDump : AppCompatActivity() {
 
         dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         val dataDumpString = dataSharedPref.getString("dataDump", "")
-        dataDumpList = JSONArray(dataDumpString)
+        dataDumpList = if (!dataDumpString.isNullOrBlank()) JSONArray(dataDumpString) else JSONArray()
         Log.i("DataDump", "dataDumpList\n$dataDumpList")
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = DataDumpAdapter(dataDumpList, this)
         recyclerView.adapter = adapter
 
-        if (dataDumpList.length() == 0) pullS3ObjectsData() else dataPopulated()
+        if (dataDumpList.length() == 0) fetchVectorsMetadata() else dataPopulated()
 
         buttonRefresh.setOnClickListener {
             dataLoading()
-            pullS3ObjectsData()
+            fetchVectorsMetadata()
         }
     }
-    private fun pullS3ObjectsData() {
+    private fun fetchVectorsMetadata() {
         CoroutineScope(Dispatchers.Main).launch {
             dataDumpList = withContext(Dispatchers.IO) {
-                Helpers.getObjectsInS3(this@DataDump)
+                Helpers.fetchPineconeVectorMetadata()
             }
             dataSharedPref.edit().putString("dataDump", dataDumpList.toString()).apply()
 

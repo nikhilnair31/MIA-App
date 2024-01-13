@@ -3,6 +3,7 @@ package com.sil.adapters
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Environment
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -10,11 +11,14 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.recyclerview.widget.RecyclerView
 import com.sil.mia.IndivData
 import com.sil.mia.R
 import com.sil.others.Helpers
 import org.json.JSONArray
+import java.io.File
+
 
 class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: Context) :
     RecyclerView.Adapter<DataDumpAdapter.MessageViewHolder>() {
@@ -45,9 +49,11 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
         val context = holder.textTextView.context
 
         val data = dataDumpList.getJSONObject(position)
-        // Log.i("DataDumpAdapter", "data: $message")
         if (data != null) {
-            holder.vectorIdAndFilenameTextView.text = "${data.getString("currenttimeformattedstring")}\n${data.getString("filename")}"
+            val timeString = data.getString("currenttimeformattedstring") ?: ""
+            val fileNameString = data.getString("filename") ?: ""
+
+            holder.vectorIdAndFilenameTextView.text = "$timeString\n$fileNameString"
             holder.textTextView.text = data.getString("text")
 
             holder.vectorIdAndFilenameTextView.setTextColor(context.resources.getColor(R.color.accent_0, null))
@@ -74,36 +80,37 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
         Log.i("DataDumpAdapter", "handleDeleteButtonClick")
 
         val dataItem = dataDumpList.getJSONObject(adapterPosition)
-        val vectorId: String? = dataItem.optString("vector_id")
-        val fileName: String? = dataItem.optString("filename")
-        Log.i("DataDumpAdapter", "$adapterPosition\n$dataItem\n$vectorId\n$fileName")
+        val vectorId: String? = dataItem.optString("id")
+        Log.i("DataDumpAdapter", "$adapterPosition\n$dataItem\n$vectorId")
 
-        // Implement your logic to handle the delete action
         if (vectorId != null) {
-            Helpers.deleteVectorById(vectorId) {
-            }
-        }
-        if (fileName != null) {
-            Helpers.deleteS3ObjectByFilename(context, fileName) {
-            }
-        }
-        if (context is Activity) {
-            context.runOnUiThread {
-                dataDumpList.remove(adapterPosition)
-                notifyItemRemoved(adapterPosition)
+            Helpers.deletePineconeVectorById(vectorId)
+
+            if (context is Activity) {
+                context.runOnUiThread {
+                    dataDumpList.remove(adapterPosition)
+                    notifyItemRemoved(adapterPosition)
+                }
             }
         }
     }
     private fun handleDownloadButtonClick(adapterPosition: Int) {
         Log.i("DataDumpAdapter", "handleDownloadButtonClick")
 
-        //TODO: Add code to download S3 object
         val dataItem = dataDumpList.getJSONObject(adapterPosition)
         val fileName: String? = dataItem.optString("filename")
         Log.i("DataDumpAdapter", "$adapterPosition\n$dataItem\n$$fileName")
 
         if (fileName != null) {
-            Helpers.downloadFromS3(context, fileName)
+            val downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val folderName = context.getString(R.string.app_name)
+            val folder = File(downloadsDirectory, folderName)
+            if (!folder.exists()) {
+                folder.mkdirs()
+            }
+            val destinationFile = File(folder, fileName)
+
+            Helpers.downloadFromS3(context, fileName, destinationFile)
         }
     }
 

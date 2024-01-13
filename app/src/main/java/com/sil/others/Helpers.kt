@@ -17,31 +17,31 @@ import androidx.work.*
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.DeleteObjectRequest
 import com.amazonaws.services.s3.model.GetObjectRequest
-import com.amazonaws.services.s3.model.ListObjectsRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.sil.mia.BuildConfig
-import com.sil.workers.ApiCallWorker
 import com.sil.workers.UploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class Helpers {
     companion object {
@@ -59,49 +59,40 @@ class Helpers {
         private const val pineconeIndexName = BuildConfig.PINECONE_INDEX_NAME
         // endregion
 
-        // region API Call Related
-        fun scheduleApiCallWork(context: Context, payload: JSONObject) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val inputData = workDataOf(
-                "payloadJson" to payload.toString()
-            )
-
-            val apiCallWorkRequest = OneTimeWorkRequestBuilder<ApiCallWorker>()
-                .setConstraints(constraints)
-                .setInputData(inputData)
-                .build()
-
-            val appContext = context.applicationContext
-            WorkManager.getInstance(appContext).enqueue(apiCallWorkRequest)
-        }
+        // region Init Related
+        private val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
+        private val s3Client = AmazonS3Client(credentials)
+        // endregion
+        
+        // region APIs Related
         suspend fun callContextAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
             repeat(3) { attempt ->
                 try {
-                    val url = URL(awsApiEndpoint)
-                    val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 15000
-                        readTimeout = 15000
-                        requestMethod = "POST"
-                        setRequestProperty("Content-Type", "application/json")
-                        doOutput = true
-                        outputStream.use { it.write(payload.toString().toByteArray()) }
-                    }
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(15000, TimeUnit.MILLISECONDS)
+                        .readTimeout(15000, TimeUnit.MILLISECONDS)
+                        .build()
 
-                    val responseCode = httpURLConnection.responseCode
+                    val url = awsApiEndpoint
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                        .addHeader("Content-Type", "application/json")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+
                     return if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
+                        val responseJson = response.body.string()
                         val jsonResponse = JSONArray(responseJson)
                         Log.d("Helper", "callContextAPI Response: $jsonResponse")
                         val content = jsonResponse.toString()
                         content
                     } else {
-                        val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("Helper", "callContextAPI Error Response: $errorResponse")
+                        Log.e("Helper", "callContextAPI Error Response: ${response.body.string()}")
                         ""
                     }
                 } catch (e: IOException) {
@@ -111,15 +102,14 @@ class Helpers {
                         Log.e("Helper", "SocketException details: ", e)
                     }
                     lastException = e
-                    // Delay before retrying
-                    delay(1000L * (attempt + 1)) // Exponential back-off
+                    delay(1000L * (attempt + 1))
                 } catch (e: Exception) {
                     Log.e("Helper", "callContextAPI Unexpected Exception: ${e.message}")
                     return ""
                 }
             }
             lastException?.let {
-                throw it // Re-throw the last IO exception if all retries fail
+                throw it
             }
             return ""
         }
@@ -128,114 +118,174 @@ class Helpers {
 
             repeat(3) { attempt ->
                 try {
-                    val url = URL("https://api.openai.com/v1/chat/completions")
-                    val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        setRequestProperty("Authorization", "Bearer $openaiApiKey")
-                        setRequestProperty("Content-Type", "application/json")
-                        doOutput = true
-                        outputStream.use { it.write(payload.toString().toByteArray()) }
-                    }
+                    val client = OkHttpClient()
+                    val url = "https://api.openai.com/v1/chat/completions"
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                        .addHeader("Authorization", "Bearer $openaiApiKey")
+                        .build()
 
-                    val responseCode = httpURLConnection.responseCode
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+
                     return if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
-                        val jsonResponse = JSONObject(responseJson)
+                        val jsonResponse = JSONObject(response.body.string())
                         Log.d("Helper", "callOpenaiAPI Response: $jsonResponse")
-                        val content = jsonResponse.getJSONArray("choices").getJSONObject(0)
-                            .getJSONObject("message").getString("content")
+                        val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
                         content
                     } else {
-                        val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("Helper", "callOpenaiAPI Error Response: $errorResponse")
+                        Log.e("Helper", "callOpenaiAPI Error Response: ${response.body.string()}")
                         ""
                     }
                 } catch (e: IOException) {
                     Log.e("Helper", "callOpenaiAPI IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
-                    // Delay before retrying
-                    delay(1000L * (attempt + 1)) // Exponential back-off
+                    delay(1000L * (attempt + 1))
                 } catch (e: Exception) {
                     Log.e("Helper", "callOpenaiAPI Unexpected Exception: $e")
                     return ""
                 }
             }
             lastException?.let {
-                throw it // Re-throw the last IO exception if all retries fail
+                throw it
             }
             return ""
         }
-        private suspend fun callGeocodingAPI(latitude: Double, longitude: Double): String {
-            return withContext(Dispatchers.IO) {
-                try {
-                    // Construct the URL with latitude and longitude
-                    val urlString = "https://geocode.maps.co/reverse?lat=$latitude&lon=$longitude&api_key=$locationApiEndpoint"
-                    val url = URL(urlString)
+        private suspend fun callGeocodingAPI(latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val url = "https://geocode.maps.co/reverse"
+                val params = mapOf("lat" to latitude, "lon" to longitude, "api_key" to locationApiEndpoint)
 
-                    // Open the connection
-                    val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
-                        requestMethod = "GET" // This is a GET request
-                    }
+                val request = Request.Builder()
+                    .url("$url?${params.entries.joinToString("&") { "${it.key}=${it.value}" }}")
+                    .get()
+                    .build()
 
-                    // Handle the response
-                    val responseCode = httpURLConnection.responseCode
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
-                        val jsonResponse = JSONObject(responseJson)
-                        // Log.d("Helper", "callGeocodingAPI Response: $jsonResponse")
-                        val content = jsonResponse.getString("display_name")
-                        content
-                    } else {
-                        val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("Helper", "callGeocodingAPI Error Response: $errorResponse")
-                        ""
-                    }
-                } catch (e: IOException) {
-                    Log.e("Helper", "IO Exception: ${e.message}")
-                    ""
-                } catch (e: Exception) {
-                    Log.e("Helper", "Exception: ${e.message}")
+                val response = client.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val jsonResponse = JSONObject(response.body.string())
+                    Log.d("Helper", "callGeocodingAPI Response: $jsonResponse")
+                    val content = jsonResponse.getString("display_name")
+                    content
+                } else {
+                    Log.e("Helper", "callGeocodingAPI Error Response: ${response.body.string()}")
                     ""
                 }
+            } catch (e: Exception) {
+                Log.e("Helper", "callGeocodingAPI Exception: $e")
+                ""
             }
         }
-        private suspend fun callWeatherAPI(latitude: Double, longitude: Double): JSONObject? {
-            return withContext(Dispatchers.IO) {
-                try {
-                    // Construct the URL with latitude and longitude
-                    val urlString = "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&units=metric&appid=$weatherApiEndpoint"
-                    val url = URL(urlString)
+        private suspend fun callWeatherAPI(latitude: Double, longitude: Double): JSONObject? = withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val url = "https://api.openweathermap.org/data/2.5/weather"
+                val params = mapOf("lat" to latitude, "lon" to longitude, "units" to "metric", "appid" to weatherApiEndpoint)
 
-                    // Open the connection
-                    val httpURLConnection = (url.openConnection() as HttpURLConnection).apply {
-                        requestMethod = "GET" // This is a GET request
-                    }
+                val request = Request.Builder()
+                    .url("$url?${params.entries.joinToString("&") { "${it.key}=${it.value}" }}")
+                    .get()
+                    .build()
 
-                    // Handle the response
-                    val responseCode = httpURLConnection.responseCode
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val responseJson = httpURLConnection.inputStream.bufferedReader().use { it.readText() }
-                        val jsonResponse = JSONObject(responseJson)
-                        // Log.d("Helper", "callWeatherAPI Response: $jsonResponse")
-                        jsonResponse
-                    } else {
-                        val errorResponse = httpURLConnection.errorStream.bufferedReader().use { it.readText() }
-                        Log.e("Helper", "callWeatherAPI Error Response: $errorResponse")
-                        null
-                    }
-                } catch (e: IOException) {
-                    Log.e("Helper", "IO Exception: ${e.message}")
-                    null
-                } catch (e: Exception) {
-                    Log.e("Helper", "Exception: ${e.message}")
+                val response = client.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val jsonResponse = JSONObject(response.body.string())
+                    Log.d("Helper", "callWeatherAPI Response: $jsonResponse")
+                    jsonResponse
+                } else {
+                    Log.e("Helper", "callWeatherAPI Error Response: ${response.body.string()}")
                     null
                 }
+            } catch (e: Exception) {
+                Log.e("Helper", "callWeatherAPI Exception: $e")
+                null
             }
         }
         // endregion
 
-        // region Cloud Related
-        fun deleteVectorById(vectorId: String, callback: (Boolean) -> Unit) {
+        // region Pinecone and S3 Related
+        suspend fun fetchPineconeVectorMetadata(): JSONArray {
+            var lastException: IOException? = null
+
+            repeat(3) { attempt ->
+                try {
+                    val client = OkHttpClient()
+
+                    val vectorArray = FloatArray(1536)
+                    val vectorArrayJson = JSONArray().apply {
+                        for (value in vectorArray) {
+                            put(value)
+                        }
+                    }
+
+                    val mediaType = "application/json".toMediaTypeOrNull()
+                    val body = JSONObject().apply {
+                        put("filter", JSONObject().apply {
+                            put("year", 2024)
+                            put("month", 1)
+                        })
+                        put("includeValues", false)
+                        put("includeMetadata", true)
+                        put("topK", 5)
+                        put("vector", vectorArrayJson)
+                    }.toString().toRequestBody(mediaType)
+
+                    val request = Request.Builder()
+                        .url("https://mia-170756d.svc.gcp-starter.pinecone.io/query")
+                        .post(body)
+                        .addHeader("accept", "application/json")
+                        .addHeader("content-type", "application/json")
+                        .addHeader("Api-Key", pineconeApiKey)
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+
+                    return if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val responseBody = response.body.string()
+
+                        // Doing this to get array in matches key and selecting only metadata object from it
+                        val bodyJsonArray = JSONObject(responseBody).getJSONArray("matches")
+                        val metadataArray = JSONArray()
+                        for (i in 0 until bodyJsonArray.length()) {
+                            val jsonObject = bodyJsonArray.getJSONObject(i)
+                            val metadataObject = jsonObject.optJSONObject("metadata")
+                            
+                            // Doing this to get ID of the vector which isn't in the metadata JSON object
+                            if (metadataObject != null) {
+                                val modifiedMetadataObject = JSONObject(metadataObject.toString())
+                                modifiedMetadataObject.put("id", jsonObject.getString("id"))
+                                metadataArray.put(modifiedMetadataObject)
+                            }
+                        }
+
+                        metadataArray
+                    } else {
+                        Log.e("Helper", "Pinecone API Error Response: ${response.body.string()}")
+                        JSONArray()
+                    }
+                }
+                catch (e: IOException) {
+                    val message = e.message ?: "Unknown IO exception"
+                    Log.e("Helper", "Pinecone API IO Exception on attempt $attempt: $message", e)
+                    lastException = e
+                    delay(1000L * (attempt + 1))
+                }
+                catch (e: Exception) {
+                    Log.e("Helper", "Pinecone API Unexpected Exception: $e")
+                    return JSONArray()
+                }
+            }
+            lastException?.let {
+                throw it
+            }
+            return JSONArray()
+        }
+        fun deletePineconeVectorById(vectorId: String) {
             Thread {
                 var connection: HttpURLConnection? = null
                 try {
@@ -267,95 +317,61 @@ class Helpers {
 
                         Log.i("Helper", "deleteVectorById responseCode: $responseCode")
                         if (responseCode == HttpURLConnection.HTTP_OK) {
-                            Log.i("Helper", "Vector deleted successfully!")
-                            callback(true)
+                            Log.i("Helper", "Pinecone API Vector Delete: Successful!")
                         } else {
-                            // Server returned non-successful status code
-                            callback(false)
+                            Log.e("Helper", "Pinecone API Vector Delete Error: $responseCode")
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("Helper", "Error making Pinecone request: ", e)
+                    Log.e("Helper", "Pinecone API Vector Delete Error: Error making Pinecone request\n", e)
                     e.printStackTrace()
-                    callback(false)
                 } finally {
                     connection?.disconnect()
                 }
             }.start()
         }
-        fun deleteS3ObjectByFilename(context: Context, fileName: String, callback: (Boolean) -> Unit) {
+        fun downloadFromS3(context: Context, fileName: String, destinationFile: File) {
+            Log.i("Helpers", "Downloading from S3...")
+
             Thread {
                 try {
-                    val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
-                    val s3Client = AmazonS3Client(credentials)
+                    val generalSharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = generalSharedPrefs.getString("userName", null)
+                    val dataKeyName = "$userName/recordings/$fileName"
+                    Log.i("Helper", "downloadFromS3 dataKeyName: $dataKeyName")
 
-                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-                    val userName = sharedPrefs.getString("userName", null)
-                    val dataKeyName = "$userName/data/$fileName"
-                    Log.i("Helper", "deleteS3ObjectByFilename dataKeyName: $dataKeyName")
+                    // Create GetObjectRequest
+                    val getObjectRequest = GetObjectRequest(bucketName, dataKeyName)
 
-                    // Create a delete object request
-                    val deleteObjectRequest = DeleteObjectRequest(bucketName, dataKeyName)
+                    // Download the S3 object
+                    val s3Object = s3Client.getObject(getObjectRequest)
+                    val inputStream = s3Object.objectContent
 
-                    // Execute the delete operation
-                    s3Client.deleteObject(deleteObjectRequest)
+                    // Write the S3 object content to a local file
+                    val outputStream = FileOutputStream(destinationFile)
 
-                    // Notify the callback that the deletion was successful
-                    Log.i("Helper", "S3 object deleted successfully!")
-                    callback(true)
-                } catch (e: Exception) {
+                    inputStream.use { input ->
+                        outputStream.use { output ->
+                            input.copyTo(output)
+                        }
+                        showToast(context, "S3 download complete!")
+                        Log.i("Helper", "S3 download complete!")
+                    }
+
+                    // Close the streams
+                    inputStream.close()
+                    outputStream.close()
+                }
+                catch (e: Exception) {
+                    when (e) {
+                        is AmazonServiceException -> Log.e("Helper", "Error uploading to S3: ${e.message}")
+                        is FileNotFoundException -> Log.e("Helper", "File not found: ${e.message}")
+                        else -> Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
+                    }
+                    showToast(context, "S3 download failed :(")
                     e.printStackTrace()
-                    callback(false)
                 }
             }.start()
-        }
-        fun getObjectsInS3(context: Context): JSONArray {
-            val jsonArray = JSONArray()
-            Log.i("Helpers", "Reading objects in S3...")
-
-            try {
-                val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
-                val s3 = AmazonS3Client(credentials)
-
-                val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-                val userName = sharedPrefs.getString("userName", null)
-                val dataKeyName = "$userName/data/"
-
-                // List objects in the specified bucket and with the given object key prefix
-                val listObjectsRequest = ListObjectsRequest()
-                    .withBucketName(bucketName)
-                    .withPrefix(dataKeyName)
-
-                val objectsResponse = s3.listObjects(listObjectsRequest)
-
-                // Iterate through the objects and read their data
-                for (s3ObjectSummary in objectsResponse.objectSummaries) {
-                    val objectKey = s3ObjectSummary.key
-
-                    // Get the object data
-                    val getObjectRequest = GetObjectRequest(bucketName, objectKey)
-                    val s3Object = s3.getObject(getObjectRequest)
-                    val inputStream = s3Object.objectContent
-                    BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                        // Convert FileReader to String
-                        val text = reader.readText()
-                        // Assuming each file contains a single JSON object
-                        val jsonObject = JSONObject(text)
-                        jsonArray.put(jsonObject)
-                        // Read and print the data
-                        Log.i("Helpers", "DataDump from file: $objectKey - $jsonObject")
-                    }
-                }
-            }
-            catch (e: Exception) {
-                when (e) {
-                    is AmazonServiceException -> Log.e("Helper", "Error reading from S3: ${e}")
-                    is FileNotFoundException -> Log.e("Helper", "File not found: ${e}")
-                    else -> Log.e("Helper", "Error in S3 read: ${e}")
-                }
-                e.printStackTrace()
-            }
-            return jsonArray
         }
         fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
             val constraints = Constraints.Builder()
@@ -379,9 +395,6 @@ class Helpers {
             Log.i("Helpers", "Uploading to S3...")
 
             try {
-                val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
-                val s3Client = AmazonS3Client(credentials)
-
                 audioFile?.let {
                     // Verify the file's readability and size
                     if (!it.exists() || !it.canRead() || it.length() <= 0) {
@@ -390,8 +403,8 @@ class Helpers {
                     }
 
                     // Upload audio file
-                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-                    val userName = sharedPrefs.getString("userName", null)
+                    val generalSharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = generalSharedPrefs.getString("userName", null)
                     val audioKeyName = "$userName/recordings/${it.name}"
 
                     // Metadata
@@ -439,51 +452,6 @@ class Helpers {
                 }
                 e.printStackTrace()
             }
-        }
-        fun downloadFromS3(context: Context, fileName: String) {
-            Log.i("Helpers", "Downloading from S3...")
-
-            Thread {
-                try {
-                    val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
-                    val s3Client = AmazonS3Client(credentials)
-
-                    val sharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-                    val userName = sharedPrefs.getString("userName", null)
-                    val dataKeyName = "$userName/recordings/$fileName"
-                    Log.i("Helper", "downloadFromS3 dataKeyName: $dataKeyName")
-
-                    // Create GetObjectRequest
-                    val getObjectRequest = GetObjectRequest(bucketName, dataKeyName)
-
-                    // Download the S3 object
-                    val s3Object = s3Client.getObject(getObjectRequest)
-                    val inputStream = s3Object.objectContent
-
-                    // Write the S3 object content to a local file
-                    val outputFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
-                    // val outputFile = File(fileName)
-                    val outputStream = FileOutputStream(outputFile)
-
-                    inputStream.use { input ->
-                        outputStream.use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-
-                    // Close the streams
-                    inputStream.close()
-                    outputStream.close()
-                }
-                catch (e: Exception) {
-                when (e) {
-                    is AmazonServiceException -> Log.e("Helper", "Error uploading to S3: ${e.message}")
-                    is FileNotFoundException -> Log.e("Helper", "File not found: ${e.message}")
-                    else -> Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
-                }
-                e.printStackTrace()
-            }
-            }.start()
         }
         // endregion
 

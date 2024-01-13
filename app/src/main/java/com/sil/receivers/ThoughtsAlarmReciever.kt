@@ -112,7 +112,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
                 // Check if it's within the allowed notification time
                 if (isNotificationAllowed()) {
                     Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
-                    createMiaThought()
+                    miaThought()
                 } else {
                     Log.i("ThoughtsAlarm", "Do Not Disturb time. Not showing notification.")
                 }
@@ -136,11 +136,11 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
     // endregion
 
     // region Thought Generation
-    private suspend fun createMiaThought() {
-        Log.i("ThoughtsAlarm", "createMiaThought")
+    private suspend fun miaThought() {
+        Log.i("ThoughtsAlarm", "miaThought")
 
         val systemPrompt = createSystemPrompt()
-
+        Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver systemPrompt: $systemPrompt")
         val wakePayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
@@ -153,10 +153,9 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
             put("max_tokens", 128)
             put("temperature", 0.9)
         }
-        // Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakePayload: $wakePayload")
+        Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakePayload: $wakePayload")
         val wakeResponse = Helpers.callOpenaiAPI(wakePayload).lowercase()
         Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakeResponse: $wakeResponse")
-
         if(wakeResponse != "null") {
             saveMessages(wakeResponse)
 
@@ -164,6 +163,8 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
                 showNotification(wakeResponse)
             }
         }
+
+        // TODO: Create a function to pull user's unique vocab from updated transcript metadata
 
         sensorHelper.unregister()
     }
@@ -183,7 +184,6 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
 
         return finalPrompt
     }
-
     private suspend fun pullLatestRecordings(): String {
         Log.i("ThoughtsAlarm", "pullLatestRecordings")
 
