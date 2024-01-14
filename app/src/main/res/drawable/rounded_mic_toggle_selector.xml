@@ -3,13 +3,32 @@
     <!-- When checked/selected -->
     <item android:state_checked="true">
         <layer-list>
-         <item android:drawable="@drawable/rounded_mic_toggle_on"/>
+            <item>
+                <shape>
+                    <solid android:color="@color/accent_0"/>
+                    <corners android:radius="@dimen/roundedCorners"/>
+                    <stroke android:color="@color/white" android:width="@dimen/lineThickness"/>
+                </shape>
+            </item>
+
+            <item
+                android:drawable="@drawable/ic_baseline_mic_24"
+                android:gravity="center"/>
         </layer-list>
     </item>
     <!-- When unchecked/not selected -->
     <item android:state_checked="false">
         <layer-list>
-            <item android:drawable="@drawable/rounded_mic_toggle_off"/>
+            <item>
+                <shape>
+                    <solid android:color="@color/gray_5"/>
+                    <corners android:radius="@dimen/roundedCorners"/>
+                </shape>
+            </item>
+
+            <item
+                android:drawable="@drawable/ic_baseline_mic_off_24"
+                android:gravity="center"/>
         </layer-list>
     </item>
 </selector>

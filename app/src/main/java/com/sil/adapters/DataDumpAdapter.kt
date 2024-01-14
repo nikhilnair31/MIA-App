@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -11,7 +13,6 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.recyclerview.widget.RecyclerView
 import com.sil.mia.IndivData
 import com.sil.mia.R
@@ -67,7 +68,7 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
             handleDeleteButtonClick(position)
         }
         holder.downloadButton.setOnClickListener {
-            handleDownloadButtonClick(position)
+            handleDownloadButtonClick(position, holder.downloadButton)
         }
         holder.dataIndivConstraintLayout.setOnClickListener {
             val intent = Intent(context, IndivData::class.java)
@@ -97,7 +98,7 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
             }
         }
     }
-    private fun handleDownloadButtonClick(adapterPosition: Int) {
+    private fun handleDownloadButtonClick(adapterPosition: Int, downloadButton: ImageButton) {
         Log.i("DataDumpAdapter", "handleDownloadButtonClick")
 
         val dataItem = dataDumpList.getJSONObject(adapterPosition)
@@ -106,14 +107,23 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
 
         if (fileName != null) {
             val downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val folderName = context.getString(R.string.app_name)
+            val folderName = context.getString(R.string.appName)
             val folder = File(downloadsDirectory, folderName)
-            if (!folder.exists()) {
-                folder.mkdirs()
-            }
+            if (!folder.exists()) folder.mkdirs()
             val destinationFile = File(folder, fileName)
 
-            Helpers.downloadFromS3(context, fileName, destinationFile)
+            // TODO: Manage its enabled/disabled state on leaving the activity
+            downloadButton.isEnabled = false
+            Helpers.downloadFromS3(context, fileName, destinationFile) { success ->
+                Handler(Looper.getMainLooper()).post {
+                    downloadButton.isEnabled = true
+                    if (success) {
+                        Helpers.showToast(context, "S3 download complete!")
+                    } else {
+                        Helpers.showToast(context, "S3 download failed :(")
+                    }
+                }
+            }
         }
     }
 

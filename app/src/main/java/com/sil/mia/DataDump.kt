@@ -70,8 +70,17 @@ class DataDump : AppCompatActivity() {
     }
     private fun fetchVectorsMetadata() {
         CoroutineScope(Dispatchers.Main).launch {
-            val responseJsonObject = withContext(Dispatchers.IO) {
-                Helpers.fetchPineconeVectorMetadata()
+            buttonRefresh.isEnabled = false
+            var responseJsonObject = JSONObject()
+            withContext(Dispatchers.IO) {
+                Helpers.fetchPineconeVectorMetadata { success, response ->
+                    if (success) {
+                        responseJsonObject = response
+                    }
+                    this@DataDump.runOnUiThread {
+                        buttonRefresh.isEnabled = true
+                    }
+                }
             }
 
             // Doing this to get array in matches key
@@ -97,7 +106,7 @@ class DataDump : AppCompatActivity() {
                 val id2 = json2.optString("id")
                 val timestamp1 = json1.optString("currenttimeformattedstring")
                 val timestamp2 = json2.optString("currenttimeformattedstring")
-                Log.i("DataDump", "id1: $id1\nid2: $id2\ntimestamp1: $timestamp1\ntimestamp2: $timestamp2")
+                // Log.i("DataDump", "id1: $id1\nid2: $id2\ntimestamp1: $timestamp1\ntimestamp2: $timestamp2")
 
                 // Convert timestamps to milliseconds
                 val millis1 = dateFormat.parse(timestamp1)
@@ -121,7 +130,7 @@ class DataDump : AppCompatActivity() {
         }
     }
     private fun dataLoading() {
-        loadingTextView.text = getString(R.string.loading)
+        loadingTextView.text = getString(R.string.loadingText)
         loadingTextView.visibility = View.VISIBLE
         recyclerView.visibility = View.GONE
     }
@@ -131,7 +140,7 @@ class DataDump : AppCompatActivity() {
         recyclerView.visibility = View.VISIBLE
     }
     private fun dataNotPopulated() {
-        loadingTextView.text = getString(R.string.noData)
+        loadingTextView.text = getString(R.string.noDataText)
         loadingTextView.visibility = View.VISIBLE
         recyclerView.visibility = View.GONE
     }

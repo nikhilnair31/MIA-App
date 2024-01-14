@@ -18,17 +18,23 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
+        // API Keys
+        // OpenAI Related
         buildConfigField "String", "OPENAI_API_KEY", "\"${OPENAI_API_KEY}\""
-        buildConfigField "String", "BUCKET_NAME", "\"${BUCKET_NAME}\""
-        buildConfigField "String", "AWS_ACCESS_KEY", "\"${AWS_ACCESS_KEY}\""
-        buildConfigField "String", "AWS_SECRET_KEY", "\"${AWS_SECRET_KEY}\""
-        buildConfigField "String", "AWS_API_ENDPOINT", "\"${AWS_API_ENDPOINT}\""
-        buildConfigField "String", "WEATHER_API_KEY", "\"${WEATHER_API_KEY}\""
-        buildConfigField "String", "GEOLOCATION_API_KEY", "\"${GEOLOCATION_API_KEY}\""
+        // Pinecone Related
         buildConfigField "String", "PINECONE_API_ENDPOINT", "\"${PINECONE_API_ENDPOINT}\""
         buildConfigField "String", "PINECONE_API_KEY", "\"${PINECONE_API_KEY}\""
         buildConfigField "String", "PINECONE_ENV_KEY", "\"${PINECONE_ENV_KEY}\""
         buildConfigField "String", "PINECONE_INDEX_NAME", "\"${PINECONE_INDEX_NAME}\""
+        // AWS Related
+        buildConfigField "String", "BUCKET_NAME", "\"${BUCKET_NAME}\""
+        buildConfigField "String", "AWS_ACCESS_KEY", "\"${AWS_ACCESS_KEY}\""
+        buildConfigField "String", "AWS_SECRET_KEY", "\"${AWS_SECRET_KEY}\""
+        buildConfigField "String", "AWS_API_ENDPOINT", "\"${AWS_API_ENDPOINT}\""
+        // Weather Related
+        buildConfigField "String", "WEATHER_API_KEY", "\"${WEATHER_API_KEY}\""
+        // Location Related
+        buildConfigField "String", "GEOLOCATION_API_KEY", "\"${GEOLOCATION_API_KEY}\""
     }
 
     buildTypes {

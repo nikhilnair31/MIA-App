@@ -15,7 +15,7 @@
         app:layout_constraintStart_toStartOf="parent"
         android:fontFamily="@font/rubik_mono_one"
         android:textColor="@color/accent_0"
-        android:text="@string/app_name"
+        android:text="@string/appName"
         android:textSize="48sp"
         android:gravity="center" />
 
@@ -27,7 +27,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:contentDescription="@string/appLogo"
+        android:contentDescription="@string/appLogoDescription"
         android:src="@mipmap/mia_launcher_foreground"
         android:scaleType="centerCrop"
         android:scaleX="1.2"

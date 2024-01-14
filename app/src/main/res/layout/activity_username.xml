@@ -14,7 +14,7 @@
         android:textColor="@color/accent_0"
         android:gravity="center_horizontal"
         android:textSize="40sp"
-        android:text="@string/userName"
+        android:text="@string/usernameText"
         app:layout_constraintBottom_toTopOf="@+id/editText"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -26,7 +26,7 @@
         android:autofillHints="Enter your username..."
         android:background="@drawable/rounded_edittext"
         android:fontFamily="@font/rubik_mono_one"
-        android:hint="@string/usernameSetting"
+        android:hint="@string/usernameHint"
         android:padding="8dp"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"

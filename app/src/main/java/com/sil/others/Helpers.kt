@@ -7,12 +7,9 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.BatteryManager
-import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.work.Constraints
-import androidx.work.NetworkType
 import androidx.work.*
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
@@ -20,16 +17,15 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.sil.mia.R
 import com.sil.mia.BuildConfig
 import com.sil.workers.UploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -57,8 +53,6 @@ class Helpers {
         private const val locationApiEndpoint = BuildConfig.GEOLOCATION_API_KEY
         private const val pineconeApiEndpoint = BuildConfig.PINECONE_API_ENDPOINT
         private const val pineconeApiKey = BuildConfig.PINECONE_API_KEY
-        private const val pineconeEnvKey = BuildConfig.PINECONE_ENV_KEY
-        private const val pineconeIndexName = BuildConfig.PINECONE_INDEX_NAME
         // endregion
 
         // region Init Related
@@ -154,10 +148,10 @@ class Helpers {
             }
             return ""
         }
-        private suspend fun callGeocodingAPI(latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
+        private suspend fun callGeocodingAPI(context: Context, latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
             try {
                 val client = OkHttpClient()
-                val url = "https://geocode.maps.co/reverse"
+                val url = context.getString(R.string.addressURL)
                 val params = mapOf("lat" to latitude, "lon" to longitude, "api_key" to locationApiEndpoint)
 
                 val request = Request.Builder()
@@ -169,22 +163,22 @@ class Helpers {
 
                 if (response.isSuccessful) {
                     val jsonResponse = JSONObject(response.body.string())
-                    Log.d("Helper", "callGeocodingAPI Response: $jsonResponse")
+                    // Log.d("Helper", "callGeocodingAPI Response\n$jsonResponse")
                     val content = jsonResponse.getString("display_name")
                     content
                 } else {
-                    Log.e("Helper", "callGeocodingAPI Error Response: ${response.body.string()}")
+                    Log.e("Helper", "callGeocodingAPI Error Response\n${response.body.string()}")
                     ""
                 }
             } catch (e: Exception) {
-                Log.e("Helper", "callGeocodingAPI Exception: $e")
+                Log.e("Helper", "callGeocodingAPI Exception\n$e")
                 ""
             }
         }
-        private suspend fun callWeatherAPI(latitude: Double, longitude: Double): JSONObject? = withContext(Dispatchers.IO) {
+        private suspend fun callWeatherAPI(context: Context, latitude: Double, longitude: Double): JSONObject? = withContext(Dispatchers.IO) {
             try {
                 val client = OkHttpClient()
-                val url = "https://api.openweathermap.org/data/2.5/weather"
+                val url = context.getString(R.string.weatherURL)
                 val params = mapOf("lat" to latitude, "lon" to longitude, "units" to "metric", "appid" to weatherApiEndpoint)
 
                 val request = Request.Builder()
@@ -196,21 +190,21 @@ class Helpers {
 
                 if (response.isSuccessful) {
                     val jsonResponse = JSONObject(response.body.string())
-                    Log.d("Helper", "callWeatherAPI Response: $jsonResponse")
+                    // Log.d("Helper", "callWeatherAPI Response\n$jsonResponse")
                     jsonResponse
                 } else {
-                    Log.e("Helper", "callWeatherAPI Error Response: ${response.body.string()}")
+                    Log.e("Helper", "callWeatherAPI Error Response\n${response.body.string()}")
                     null
                 }
             } catch (e: Exception) {
-                Log.e("Helper", "callWeatherAPI Exception: $e")
+                Log.e("Helper", "callWeatherAPI Exception\n$e")
                 null
             }
         }
         // endregion
 
-        // region Pinecone and S3 Related
-        suspend fun fetchPineconeVectorMetadata(): JSONObject {
+        // region Pinecone Related
+        suspend fun fetchPineconeVectorMetadata(onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
             Log.i("Helpers", "Fetching from Pinecone...")
 
             var lastException: IOException? = null
@@ -253,6 +247,7 @@ class Helpers {
                     return if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseBody = response.body.string()
                         val bodyJsonArray = JSONObject(responseBody)
+                        onComplete.invoke(true, bodyJsonArray)
                         bodyJsonArray
                     } else {
                         Log.e("Helper", "Pinecone API Error Response: ${response.body.string()}")
@@ -267,6 +262,7 @@ class Helpers {
                 }
                 catch (e: Exception) {
                     Log.e("Helper", "Pinecone API Unexpected Exception: $e")
+                    onComplete.invoke(false, JSONObject())
                     return JSONObject()
                 }
             }
@@ -367,7 +363,10 @@ class Helpers {
                 }
             }.start()
         }
-        fun downloadFromS3(context: Context, fileName: String, destinationFile: File) {
+        // endregion
+
+        // region S3 Related
+        fun downloadFromS3(context: Context, fileName: String, destinationFile: File, onComplete: (success: Boolean) -> Unit) {
             Log.i("Helpers", "Downloading from S3...")
 
             Thread {
@@ -391,7 +390,7 @@ class Helpers {
                         outputStream.use { output ->
                             input.copyTo(output)
                         }
-                        showToast(context, "S3 download complete!")
+                        onComplete.invoke(true)
                         Log.d("Helper", "S3 download complete!")
                     }
 
@@ -405,7 +404,7 @@ class Helpers {
                         is FileNotFoundException -> Log.e("Helper", "File not found: ${e.message}")
                         else -> Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
                     }
-                    showToast(context, "S3 download failed :(")
+                    onComplete.invoke(false)
                     e.printStackTrace()
                 }
             }.start()
@@ -497,111 +496,89 @@ class Helpers {
             val finalOutput = JSONObject()
 
             // region Time
-            // Pulling system time in ms
-            val currentSystemTime = pullSystemTime()
-            // Pulling formatted time string
-            val currentTimeFormattedString = pullTimeFormattedString()
-            // Creating a Calendar instance
             val calendar = Calendar.getInstance().apply {
-                timeInMillis = currentSystemTime
+                timeInMillis = pullSystemTime()
             }
-            // Extracting day, month, year, hours, and minutes
-            val day = calendar.get(Calendar.DAY_OF_MONTH)
-            val month = calendar.get(Calendar.MONTH) + 1
-            val year = calendar.get(Calendar.YEAR)
-            val hours = calendar.get(Calendar.HOUR_OF_DAY)
-            val minutes = calendar.get(Calendar.MINUTE)
-            // Adding values to finalOutput
             finalOutput.apply {
-                put("currentTimeFormattedString", currentTimeFormattedString)
-                put("day", day)
-                put("month", month)
-                put("year", year)
-                put("hours", hours)
-                put("minutes", minutes)
+                put("currentTimeFormattedString", pullTimeFormattedString())
+                put("day", calendar.get(Calendar.DAY_OF_MONTH))
+                put("month", calendar.get(Calendar.MONTH) + 1)
+                put("year", calendar.get(Calendar.YEAR))
+                put("hours", calendar.get(Calendar.HOUR_OF_DAY))
+                put("minutes", calendar.get(Calendar.MINUTE))
             }
             // endregion
             // region Battery
             // Pulling current battery level
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-            val batteryLevel = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-            finalOutput.apply {
-                put("batteryLevel", batteryLevel)
-            }
+            finalOutput.put("batteryLevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
             // endregion
             // region Location & Climate
-            // Pulling user's current latitude/longitude
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val location: Location?
-            var address = ""
-            var latitude: Double? = null
-            var longitude: Double? = null
-            var firstWeatherDescription = ""
-            var feelsLike = ""
-            var humidity = ""
-            var windSpeed = ""
-            var cloudAll = ""
-            // Check for location permission
-            if (
-                ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                ||
-                ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-            ) {
-                location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                // Log.v("Helper", "pullDeviceData location: $location")
-                location?.let {
-                    // Log.v("Helper", "pullDeviceData it.latitude: ${it.latitude} it.longitude: ${it.longitude}")
-                    latitude = it.latitude
-                    longitude = it.longitude
-                    address = callGeocodingAPI(latitude!!, longitude!!)
+            if (hasLocationPermission(context)) {
+                val location = getLastKnownLocation(context)
+                location?.let { locIt ->
+                    val (latitude, longitude) = Pair(locIt.latitude, locIt.longitude)
+                    val address = callGeocodingAPI(context, latitude, longitude)
+                    val weatherJSON = callWeatherAPI(context, latitude, longitude)
 
-                    // region Climate
-                    // Pull user's current location's temperature and humidity
-                    val weatherJSON = callWeatherAPI(latitude!!, longitude!!)
-                    if (weatherJSON != null) {
-                        val weatherArray = weatherJSON.getJSONArray("weather")
-                        firstWeatherDescription = weatherArray.getJSONObject(0).getString("description")
+                    finalOutput.apply {
+                        put("address", address)
+                        weatherJSON?.let {
+                            val weatherArray = it.getJSONArray("weather")
+                            put("firstWeatherDescription", weatherArray.getJSONObject(0).getString("description"))
 
-                        val mainObject = weatherJSON.getJSONObject("main")
-                        feelsLike = mainObject.getDouble("feels_like").toString()
-                        humidity = mainObject.getInt("humidity").toString()
+                            val mainObject = it.getJSONObject("main")
+                            put("feelsLike", mainObject.getDouble("feels_like").toString())
+                            put("humidity", mainObject.getInt("humidity").toString())
 
-                        val windObject = weatherJSON.getJSONObject("wind")
-                        windSpeed = windObject.getDouble("speed").toString()
+                            val windObject = it.getJSONObject("wind")
+                            put("windSpeed", windObject.getDouble("speed").toString())
 
-                        val cloudsObject = weatherJSON.getJSONObject("clouds")
-                        cloudAll = cloudsObject.getInt("all").toString()
+                            val cloudsObject = it.getJSONObject("clouds")
+                            put("cloudAll", cloudsObject.getInt("all").toString())
+                        }
                     }
-                    // endregion
                 }
-            }
-            finalOutput.apply {
-                // put("latitude", latitude)
-                // put("longitude", longitude)
-                put("address", address)
-                put("firstWeatherDescription", firstWeatherDescription)
-                put("feelsLike", feelsLike)
-                put("humidity", humidity)
-                put("windSpeed", windSpeed)
-                put("cloudAll", cloudAll)
             }
             // endregion
             // region Motion
             val deviceSpeed = sensorHelper?.getDeviceStatus() ?: 0f
-            Log.d("Helper", "deviceSpeed: $deviceSpeed")
-            val deviceStatus = when {
-                deviceSpeed < 10 -> "idle"
-                deviceSpeed >= 10 && deviceSpeed < 150 -> "moving normal"
-                deviceSpeed >= 150 && deviceSpeed < 500 -> "moving fast"
-                else -> "unknown"
-            }
             finalOutput.apply {
-                put("movementStatus", deviceStatus)
+                put("movementStatus", when {
+                    deviceSpeed < 10 -> "idle"
+                    deviceSpeed >= 10 && deviceSpeed < 150 -> "moving normal"
+                    deviceSpeed >= 150 && deviceSpeed < 500 -> "moving fast"
+                    else -> "unknown"
+                })
             }
+            // Log.d("Helper", "deviceSpeed: $deviceSpeed")
             // endregion
 
             // Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
+        }
+        private fun hasLocationPermission(context: Context): Boolean {
+            return ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+        }
+        private fun getLastKnownLocation(context: Context): Location? {
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+            return try {
+                if (hasLocationPermission(context)) {
+                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                } else null
+            } catch (securityException: SecurityException) {
+                // Handle SecurityException (e.g., show a message to the user)
+                Log.e("Helper", "SecurityException: ${securityException.message}")
+                null
+            }
         }
         private fun pullSystemTime(): Long {
             return System.currentTimeMillis()
@@ -610,6 +587,9 @@ class Helpers {
             val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
             return dateFormat.format(Date())
         }
+        // endregion
+
+        // region Message Related
         fun messageDataWindow(fullJsonString: String?, maxMessages: Int?): JSONArray {
             // Log.i("Helpers", "messageDataWindow")
 

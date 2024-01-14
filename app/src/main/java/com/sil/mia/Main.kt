@@ -118,7 +118,7 @@ hey i'm MIA. what's up?
     """
 
     private val alarmIntervalInMin: Double = 30.05
-    private val maxDataMessages: Int = 100
+    private val maxDataMessages: Int = 20
     // endregion
 
     // region Common
@@ -247,7 +247,9 @@ hey i'm MIA. what's up?
     }
     private suspend fun createMiaResponse(): String {
         val systemData = Helpers.pullDeviceData(this@Main, null)
-        val updatedUserMessage = "$userMessage\nExtra DataDump:\n$systemData"
+        Log.i("Main", "createMiaResponse systemData\n$systemData")
+        val updatedUserMessage = "$userMessage\nExtra Data Dump:\n$systemData"
+        Log.i("Main", "createMiaResponse updatedUserMessage\n$updatedUserMessage")
 
         val messagesListUiCopy = JSONArray(messagesListUI.toString())
         messagesListUiCopy.put(JSONObject().apply {
@@ -255,17 +257,16 @@ hey i'm MIA. what's up?
             put("content", updatedUserMessage)
         })
         val conversationHistoryText = messagesListUiCopy.toString()
-        Log.d("Main", "createMiaResponse conversationHistoryText: $conversationHistoryText")
-        print("createMiaResponse conversationHistoryText: $conversationHistoryText")
+        Log.i("Main", "createMiaResponse conversationHistoryText: $conversationHistoryText")
 
         // If MIA should should look into Pinecone or reply directly
         val withOrWithoutContextMemory =
-            if(shouldMiaLookExternally(conversationHistoryText))
-                lookingExternally(conversationHistoryText)
-            else
+            // if(shouldMiaLookExternally(conversationHistoryText))
+            //     lookingExternally(conversationHistoryText)
+            // else
                 ""
         val finalUserMessage = "$updatedUserMessage\nContext Memory:\n$withOrWithoutContextMemory"
-        print("createMiaResponse finalUserMessage: $finalUserMessage")
+        Log.i("Main", "createMiaResponse finalUserMessage: $finalUserMessage")
 
         // Append JSON for user's message with/without context
         val userJSON = JSONObject().apply {
@@ -283,14 +284,13 @@ hey i'm MIA. what's up?
             put("max_tokens", 512)
             put("temperature", 0)
         }
-        Log.d("Main", "createMiaResponse replyPayload: $replyPayload")
+        Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
         print("createMiaResponse replyPayload: $replyPayload")
         val assistantMessage = withContext(Dispatchers.IO) {
             Helpers.callOpenaiAPI(replyPayload)
         }
-        Log.d("Main", "createMiaResponse assistantMessage: $assistantMessage")
+        Log.i("Main", "createMiaResponse assistantMessage\n$assistantMessage")
 
-        // Return
         return assistantMessage
     }
     private suspend fun shouldMiaLookExternally(conversationHistoryText: String): Boolean {
@@ -310,13 +310,13 @@ hey i'm MIA. what's up?
             put("max_tokens", 24)
             put("temperature", 0)
         }
-        Log.d("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
+        Log.i("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
 
         var taskGuess = withContext(Dispatchers.IO) {
             Helpers.callOpenaiAPI(taskPayload)
         }
         taskGuess = taskGuess.replace("'", "").trim()
-        Log.d("Main", "shouldMiaLookExternally taskGuess: $taskGuess")
+        Log.i("Main", "shouldMiaLookExternally taskGuess: $taskGuess")
 
         return taskGuess.contains("ext")
     }
@@ -338,14 +338,14 @@ hey i'm MIA. what's up?
             put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.d("Main", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
+        Log.i("Main", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
         print("createMiaResponse queryGeneratorPayload: $queryGeneratorPayload")
 
         val queryResponse = withContext(Dispatchers.IO) {
             Helpers.callOpenaiAPI(queryGeneratorPayload)
         }
         val queryResultJSON = JSONObject(queryResponse)
-        Log.d("Main", "lookingExternally queryResultJSON: $queryResultJSON")
+        Log.i("Main", "lookingExternally queryResultJSON: $queryResultJSON")
 
         // Parse the filter JSON to handle various keys and filter types
         val filterJSONObject = JSONObject().apply {
@@ -370,7 +370,7 @@ hey i'm MIA. what's up?
             val userName = sharedPrefs.getString("userName", null)
             put("username", userName)
         }
-        Log.d("Main", "lookingExternally filterJSONObject: $filterJSONObject")
+        Log.i("Main", "lookingExternally filterJSONObject: $filterJSONObject")
 
         // Pull relevant data using a query
         val queryText = queryResultJSON.optString("query", userMessage)
@@ -380,11 +380,11 @@ hey i'm MIA. what's up?
             put("query_top_k", 3)
             put("show_log", "True")
         }
-        Log.d("Main", "lookingExternally contextPayload: $contextPayload")
+        Log.i("Main", "lookingExternally contextPayload: $contextPayload")
         val contextMemory = withContext(Dispatchers.IO) {
             Helpers.callContextAPI(contextPayload)
         }
-        Log.d("Main", "lookingExternally contextMemory: $contextMemory")
+        Log.i("Main", "lookingExternally contextMemory: $contextMemory")
 
         return contextMemory
     }
@@ -428,6 +428,7 @@ hey i'm MIA. what's up?
             messagesListData = Helpers.messageDataWindow(messagesDataString, maxDataMessages)
             messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
             // Log.i("Main", "messagesListComplete\n$messagesListComplete\nmessagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
+
             adapter.notifyDataSetChanged()
         }
         recyclerView.scrollToPosition(adapter.itemCount - 1)

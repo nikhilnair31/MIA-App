@@ -1,32 +1,43 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">MIA</string>
-    <string name="send">send</string>
-    <string name="talkToMIA">Talk to MIA…</string>
-    <string name="dataButton">data button</string>
-    <string name="dataComplete">complete</string>
-    <string name="dataData">data</string>
-    <string name="dataUi">ui</string>
-    <string name="gpt4turbo" tools:ignore="TypographyDashes">gpt-4-1106-preview</string>
-    <string name="gpt3_5turbo">gpt-3.5-turbo</string>
-    <string name="settings">SETTINGS</string>
-    <string name="userName">username</string>
-    <string name="appLogo">app logo</string>
-    <string name="nextButton">back button</string>
-    <string name="usernameSetting">SET A USERNAME</string>
-    <string name="givePermissions">GIVE PERMISSIONS</string>
-    <string name="permissions">PERMISSIONS</string>
-    <string name="dataDump">DUMP</string>
-    <string name="dataIndiv">DATA</string>
-    <string name="loading">LOADING…</string>
-    <string name="noData">NO DATA</string>
-    <string name="deleteButton">delete button</string>
+    <string name="appName">MIA</string>
+
+    <string name="nextButton">next button</string>
+    <string name="refreshButton">refresh button</string>
+    <string name="backButton">back button</string>
+
+    <string name="appLogoDescription">app logo</string>
+
+    <string name="usernameText">username</string>
+    <string name="usernameHint">SET A USERNAME</string>
+
+    <string name="permissionsText">PERMISSIONS</string>
+    <string name="givePermissionsText">GIVE PERMISSIONS</string>
+
+    <string name="dataButtonDescription">data button</string>
+    <string name="sendButtonDescription">send</string>
+    <string name="talkToMiaHint">Talk to MIA…</string>
+
+    <string name="dataDumpText">DUMP</string>
+    <string name="noDataText">NO DATA</string>
+    <string name="loadingText">LOADING…</string>
+
+    <string name="deleteButtonDescription">delete button</string>
+    <string name="downloadButtonDescription">download button</string>
+
     <string name="address">ADDRESS</string>
     <string name="weather">WEATHER</string>
     <string name="transcript">TRANSCRIPT</string>
-    <string name="refresh_button">refresh button</string>
-    <string name="back_button">back button</string>
     <string name="source">SOURCE</string>
     <string name="updated">Updated</string>
-    <!-- Strings used for fragments for navigation -->
+
+    <string name="dataComplete">complete</string>
+    <string name="dataData">data</string>
+    <string name="dataUi">ui</string>
+
+    <string name="gpt4turbo" tools:ignore="TypographyDashes">gpt-4-1106-preview</string>
+    <string name="gpt3_5turbo" tools:ignore="TypographyDashes">gpt-3.5-turbo</string>
+
+    <string name="addressURL">https://geocode.maps.co/reverse</string>
+    <string name="weatherURL">https://api.openweathermap.org/data/2.5/weather</string>
 
 </resources>

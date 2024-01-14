@@ -11,9 +11,12 @@
         android:layout_height="wrap_content"
         android:layout_margin="4dp"
         android:background="@drawable/message_background"
+
         android:padding="10dp"
-        android:fontFamily="@font/rubik_mono_one"
-        android:textColor="@color/gray_70"
+
+        android:textSize="12sp"
         android:layout_gravity="start"
-        android:textSize="12sp" />
+        android:textColor="@color/gray_70"
+        android:fontFamily="@font/rubik_mono_one"
+        android:hint="hi i'm mia" />
 </LinearLayout>
