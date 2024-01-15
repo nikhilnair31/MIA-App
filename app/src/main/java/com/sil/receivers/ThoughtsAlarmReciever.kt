@@ -14,7 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
-import com.sil.others.SensorHelper
+import com.sil.listeners.SensorListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -83,7 +83,7 @@ Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 
 Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day": { "\eq": 29 }, "month": { "\eq": 12 }, "year": { "\eq": 2023 }}}
     """
 
-    private lateinit var sensorHelper: SensorHelper
+    private lateinit var sensorListener: SensorListener
     private var contextMain: Context? = null
 
     private lateinit var messagesSharedPref: SharedPreferences
@@ -102,7 +102,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         Log.i("ThoughtsAlarm", "onReceive")
 
         contextMain = context
-        sensorHelper = SensorHelper(context)
+        sensorListener = SensorListener(context)
         messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
         CoroutineScope(Dispatchers.IO).launch {
             if (isAppInForeground()) {
@@ -166,13 +166,13 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
 
         // TODO: Create a function to pull user's unique vocab from updated transcript metadata
 
-        sensorHelper.unregister()
+        sensorListener.unregister()
     }
 
     private suspend fun createSystemPrompt(): String {
         Log.i("ThoughtsAlarm", "createSystemPrompt")
 
-        val deviceData = contextMain?.let { Helpers.pullDeviceData(it, sensorHelper) }
+        val deviceData = contextMain?.let { Helpers.pullDeviceData(it, sensorListener) }
         // Log.i("ThoughtsAlarm", "createSystemPrompt deviceData\n$deviceData")
         val latestRecordings = pullLatestRecordings()
         // Log.i("ThoughtsAlarm", "createSystemPrompt latestRecordings\n$latestRecordings")
@@ -187,7 +187,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
     private suspend fun pullLatestRecordings(): String {
         Log.i("ThoughtsAlarm", "pullLatestRecordings")
 
-        val contextData = contextMain?.let { Helpers.pullDeviceData(it, sensorHelper) }
+        val contextData = contextMain?.let { Helpers.pullDeviceData(it, sensorListener) }
         val finalUserMessage = "Context:\n$contextData"
 
         // Use GPT to create a filter

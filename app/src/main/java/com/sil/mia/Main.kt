@@ -40,19 +40,18 @@ class Main : AppCompatActivity() {
     private var messagesListComplete = JSONArray()
     private var messagesListData = JSONArray()
     private var messagesListUI = JSONArray()
-    private var dataDumpListUI = JSONArray()
 
     private val lookExtSystemPrompt = """
-You are a system with 2 types of memory. The first is your internal training data itself and another is from an external memories database. 
-Depending on the user's messages determine where to look to reply. ONLY answer with 'int' if internal and 'ext' if external else 'none'. 
+You are a system with 2 types of memory. The first is your internal chat training data itself and another is from an external memories database. 
+You will receive the user's conversation history along with the latest message. Based on this determine where to look to reply. ONLY answer with 'int' if internal and 'ext' if external else 'none'. 
 Examples: 
-Example #1: user: help me make a crème caramel assistant: 'int' 
-Example #2: user: what did they discuss about the marketing project? assistant: 'ext' 
-Example #3: assistant: My apologies if the response seemed robotic. I'm here to chat more naturally. What's on your mind? user: bruhhh where's the personality at assistant: 'int'
-Example #4: user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him assistant: 'ext'
-Example #5: user: what is my opinion on niche music assistant: 'int'
-Example #6: user: recap last week assistant: 'ext'
-Example #7: user: just thinking about last night assistant: 'ext'
+- user: help me make a crème caramel assistant: 'int' 
+- user: what did they discuss about the marketing project? assistant: 'ext' 
+- assistant: Apologies if the response seemed robotic. What is on your mind? user: bruhhh where's the personality at assistant: 'int'
+- user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him assistant: 'ext'
+- user: what is my opinion on niche music assistant: 'int'
+- user: just thinking about last night assistant: 'ext'
+- user: yoooo assistant: 'int'
     """
     private val queryGeneratorSystemPrompt = """
 You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
@@ -251,7 +250,7 @@ hey i'm MIA. what's up?
         val updatedUserMessage = "$userMessage\nExtra Data Dump:\n$systemData"
         Log.i("Main", "createMiaResponse updatedUserMessage\n$updatedUserMessage")
 
-        val messagesListUiCopy = JSONArray(messagesListUI.toString())
+        val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 5)
         messagesListUiCopy.put(JSONObject().apply {
             put("role", "user")
             put("content", updatedUserMessage)
@@ -261,12 +260,12 @@ hey i'm MIA. what's up?
 
         // If MIA should should look into Pinecone or reply directly
         val withOrWithoutContextMemory =
-            // if(shouldMiaLookExternally(conversationHistoryText))
-            //     lookingExternally(conversationHistoryText)
-            // else
+            if(shouldMiaLookExternally(conversationHistoryText))
+                lookingExternally(conversationHistoryText)
+            else
                 ""
         val finalUserMessage = "$updatedUserMessage\nContext Memory:\n$withOrWithoutContextMemory"
-        Log.i("Main", "createMiaResponse finalUserMessage: $finalUserMessage")
+        Log.i("Main", "createMiaResponse finalUserMessage\n$finalUserMessage")
 
         // Append JSON for user's message with/without context
         val userJSON = JSONObject().apply {
@@ -427,7 +426,7 @@ hey i'm MIA. what's up?
             messagesListComplete = Helpers.messageDataWindow(messagesCompleteString, null)
             messagesListData = Helpers.messageDataWindow(messagesDataString, maxDataMessages)
             messagesListUI = Helpers.messageDataWindow(messagesUiString, null)
-            // Log.i("Main", "messagesListComplete\n$messagesListComplete\nmessagesListData\n$messagesListData\nmessagesListUI\n$messagesListUI")
+            Log.i("Main", "messagesListComplete: ${messagesListComplete.length()}\nmessagesListData: ${messagesListData.length()}\nmessagesListUI: ${messagesListUI.length()}")
 
             adapter.notifyDataSetChanged()
         }

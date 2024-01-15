@@ -17,6 +17,7 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.sil.listeners.SensorListener
 import com.sil.mia.R
 import com.sil.mia.BuildConfig
 import com.sil.workers.UploadWorker
@@ -38,6 +39,7 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -137,7 +139,7 @@ class Helpers {
                 } catch (e: IOException) {
                     Log.e("Helper", "callOpenaiAPI IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
-                    delay(1000L * (attempt + 1))
+                    delay(1500L * (attempt + 1))
                 } catch (e: Exception) {
                     Log.e("Helper", "callOpenaiAPI Unexpected Exception: $e")
                     return ""
@@ -204,7 +206,7 @@ class Helpers {
         // endregion
 
         // region Pinecone Related
-        suspend fun fetchPineconeVectorMetadata(onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
+        suspend fun fetchPineconeVectorMetadata(context: Context, onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
             Log.i("Helpers", "Fetching from Pinecone...")
 
             var lastException: IOException? = null
@@ -220,18 +222,34 @@ class Helpers {
                         }
                     }
 
+                    val currentDate = LocalDate.now()
+                    val oneWeekAgo = currentDate.minusWeeks(1)
+                    val generalSharedPref: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = generalSharedPref.getString("userName", null)
                     val mediaType = "application/json".toMediaTypeOrNull()
-                    val body = JSONObject().apply {
-                        // FIXME: Update this to use the generated filters (or not)
-                        // put("filter", JSONObject().apply {
-                        //     put("year", 2024)
-                        //     put("day", 13)
-                        // })
+
+                    // Filtering for past week only
+                    val bodyJson = JSONObject().apply {
+                        put("filter", JSONObject().apply {
+                            put("day", JSONObject().apply {
+                                put("\$gte", oneWeekAgo.dayOfMonth)
+                                put("\$lte", currentDate.dayOfMonth)
+                            })
+                            put("month", JSONObject().apply {
+                                put("\$eq", oneWeekAgo.monthValue)
+                            })
+                            put("year", JSONObject().apply {
+                                put("\$eq", oneWeekAgo.year)
+                            })
+                            put("username", userName)
+                        })
                         put("includeValues", false)
                         put("includeMetadata", true)
-                        put("topK", 50)
+                        put("topK", 100)
                         put("vector", vectorArrayJson)
-                    }.toString().toRequestBody(mediaType)
+                    }
+                    val body = bodyJson.toString().toRequestBody(mediaType)
+                    // Log.d("Helper", "fetchPineconeVectorMetadata bodyJson\n$bodyJson")
 
                     val request = Request.Builder()
                         .url("https://mia-170756d.svc.gcp-starter.pinecone.io/query")
@@ -492,7 +510,7 @@ class Helpers {
         // endregion
 
         // region Data Related
-        suspend fun pullDeviceData(context: Context, sensorHelper: SensorHelper?): JSONObject {
+        suspend fun pullDeviceData(context: Context, sensorListener: SensorListener?): JSONObject {
             val finalOutput = JSONObject()
 
             // region Time
@@ -542,7 +560,7 @@ class Helpers {
             }
             // endregion
             // region Motion
-            val deviceSpeed = sensorHelper?.getDeviceStatus() ?: 0f
+            val deviceSpeed = sensorListener?.getDeviceStatus() ?: 0f
             finalOutput.apply {
                 put("movementStatus", when {
                     deviceSpeed < 10 -> "idle"

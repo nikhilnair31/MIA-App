@@ -1,4 +1,4 @@
-package com.sil.others
+package com.sil.listeners
 
 import android.content.Context
 import android.hardware.Sensor
@@ -8,7 +8,7 @@ import android.hardware.SensorManager
 import android.util.Log
 import kotlin.math.pow
 
-class SensorHelper(private val context: Context) : SensorEventListener {
+class SensorListener(private val context: Context) : SensorEventListener {
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var gyroscope: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
     private var accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)

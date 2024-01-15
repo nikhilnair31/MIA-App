@@ -7,7 +7,7 @@
 
     <string name="appLogoDescription">app logo</string>
 
-    <string name="usernameText">username</string>
+    <string name="usernameText">USERNAME</string>
     <string name="usernameHint">SET A USERNAME</string>
 
     <string name="permissionsText">PERMISSIONS</string>
@@ -15,9 +15,9 @@
 
     <string name="dataButtonDescription">data button</string>
     <string name="sendButtonDescription">send</string>
-    <string name="talkToMiaHint">Talk to MIA…</string>
+    <string name="talkToMiaHint">TALK TO MIA…</string>
 
-    <string name="dataDumpText">DUMP</string>
+    <string name="dataDumpText">WEEKLY DUMP</string>
     <string name="noDataText">NO DATA</string>
     <string name="loadingText">LOADING…</string>
 

@@ -13,11 +13,12 @@
         app:layout_constraintBottom_toTopOf="@+id/imageView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:fontFamily="@font/rubik_mono_one"
-        android:textColor="@color/accent_0"
+
         android:text="@string/appName"
         android:textSize="48sp"
-        android:gravity="center" />
+        android:gravity="center"
+        android:textColor="@color/accent_0"
+        android:fontFamily="@font/venus_cormier" />
 
     <ImageView
         android:id="@+id/imageView"

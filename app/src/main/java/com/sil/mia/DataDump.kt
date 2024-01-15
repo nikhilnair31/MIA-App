@@ -73,7 +73,7 @@ class DataDump : AppCompatActivity() {
             buttonRefresh.isEnabled = false
             var responseJsonObject = JSONObject()
             withContext(Dispatchers.IO) {
-                Helpers.fetchPineconeVectorMetadata { success, response ->
+                Helpers.fetchPineconeVectorMetadata(this@DataDump) { success, response ->
                     if (success) {
                         responseJsonObject = response
                     }

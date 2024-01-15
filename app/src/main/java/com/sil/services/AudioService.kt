@@ -14,7 +14,7 @@ import androidx.core.app.ActivityCompat
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
-import com.sil.others.SensorHelper
+import com.sil.listeners.SensorListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -25,7 +25,7 @@ import java.util.Locale
 
 class AudioService : Service() {
     // region Vars
-    private lateinit var sensorHelper: SensorHelper
+    private lateinit var sensorListener: SensorListener
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
     private val maxRecordingTimeInMin = 20
@@ -44,7 +44,7 @@ class AudioService : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.i("AudioRecord", "onStartCommand")
 
-        sensorHelper = SensorHelper(this@AudioService)
+        sensorListener = SensorListener(this@AudioService)
         startForeground(listeningNotificationId, createNotification())
         startListening()
         return START_STICKY
@@ -52,7 +52,7 @@ class AudioService : Service() {
     override fun onDestroy() {
         Log.i("AudioRecord", "onDestroy")
 
-        sensorHelper.unregister()
+        sensorListener.unregister()
         stopListening()
         super.onDestroy()
     }
@@ -166,7 +166,7 @@ class AudioService : Service() {
     private fun uploadAudioFileAndMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
             // Pull system data for metadata
-            val metadataJson = Helpers.pullDeviceData(this@AudioService, sensorHelper)
+            val metadataJson = Helpers.pullDeviceData(this@AudioService, sensorListener)
             // Add username and audio related metadata
             val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
             val userName = sharedPrefs.getString("userName", null)

@@ -21,12 +21,15 @@
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:layout_marginStart="24dp"
-            android:fontFamily="@font/rubik_mono_one"
-            android:gravity="center_vertical|start"
+
             android:paddingStart="0dp"
+
             android:text="@string/appName"
             android:textColor="@color/accent_0"
             android:textSize="36sp"
+            android:fontFamily="@font/venus_cormier"
+            android:gravity="center_vertical|start"
+
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -69,14 +72,13 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintLayout1"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/constraintLayout2">
 
@@ -99,18 +101,21 @@
             android:layout_height="0dp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
-            android:autofillHints="@string/talkToMiaHint"
-            android:background="@drawable/rounded_edittext"
-            android:hint="@string/talkToMiaHint"
-            android:fontFamily="@font/rubik_mono_one"
-            android:textSize="12sp"
-            android:inputType="textMultiLine"
+
             android:padding="8dp"
             android:paddingStart="64dp"
             android:paddingEnd="16dp"
+
             android:textColor="@color/gray_70"
             android:textColorHint="@color/gray_15"
             android:textCursorDrawable="@drawable/cursor_color"
+            android:textSize="14sp"
+            android:autofillHints="@string/talkToMiaHint"
+            android:background="@drawable/rounded_edittext"
+            android:fontFamily="@font/venus_cormier"
+            android:hint="@string/talkToMiaHint"
+            android:inputType="textMultiLine"
+
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/buttonSend"
             app:layout_constraintStart_toStartOf="parent"

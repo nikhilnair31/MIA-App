@@ -11,6 +11,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/constraintLayout2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -36,12 +38,13 @@
             android:layout_marginStart="8dp"
 
             android:ellipsize="end"
-            android:fontFamily="@font/rubik_mono_one"
+            android:fontFamily="@font/venus_cormier"
             android:gravity="center_vertical|start"
             android:hint="2024-01-12 13:49:00\nrecording_12012024134023.m4a"
+            android:lineSpacingMultiplier="1.5"
             android:textColor="@color/accent_0"
             android:textColorHint="@color/accent_0"
-            android:textSize="12sp"
+            android:textSize="16sp"
 
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -50,203 +53,245 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout2"
-        android:layout_width="0dp"
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="64dp"
-
         android:layout_marginEnd="8dp"
-
         android:layout_marginBottom="8dp"
-        android:background="@drawable/data_background"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/addressTitleTextView"
-            android:layout_width="0dp"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/constraintLayout2"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/message_background"
-            android:fontFamily="@font/rubik_mono_one"
 
-            android:gravity="center"
-            android:padding="10dp"
-            android:text="@string/address"
-            android:textColor="@color/accent_2"
-            android:textColorHint="@color/accent_2"
-            android:textSize="12sp"
-
+            android:layout_marginBottom="72dp"
+            android:background="@drawable/data_background"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/addressTitleTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:background="@drawable/message_background"
+
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="center"
+                android:padding="12dp"
+                android:text="@string/address"
+                android:textColor="@color/accent_2"
+                android:textColorHint="@color/accent_2"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <EditText
+                android:id="@+id/addressTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:autofillHints="address"
+                android:background="@android:color/transparent"
+
+                android:fontFamily="@font/venus_cormier"
+                android:hint="1805, Pearl Street, Judge's Hill Historic District, Austin, Travis County, Texas, 78701, United States"
+                android:inputType="textMultiLine"
+                android:lineSpacingMultiplier="1.5"
+                android:padding="12dp"
+                android:textColor="@color/gray_70"
+                android:textColorHint="@color/gray_70"
+                android:textCursorDrawable="@drawable/cursor_color"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/addressTitleTextView" />
+
+            <TextView
+                android:id="@+id/weatherTitleTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:background="@drawable/message_background"
+
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="center"
+                android:padding="12dp"
+                android:text="@string/weather"
+                android:textColor="@color/accent_1"
+                android:textColorHint="@color/accent_1"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/addressTextView" />
+
+            <EditText
+                android:id="@+id/weatherTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:autofillHints="weather"
+                android:background="@android:color/transparent"
+
+                android:fontFamily="@font/venus_cormier"
+                android:hint="clear sky"
+                android:inputType="text"
+                android:lineSpacingMultiplier="1.5"
+                android:padding="12dp"
+                android:textColor="@color/gray_70"
+                android:textColorHint="@color/gray_70"
+                android:textCursorDrawable="@drawable/cursor_color"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/weatherTitleTextView" />
+
+            <TextView
+                android:id="@+id/sourceTitleTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:background="@drawable/message_background"
+
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="center"
+                android:padding="12dp"
+                android:text="@string/source"
+                android:textColor="@color/accent_3"
+                android:textColorHint="@color/accent_3"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/weatherTextView" />
+
+            <EditText
+                android:id="@+id/sourceTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:autofillHints="source"
+                android:background="@android:color/transparent"
+
+                android:fontFamily="@font/venus_cormier"
+                android:hint="recording"
+                android:inputType="text"
+                android:lineSpacingMultiplier="1.5"
+                android:padding="12dp"
+                android:textColor="@color/gray_70"
+                android:textColorHint="@color/gray_70"
+                android:textCursorDrawable="@drawable/cursor_color"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/sourceTitleTextView" />
+
+            <TextView
+                android:id="@+id/textTitleTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:background="@drawable/message_background"
+
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="center"
+                android:padding="12dp"
+                android:text="@string/transcript"
+                android:textColor="@color/accent_4"
+                android:textColorHint="@color/accent_4"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/sourceTextView" />
+
+            <EditText
+                android:id="@+id/textTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_margin="4dp"
+                android:layout_marginTop="4dp"
+
+                android:autofillHints="text"
+                android:background="@android:color/transparent"
+
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="top|start"
+                android:hint="S0: Testing at this part. EFT withdrawal. We're gonna switch it. We're gonna switch it.\n\nS1: When did we say that?\n\nS0: No, I remember that. That cannot be.\n\nS1: I don't remember what I was thinking. I think it was...\n\nS2: Gamers cannot afford this. If you're a gamer, you cannot afford this. I'm sorry."
+                android:inputType="textMultiLine"
+                android:lineSpacingMultiplier="1.5"
+                android:padding="12dp"
+                android:textColor="@color/gray_70"
+                android:textColorHint="@color/gray_70"
+                android:textCursorDrawable="@drawable/cursor_color"
+                android:textSize="14sp"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textTitleTextView" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </ScrollView>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintLayout1"
+        android:layout_width="0dp"
+        android:layout_height="64dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageButton
+            android:id="@+id/updateButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/rounded_done_button"
+            android:contentDescription="@string/sendButtonDescription"
+            android:text="@string/updated"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <EditText
-            android:id="@+id/addressTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@android:color/transparent"
-            android:fontFamily="@font/rubik_mono_one"
-            android:hint="1805, Pearl Street, Judge's Hill Historic District, Austin, Travis County, Texas, 78701, United States"
-            android:padding="10dp"
-
-            android:textColor="@color/gray_70"
-            android:textColorHint="@color/gray_70"
-
-            android:textCursorDrawable="@drawable/cursor_color"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/addressTitleTextView" />
-
-        <TextView
-            android:id="@+id/weatherTitleTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/message_background"
-            android:fontFamily="@font/rubik_mono_one"
-
-            android:gravity="center"
-            android:padding="10dp"
-            android:text="@string/weather"
-            android:textColor="@color/accent_1"
-            android:textColorHint="@color/accent_1"
-            android:textSize="12sp"
-
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/addressTextView" />
-
-        <EditText
-            android:id="@+id/weatherTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@android:color/transparent"
-            android:fontFamily="@font/rubik_mono_one"
-            android:hint="clear sky"
-            android:padding="10dp"
-
-            android:textColor="@color/gray_70"
-            android:textColorHint="@color/gray_70"
-
-            android:textCursorDrawable="@drawable/cursor_color"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/weatherTitleTextView" />
-
-        <TextView
-            android:id="@+id/sourceTitleTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/message_background"
-            android:fontFamily="@font/rubik_mono_one"
-
-            android:gravity="center"
-            android:padding="10dp"
-            android:text="@string/source"
-            android:textColor="@color/accent_3"
-            android:textColorHint="@color/accent_3"
-            android:textSize="12sp"
-
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/weatherTextView" />
-
-        <EditText
-            android:id="@+id/sourceTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@android:color/transparent"
-            android:fontFamily="@font/rubik_mono_one"
-            android:hint="recording"
-            android:padding="10dp"
-
-            android:textColor="@color/gray_70"
-            android:textColorHint="@color/gray_70"
-
-            android:textCursorDrawable="@drawable/cursor_color"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/sourceTitleTextView" />
-
-        <TextView
-            android:id="@+id/textTitleTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/message_background"
-            android:fontFamily="@font/rubik_mono_one"
-
-            android:gravity="center"
-            android:padding="10dp"
-            android:text="@string/transcript"
-            android:textColor="@color/accent_4"
-            android:textColorHint="@color/accent_4"
-            android:textSize="12sp"
-
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/sourceTextView" />
-
-        <EditText
-            android:id="@+id/textTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_margin="4dp"
-            android:layout_marginTop="4dp"
-            android:background="@android:color/transparent"
-            android:fontFamily="@font/rubik_mono_one"
-            android:gravity="top|start"
-            android:hint="S0: Testing at this part. EFT withdrawal. We're gonna switch it. We're gonna switch it.\n\nS1: When did we say that?\n\nS0: No, I remember that. That cannot be.\n\nS1: I don't remember what I was thinking. I think it was...\n\nS2: Gamers cannot afford this. If you're a gamer, you cannot afford this. I'm sorry."
-
-            android:padding="10dp"
-            android:textColor="@color/gray_70"
-
-            android:textColorHint="@color/gray_70"
-            android:textCursorDrawable="@drawable/cursor_color"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/textTitleTextView" />
-
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <ImageButton
-        android:id="@+id/updateButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        android:background="@drawable/rounded_done_button"
-        android:contentDescription="@string/sendButtonDescription"
-        android:text="@string/updated"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
