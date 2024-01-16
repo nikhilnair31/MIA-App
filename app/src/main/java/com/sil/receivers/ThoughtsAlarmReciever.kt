@@ -39,6 +39,13 @@ Using this data message the user with something:
 - suggestion like "please sleep on time today at least"
 If nothing relevant to send then respond with "null"
     """
+    private val messageHistorySummarySystemPrompt: String = """
+You are a system that takes in a dump of message history between a user and an assistant and are to summarize the conversation in a single paragraph
+    """
+    private val latestRecordingsSummarySystemPrompt: String = """
+You are a system that takes in a dump of transcripts of real-world audio. The conversation could be between one or many speakers marked S0, S1, S2 etc. 
+You are to summarize these transcripts it in a single paragraph
+    """
     private val queryGeneratorSystemPrompt: String = """
 You are a system that takes system data context as a JSON and outputs a JSON payload to query a vector database.
 
@@ -121,9 +128,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
                 // Check if it's within the allowed notification time
                 if (isNotificationAllowed()) {
                     Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
-                    withContext(Dispatchers.IO) {
-                        miaThought()
-                    }
+                    miaThought()
                 } else {
                     Log.i("ThoughtsAlarm", "Do Not Disturb time. Not showing notification.")
                 }
@@ -150,13 +155,68 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
     private suspend fun miaThought() {
         Log.i("ThoughtsAlarm", "miaThought")
 
-        val systemPrompt = createSystemPrompt()
+        val messageHistoryDumpString = pullConversationHistory(10)
+        val messageHistoryDumpPayload = JSONObject().apply {
+            put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", messageHistorySummarySystemPrompt)
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", messageHistoryDumpString)
+                })
+            })
+            put("seed", 48)
+            put("max_tokens", 512)
+            put("temperature", 0.9)
+        }
+        val messageHistorySummaryString = Helpers.callOpenAiChatAPI(messageHistoryDumpPayload)
+        Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
+
+        val latestRecordingsDumpString = pullLatestRecordings(10)
+        val latestRecordingsDumpPayload = JSONObject().apply {
+            put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", latestRecordingsSummarySystemPrompt)
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", latestRecordingsDumpString)
+                })
+            })
+            put("seed", 48)
+            put("max_tokens", 512)
+            put("temperature", 0.9)
+        }
+        val latestRecordingsSummaryString = Helpers.callOpenAiChatAPI(latestRecordingsDumpPayload)
+        Log.i("ThoughtsAlarm", "miaThought latestRecordingsSummaryString\n$latestRecordingsSummaryString")
+
+        val userMessage = """
+Real-Time System Data
+$deviceData
+
+Conversation History Summary
+$messageHistorySummaryString
+
+Audio Transcript Summary
+$latestRecordingsSummaryString
+"""
+        Log.i("ThoughtsAlarm", "miaThought userMessage\n$userMessage")
+
         val wakePayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
-                    put("content", systemPrompt)
+                    put("content", systemPromptBase)
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userMessage)
                 })
             })
             put("seed", 48)
@@ -164,6 +224,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
             put("temperature", 0.9)
         }
         val wakeResponse = Helpers.callOpenAiChatAPI(wakePayload)
+
         if(wakeResponse.lowercase() != "null") {
             saveMessages(wakeResponse)
 
@@ -177,16 +238,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         sensorListener.unregister()
     }
 
-    private fun createSystemPrompt(): String {
-        Log.i("ThoughtsAlarm", "createSystemPrompt")
-
-        val latestRecordings = pullLatestRecordings(10)
-        val messageHistory = pullConversationHistory(20)
-
-        val finalPrompt = "$systemPromptBase\nReal-Time System Data\n$deviceData\nConversation History\n$messageHistory\nAudio Recording Transcript History\n$latestRecordings"
-
-        return finalPrompt
-    }
+    @Suppress("UnnecessaryVariable")
     private fun pullLatestRecordings(maxMessages: Int): String {
         Log.i("ThoughtsAlarm", "pullLatestRecordings")
 
@@ -198,11 +250,11 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
 
         return contextMemory
     }
+    @Suppress("UnnecessaryVariable")
     private fun pullConversationHistory(maxMessages: Int?): String {
         Log.i("ThoughtsAlarm", "pullConversationHistory")
 
         val messagesString = messagesSharedPref.getString("ui", maxMessages.toString())
-
         val conversationHistory = JSONArray(messagesString).toString()
 
         return conversationHistory

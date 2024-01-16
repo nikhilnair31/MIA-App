@@ -36,6 +36,7 @@
 
     <string name="gpt4turbo" tools:ignore="TypographyDashes">gpt-4-1106-preview</string>
     <string name="gpt3_5turbo" tools:ignore="TypographyDashes">gpt-3.5-turbo</string>
+    <string name="gpt3_5turbo_16k" tools:ignore="TypographyDashes">gpt-3.5-turbo-16k-0613</string>
 
     <string name="addressURL">https://geocode.maps.co/reverse</string>
     <string name="weatherURL">https://api.openweathermap.org/data/2.5/weather</string>
