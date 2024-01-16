@@ -190,7 +190,7 @@ DO THE FOLLOWING:
 
             metadataJson.put("source", "audio")
             metadataJson.put("username", userName)
-            metadataJson.put("fileName", audioFile.name)
+            metadataJson.put("filename", audioFile.name)
 
             // Start upload process
             Helpers.scheduleUploadWork(this@AudioService, audioFile, metadataJson)

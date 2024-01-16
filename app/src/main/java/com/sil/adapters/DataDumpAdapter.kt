@@ -51,8 +51,8 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
 
         val data = dataDumpList.getJSONObject(position)
         if (data != null) {
-            val timeString = data.getString("currenttimeformattedstring") ?: ""
-            val fileNameString = data.getString("filename") ?: ""
+            val timeString = data.optString("currenttimeformattedstring", "") ?: ""
+            val fileNameString = data.optString("filename", "") ?: ""
 
             holder.vectorIdAndFilenameTextView.text = "$timeString\n$fileNameString"
             holder.textTextView.text = data.getString("text")

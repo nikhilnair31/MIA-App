@@ -116,7 +116,7 @@ Do not explicitly call these out but use as needed. You help the user with all t
 hey i'm MIA. what's up?
     """
 
-    private val alarmIntervalInMin: Double = 30.05
+    private val alarmIntervalInMin: Double = 1.05
     private val maxDataMessages: Int = 20
     // endregion
 
@@ -320,7 +320,7 @@ hey i'm MIA. what's up?
         return taskGuess.contains("ext")
     }
     private suspend fun lookingExternally(conversationHistoryText: String): String {
-        // Use GPT to create a filter
+        // Use GPT to create a query and filter
         val queryGeneratorPayload = JSONObject().apply {
             put("model", getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
@@ -337,17 +337,24 @@ hey i'm MIA. what's up?
             put("max_tokens", 256)
             put("temperature", 0)
         }
-        Log.i("Main", "lookingExternally queryGeneratorPayload: $queryGeneratorPayload")
-        print("createMiaResponse queryGeneratorPayload: $queryGeneratorPayload")
-
         val queryResponse = withContext(Dispatchers.IO) {
             Helpers.callOpenAiChatAPI(queryGeneratorPayload)
         }
         val queryResultJSON = JSONObject(queryResponse)
-        Log.i("Main", "lookingExternally queryResultJSON: $queryResultJSON")
+
+        // Generate JSONArray of embeddings from generated query text
+        val queryVectorArrayJson = withContext(Dispatchers.IO) {
+            val queryText = queryResultJSON.optString("query", userMessage)
+            val queryEmbeddingsOutput = Helpers.callOpenAiEmbeddingAPI(queryText)
+            JSONArray().apply {
+                for (value in queryEmbeddingsOutput) {
+                    put(value)
+                }
+            }
+        }
 
         // Parse the filter JSON to handle various keys and filter types
-        val filterJSONObject = JSONObject().apply {
+        val filterJsonObject = JSONObject().apply {
             // Time based filters
             if (queryResultJSON.has("query_filter")) {
                 val queryFilters = queryResultJSON.getJSONObject("query_filter")
@@ -369,21 +376,11 @@ hey i'm MIA. what's up?
             val userName = sharedPrefs.getString("userName", null)
             put("username", userName)
         }
-        Log.i("Main", "lookingExternally filterJSONObject: $filterJSONObject")
 
-        // Pull relevant data using a query
-        val queryText = queryResultJSON.optString("query", userMessage)
-        val contextPayload = JSONObject().apply {
-            put("query_text", queryText)
-            put("query_filter", filterJSONObject)
-            put("query_top_k", 3)
-            put("show_log", "True")
-        }
-        Log.i("Main", "lookingExternally contextPayload: $contextPayload")
+        // Final output vectors to be used as context memory
         val contextMemory = withContext(Dispatchers.IO) {
-            Helpers.callContextAPI(contextPayload)
-        }
-        Log.i("Main", "lookingExternally contextMemory: $contextMemory")
+            Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 10) { _ , _ -> }
+        }.toString()
 
         return contextMemory
     }

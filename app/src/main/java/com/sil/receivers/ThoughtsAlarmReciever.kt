@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.SimpleDateFormat
 import java.util.*
 
 class ThoughtsAlarmReceiver : BroadcastReceiver() {
@@ -83,9 +84,12 @@ Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 
 Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day": { "\eq": 29 }, "month": { "\eq": 12 }, "year": { "\eq": 2023 }}}
     """
 
-    private lateinit var sensorListener: SensorListener
     private var contextMain: Context? = null
 
+    private lateinit var sensorListener: SensorListener
+    private lateinit var deviceData: JSONObject
+
+    private lateinit var dataDumpSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
 
     private val thoughtChannelId = "MIAThoughtChannel"
@@ -102,9 +106,14 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         Log.i("ThoughtsAlarm", "onReceive")
 
         contextMain = context
-        sensorListener = SensorListener(context)
+
+        dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
+
         CoroutineScope(Dispatchers.IO).launch {
+            sensorListener = SensorListener(context)
+            deviceData = context.let { Helpers.pullDeviceData(it, sensorListener) }
+
             if (isAppInForeground()) {
                 Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
             }
@@ -112,7 +121,9 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
                 // Check if it's within the allowed notification time
                 if (isNotificationAllowed()) {
                     Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
-                    miaThought()
+                    withContext(Dispatchers.IO) {
+                        miaThought()
+                    }
                 } else {
                     Log.i("ThoughtsAlarm", "Do Not Disturb time. Not showing notification.")
                 }
@@ -140,7 +151,6 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         Log.i("ThoughtsAlarm", "miaThought")
 
         val systemPrompt = createSystemPrompt()
-        Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver systemPrompt: $systemPrompt")
         val wakePayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
@@ -153,10 +163,8 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
             put("max_tokens", 128)
             put("temperature", 0.9)
         }
-        Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakePayload: $wakePayload")
-        val wakeResponse = Helpers.callOpenAiChatAPI(wakePayload).lowercase()
-        Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakeResponse: $wakeResponse")
-        if(wakeResponse != "null") {
+        val wakeResponse = Helpers.callOpenAiChatAPI(wakePayload)
+        if(wakeResponse.lowercase() != "null") {
             saveMessages(wakeResponse)
 
             withContext(Dispatchers.Main) {
@@ -169,100 +177,39 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         sensorListener.unregister()
     }
 
-    private suspend fun createSystemPrompt(): String {
+    private fun createSystemPrompt(): String {
         Log.i("ThoughtsAlarm", "createSystemPrompt")
 
-        val deviceData = contextMain?.let { Helpers.pullDeviceData(it, sensorListener) }
-        // Log.i("ThoughtsAlarm", "createSystemPrompt deviceData\n$deviceData")
-        val latestRecordings = pullLatestRecordings()
-        // Log.i("ThoughtsAlarm", "createSystemPrompt latestRecordings\n$latestRecordings")
-        val messageHistory = pullConversationHistory()
-        // Log.i("ThoughtsAlarm", "createSystemPrompt messageHistory\n$messageHistory")
+        val latestRecordings = pullLatestRecordings(10)
+        val messageHistory = pullConversationHistory(20)
 
-        val finalPrompt = "$systemPromptBase\nCurrent Device DataDump:$deviceData\nConversation History:$messageHistory\nAudio Recording Transcript History:$latestRecordings"
-        Log.i("ThoughtsAlarm", "createSystemPrompt finalPrompt\n$finalPrompt")
+        val finalPrompt = "$systemPromptBase\nReal-Time System Data\n$deviceData\nConversation History\n$messageHistory\nAudio Recording Transcript History\n$latestRecordings"
 
         return finalPrompt
     }
-    private suspend fun pullLatestRecordings(): String {
+    private fun pullLatestRecordings(maxMessages: Int): String {
         Log.i("ThoughtsAlarm", "pullLatestRecordings")
 
-        val contextData = contextMain?.let { Helpers.pullDeviceData(it, sensorListener) }
-        val finalUserMessage = "Context:\n$contextData"
-
-        // Use GPT to create a filter
-        val queryGeneratorPayload = JSONObject().apply {
-            put("model",  contextMain?.getString(R.string.gpt3_5turbo))
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", queryGeneratorSystemPrompt)
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", finalUserMessage)
-                })
-            })
-            put("seed", 48)
-            put("max_tokens", 256)
-            put("temperature", 0)
-        }
-        // Log.i("ThoughtsAlarm", "pullLatestRecordings queryGeneratorPayload: $queryGeneratorPayload")
-        val queryResponse = Helpers.callOpenAiChatAPI(queryGeneratorPayload)
-        // Log.i("ThoughtsAlarm", "pullLatestRecordings queryResponse: $queryResponse")
-        val queryResultJSON = JSONObject(queryResponse)
-        // Log.i("ThoughtsAlarm", "pullLatestRecordings queryResultJSON: $queryResultJSON")
-
-        // Parse the filter JSON to handle various keys and filter types
-        val filterJSONObject = JSONObject().apply {
-            // Check if 'query_filter' is present and iterate through its keys
-            if (queryResultJSON.has("query_filter")) {
-                val queryFilters = queryResultJSON.getJSONObject("query_filter")
-                queryFilters.keys().forEach { key ->
-                    val timeFilter = queryFilters.getJSONObject(key)
-                    val timeFilterJSONObject = JSONObject()
-                    timeFilter.keys().forEach { filterKey ->
-                        when (filterKey) {
-                            "\$gte", "\$lte", "\$eq" -> timeFilterJSONObject.put(filterKey, timeFilter.getInt(filterKey))
-                            // Add cases for other possible filter keys if needed
-                        }
-                    }
-                    put(key, timeFilterJSONObject)
-                }
-            }
-
-            // Source for user based on userName
-            val sharedPrefs: SharedPreferences? = contextMain?.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-            val userName = sharedPrefs?.getString("userName", null)
-            put("username", userName)
-        }
-        // Log.i("ThoughtsAlarm", "pullLatestRecordings filterJSONObject: $filterJSONObject")
-
-        // Pull relevant data using a query
-        val queryText = queryResultJSON.optString("query", "")
-        val contextPayload = JSONObject().apply {
-            put("query_text", queryText)
-            put("query_filter", filterJSONObject)
-            put("query_top_k", 5)
-            put("show_log", "True")
-        }
-        // Log.i("ThoughtsAlarm", "pullLatestRecordings contextPayload: $contextPayload")
-        val contextMemory = Helpers.callContextAPI(contextPayload)
-        // Log.i("ThoughtsAlarm", "pullLatestRecordings contextMemory: $contextMemory")
+        // Pulling context memory vector data from shared prefs
+        val dataDumpString = dataDumpSharedPref.getString("dataDump", "")
+        val dataJsonArray = if (!dataDumpString.isNullOrBlank()) JSONArray(dataDumpString) else JSONArray()
+        val dataListSortedDesc = Helpers.sortJsonDescending(dataJsonArray)
+        val contextMemory = if (dataListSortedDesc.isNotEmpty()) JSONArray(dataListSortedDesc.subList(0, maxMessages)).toString() else ""
 
         return contextMemory
     }
-    private fun pullConversationHistory(): JSONArray {
+    private fun pullConversationHistory(maxMessages: Int?): String {
         Log.i("ThoughtsAlarm", "pullConversationHistory")
 
-        val messagesString = messagesSharedPref.getString("ui", null)
-        // Log.i("ThoughtsAlarm", "messagesString\n$messagesString")
+        val messagesString = messagesSharedPref.getString("ui", maxMessages.toString())
 
-        val messagesArray = JSONArray(messagesString)
-        // Log.i("ThoughtsAlarm", "messagesDataArray\n$messagesDataArray")
-        return messagesArray
+        val conversationHistory = JSONArray(messagesString).toString()
+
+        return conversationHistory
     }
+    // endregion
 
+    // region Messages Related
     private fun saveMessages(assistantMessage: String) {
         val keysList = listOf("complete", "data", "ui")
         for (key in keysList) {

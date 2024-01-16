@@ -19,6 +19,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Collections
 import java.util.Locale
 
@@ -29,6 +30,7 @@ class DataDump : AppCompatActivity() {
     private lateinit var backButton: ImageButton
     private lateinit var buttonRefresh: ImageButton
 
+    private lateinit var generalSharedPref: SharedPreferences
     private lateinit var dataSharedPref: SharedPreferences
     private lateinit var adapter: DataDumpAdapter
     private var dataDumpList = JSONArray()
@@ -72,8 +74,38 @@ class DataDump : AppCompatActivity() {
         CoroutineScope(Dispatchers.Main).launch {
             buttonRefresh.isEnabled = false
             var responseJsonObject = JSONObject()
+
+            val queryVectorArray = FloatArray(1536)
+            val queryVectorArrayJson = JSONArray().apply {
+                for (value in queryVectorArray) {
+                    put(value)
+                }
+            }
+
+            // Creating final filter object
+            val filterJsonObject = JSONObject().apply {
+                // Objects to get last week's filter
+                val currentDate = LocalDate.now()
+                val oneWeekAgo = currentDate.minusWeeks(1)
+                put("day", JSONObject().apply {
+                    put("\$gte", oneWeekAgo.dayOfMonth)
+                    put("\$lte", currentDate.dayOfMonth)
+                })
+                put("month", JSONObject().apply {
+                    put("\$eq", oneWeekAgo.monthValue)
+                })
+                put("year", JSONObject().apply {
+                    put("\$eq", oneWeekAgo.year)
+                })
+
+                // Need to filter vectors by username
+                generalSharedPref = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                val userName = generalSharedPref.getString("userName", null)
+                put("username", userName)
+            }
+
             withContext(Dispatchers.IO) {
-                Helpers.callPineconeFetchAPI(this@DataDump) { success, response ->
+                Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 30) { success, response ->
                     if (success) {
                         responseJsonObject = response
                     }
@@ -99,27 +131,7 @@ class DataDump : AppCompatActivity() {
                 }
             }
 
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            // Create a comparator to compare JSONObjects based on the currenttimeformattedstring field
-            val comparator = Comparator<JSONObject> { json1, json2 ->
-                val id1 = json1.optString("id")
-                val id2 = json2.optString("id")
-                val timestamp1 = json1.optString("currenttimeformattedstring")
-                val timestamp2 = json2.optString("currenttimeformattedstring")
-                // Log.i("DataDump", "json1\n$json1\n\njson2\n$json2")
-
-                // Convert timestamps to milliseconds
-                val millis1 = dateFormat.parse(timestamp1)
-                val millis2 = dateFormat.parse(timestamp2)
-
-                // Compare dates
-                millis2?.compareTo(millis1) ?: 0
-            }
-            // Convert JSONArray to a List of JSONObjects
-            val metadataList = (0 until metadataArray.length()).mapTo(mutableListOf()) { metadataArray.getJSONObject(it) }
-            // Sort the List using the comparator
-            Collections.sort(metadataList, comparator)
-
+            val metadataList = Helpers.sortJsonDescending(metadataArray)
             dataDumpList = JSONArray(metadataList)
             dataSharedPref.edit().putString("dataDump", dataDumpList.toString()).apply()
 

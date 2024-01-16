@@ -329,7 +329,7 @@ class Helpers {
         // endregion
 
         // region Pinecone Related
-        suspend fun callPineconeFetchAPI(context: Context, onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
+        suspend fun callPineconeFetchAPI(queryVectorArrayJson: JSONArray, filterJsonObject: JSONObject, topKCount: Int, onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
             Log.i("Helpers", "Fetching from Pinecone...")
 
             var lastException: IOException? = null
@@ -337,42 +337,16 @@ class Helpers {
             repeat(3) { attempt ->
                 try {
                     val client = OkHttpClient()
-
-                    val vectorArray = FloatArray(1536)
-                    val vectorArrayJson = JSONArray().apply {
-                        for (value in vectorArray) {
-                            put(value)
-                        }
-                    }
-
-                    val currentDate = LocalDate.now()
-                    val oneWeekAgo = currentDate.minusWeeks(1)
-                    val generalSharedPref: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-                    val userName = generalSharedPref.getString("userName", null)
                     val mediaType = "application/json".toMediaTypeOrNull()
-
-                    // Filtering for past week only
                     val bodyJson = JSONObject().apply {
-                        put("filter", JSONObject().apply {
-                            put("day", JSONObject().apply {
-                                put("\$gte", oneWeekAgo.dayOfMonth)
-                                put("\$lte", currentDate.dayOfMonth)
-                            })
-                            put("month", JSONObject().apply {
-                                put("\$eq", oneWeekAgo.monthValue)
-                            })
-                            put("year", JSONObject().apply {
-                                put("\$eq", oneWeekAgo.year)
-                            })
-                            put("username", userName)
-                        })
+                        put("topK", topKCount)
+                        put("vector", queryVectorArrayJson)
+                        put("filter", filterJsonObject)
                         put("includeValues", false)
                         put("includeMetadata", true)
-                        put("topK", 100)
-                        put("vector", vectorArrayJson)
                     }
                     val body = bodyJson.toString().toRequestBody(mediaType)
-                    // Log.d("Helper", "callPineconeFetchAPI bodyJson\n$bodyJson")
+                    Log.d("Helper", "callPineconeFetchAPI bodyJson\n$bodyJson")
 
                     val request = Request.Builder()
                         .url("https://mia-170756d.svc.gcp-starter.pinecone.io/query")
@@ -776,6 +750,17 @@ class Helpers {
         private fun pullTimeFormattedString(): String {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             return dateFormat.format(Date())
+        }
+        fun sortJsonDescending(dataJsonArray: JSONArray): MutableList<JSONObject> {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val comparator = Comparator<JSONObject> { json1, json2 ->
+                val millis1 = dateFormat.parse(json1.optString("currenttimeformattedstring"))
+                val millis2 = dateFormat.parse(json2.optString("currenttimeformattedstring"))
+                millis2?.compareTo(millis1) ?: 0
+            }
+            val dataList = (0 until dataJsonArray.length()).mapTo(mutableListOf()) { dataJsonArray.getJSONObject(it) }
+            Collections.sort(dataList, comparator)
+            return dataList
         }
         // endregion
 
