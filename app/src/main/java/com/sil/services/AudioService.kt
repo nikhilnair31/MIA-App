@@ -18,13 +18,30 @@ import com.sil.listeners.SensorListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class AudioService : Service() {
     // region Vars
+    private val cleaningSystemPrompt = """
+You will receive a user's transcribed speech and are to process it to correct potential errors. 
+DO NOT DO THE FOLLOWING: 
+- Generate any additional content 
+- Censor any of the content 
+- Print repetitive content 
+DO THE FOLLOWING: 
+- Account for transcript include speech of multiple users 
+- Translate everything to English
+- Only output corrected text 
+- If too much of the content seems erroneous return '.'
+    """
+
     private lateinit var sensorListener: SensorListener
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
@@ -165,17 +182,53 @@ class AudioService : Service() {
     }
     private fun uploadAudioFileAndMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
-            // Pull system data for metadata
-            val metadataJson = Helpers.pullDeviceData(this@AudioService, sensorListener)
             // Add username and audio related metadata
             val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
             val userName = sharedPrefs.getString("userName", null)
-            // TODO: Change "source" to change depending on if audio or chat
+            // Pull system data for metadata
+            val metadataJson = Helpers.pullDeviceData(this@AudioService, sensorListener)
+
             metadataJson.put("source", "audio")
             metadataJson.put("username", userName)
             metadataJson.put("fileName", audioFile.name)
+
             // Start upload process
             Helpers.scheduleUploadWork(this@AudioService, audioFile, metadataJson)
+
+            // Start processing audio
+            withContext(Dispatchers.IO) {
+                // Generate transcript from audio file
+                val transcriptOutput = Helpers.callDeepgramAPI(audioFile)
+                Log.i("Helpers", "transcriptOutput: $transcriptOutput")
+
+                val cleanTranscriptPayload = JSONObject().apply {
+                    put("model", getString(R.string.gpt3_5turbo))
+                    put("messages", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("role", "system")
+                            put("content", cleaningSystemPrompt)
+                        })
+                        put(JSONObject().apply {
+                            put("role", "user")
+                            put("content", transcriptOutput)
+                        })
+                    })
+                    put("seed", 48)
+                    put("max_tokens", 512)
+                    put("temperature", 0)
+                }
+                val cleanedTranscript = Helpers.callOpenAiChatAPI(cleanTranscriptPayload)
+                Log.i("Main", "cleanedTranscript: $cleanedTranscript")
+
+                // Generate embeddings from transcript
+                val embeddingsOutput = Helpers.callOpenAiEmbeddingAPI(cleanedTranscript)
+                Log.i("Helpers", "embeddingsOutput: $embeddingsOutput")
+
+                // Upsert embeddings
+                val vectorId = UUID.randomUUID().toString()
+                metadataJson.put("text", cleanedTranscript)
+                Helpers.callPineconeUpsertAPI(vectorId, embeddingsOutput, metadataJson)
+            }
         }
     }
     // endregion

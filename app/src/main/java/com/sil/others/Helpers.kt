@@ -38,6 +38,8 @@ import java.io.IOException
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.util.*
@@ -50,6 +52,7 @@ class Helpers {
         private const val awsAccessKey = BuildConfig.AWS_ACCESS_KEY
         private const val awsSecretKey = BuildConfig.AWS_SECRET_KEY
         private const val openaiApiKey = BuildConfig.OPENAI_API_KEY
+        private const val deepgramApiKey = BuildConfig.DEEPGRAM_API_KEY
         private const val awsApiEndpoint = BuildConfig.AWS_API_ENDPOINT
         private const val weatherApiEndpoint = BuildConfig.WEATHER_API_KEY
         private const val locationApiEndpoint = BuildConfig.GEOLOCATION_API_KEY
@@ -111,7 +114,80 @@ class Helpers {
             }
             return ""
         }
-        suspend fun callOpenaiAPI(payload: JSONObject): String {
+        suspend fun callDeepgramAPI(audioFile: File?): String {
+            var lastException: IOException? = null
+
+            repeat(3) { attempt ->
+                try {
+                    val client = OkHttpClient()
+                    val url = "https://api.deepgram.com/v1/listen"
+                    val params = JSONObject().apply {
+                        put("model", "nova-2-general")
+                        put("version", "latest")
+                        // put("detect_language", true)
+                        put("language", "hi")
+                        put("diarize", true)
+                        put("smart_format", true)
+                        put("filler_words", true)
+                        put("measurements", true)
+                        put("dictation", true)
+                    }
+                    val queryParams = StringBuilder()
+                    var firstParam = true
+                    for (key in params.keys()) {
+                        if (!firstParam) queryParams.append("&")
+                        else firstParam = false
+                        queryParams.append(key).append("=").append(params.get(key))
+                    }
+                    val finalUrl = "$url?$queryParams"
+                    val audioData = audioFile?.readBytes()
+                    Log.d("Helper", "callDeepgramAPI finalUrl: $finalUrl")
+
+                    audioData?.let {
+                        val mediaType = "audio/wav".toMediaTypeOrNull()
+                        val body = audioData.toRequestBody(mediaType)
+                        val request = Request.Builder()
+                            .url(url)
+                            .post(body)
+                            .addHeader("Content-Type", "audio/wav")
+                            .addHeader("Accept", "application/json")
+                            .addHeader("Authorization", "Token $deepgramApiKey")
+                            .url(finalUrl)
+                            .build()
+
+                        val response = client.newCall(request).execute()
+                        val responseCode = response.code
+
+                        return if (responseCode == 200) {
+                            val jsonResponse = JSONObject(response.body.string())
+                            // Log.d("Helper", "Deepgram API Response: $jsonResponse")
+                            val transcript = jsonResponse.getJSONObject("results").getJSONArray("channels")
+                                .getJSONObject(0).getJSONArray("alternatives").getJSONObject(0)
+                                .getJSONObject("paragraphs").getString("transcript")
+                            transcript
+                        }
+                        else {
+                            Log.e("Helper", "Deepgram API Error Response: ${response.body.string()}")
+                            ""
+                        }
+                    }
+                }
+                catch (e: IOException) {
+                    Log.e("Helper", "Deepgram API IO Exception on attempt $attempt: ${e.message}")
+                    lastException = e
+                    delay(1500L * (attempt + 1))
+                }
+                catch (e: Exception) {
+                    Log.e("Helper", "Deepgram API Unexpected Exception: $e")
+                    return ""
+                }
+            }
+            lastException?.let {
+                throw it
+            }
+            return ""
+        }
+        suspend fun callOpenAiChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
             repeat(3) { attempt ->
@@ -129,19 +205,19 @@ class Helpers {
 
                     return if (responseCode == HttpURLConnection.HTTP_OK) {
                         val jsonResponse = JSONObject(response.body.string())
-                        Log.d("Helper", "callOpenaiAPI Response: $jsonResponse")
+                        Log.d("Helper", "callOpenAiChatAPI Response: $jsonResponse")
                         val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
                         content
                     } else {
-                        Log.e("Helper", "callOpenaiAPI Error Response: ${response.body.string()}")
+                        Log.e("Helper", "callOpenAiChatAPI Error Response: ${response.body.string()}")
                         ""
                     }
                 } catch (e: IOException) {
-                    Log.e("Helper", "callOpenaiAPI IO Exception on attempt $attempt: ${e.message}")
+                    Log.e("Helper", "callOpenAiChatAPI IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
                     delay(1500L * (attempt + 1))
                 } catch (e: Exception) {
-                    Log.e("Helper", "callOpenaiAPI Unexpected Exception: $e")
+                    Log.e("Helper", "callOpenAiChatAPI Unexpected Exception: $e")
                     return ""
                 }
             }
@@ -149,6 +225,53 @@ class Helpers {
                 throw it
             }
             return ""
+        }
+        suspend fun callOpenAiEmbeddingAPI(inputText: String): FloatArray {
+            var lastException: IOException? = null
+            val vectorArray = FloatArray(1536)
+
+            repeat(3) { attempt ->
+                try {
+                    val client = OkHttpClient()
+                    val url = "https://api.openai.com/v1/embeddings"
+                    val payload = JSONObject().apply {
+                        put("model", "text-embedding-ada-002")
+                        put("input", inputText)
+                    }
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                        .addHeader("Authorization", "Bearer $openaiApiKey")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+
+                    return if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val jsonResponse = JSONObject(response.body.string())
+                        // Log.d("Helper", "callOpenAiEmbeddingAPI Response: $jsonResponse")
+                        val content = jsonResponse.getJSONArray("data").getJSONObject(0).getJSONArray("embedding")
+                        for (i in 0 until content.length()) {
+                            vectorArray[i] = content.getDouble(i).toFloat()
+                        }
+                        vectorArray
+                    } else {
+                        Log.e("Helper", "callOpenAiChatAPI Error Response: ${response.body.string()}")
+                        vectorArray
+                    }
+                } catch (e: IOException) {
+                    Log.e("Helper", "callOpenAiEmbeddingAPI IO Exception on attempt $attempt: ${e.message}")
+                    lastException = e
+                    delay(1500L * (attempt + 1))
+                } catch (e: Exception) {
+                    Log.e("Helper", "callOpenAiEmbeddingAPI Unexpected Exception: $e")
+                    return vectorArray
+                }
+            }
+            lastException?.let {
+                throw it
+            }
+            return vectorArray
         }
         private suspend fun callGeocodingAPI(context: Context, latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
             try {
@@ -206,7 +329,7 @@ class Helpers {
         // endregion
 
         // region Pinecone Related
-        suspend fun fetchPineconeVectorMetadata(context: Context, onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
+        suspend fun callPineconeFetchAPI(context: Context, onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
             Log.i("Helpers", "Fetching from Pinecone...")
 
             var lastException: IOException? = null
@@ -249,7 +372,7 @@ class Helpers {
                         put("vector", vectorArrayJson)
                     }
                     val body = bodyJson.toString().toRequestBody(mediaType)
-                    // Log.d("Helper", "fetchPineconeVectorMetadata bodyJson\n$bodyJson")
+                    // Log.d("Helper", "callPineconeFetchAPI bodyJson\n$bodyJson")
 
                     val request = Request.Builder()
                         .url("https://mia-170756d.svc.gcp-starter.pinecone.io/query")
@@ -289,7 +412,7 @@ class Helpers {
             }
             return JSONObject()
         }
-        fun deletePineconeVectorById(context: Context, vectorId: String) {
+        fun callPineconeDeleteByIdAPI(context: Context, vectorId: String) {
             Log.i("Helpers", "Deleting from Pinecone...")
 
             Thread {
@@ -338,7 +461,7 @@ class Helpers {
                 }
             }.start()
         }
-        fun updatePineconeVectorById(context: Context, vectorId: String, addressText: String, weatherText: String, sourceText: String, textText: String) {
+        fun callPineconeUpdateByIdAPI(context: Context, vectorId: String, addressText: String, weatherText: String, sourceText: String, textText: String) {
             Log.i("Helpers", "Updating Pinecone Vector...")
 
             Thread {
@@ -377,6 +500,54 @@ class Helpers {
                 } catch (e: Exception) {
                     showToast(context, "Pinecone Vector Update Error :(")
                     Log.e("Helpers", "Pinecone Vector Update Error: $e")
+                    e.printStackTrace()
+                }
+            }.start()
+        }
+        fun callPineconeUpsertAPI(vectorId: String, vectorValues: FloatArray, metadataJson: JSONObject) {
+            Log.i("Helpers", "Upserting Pinecone Vector...")
+
+            Thread {
+                try {
+                    val client = OkHttpClient()
+
+                    val url = URL("$pineconeApiEndpoint/vectors/upsert")
+                    val mediaType = "application/json".toMediaTypeOrNull()
+                    val vectorValuesJsonArray = JSONArray()
+                    vectorValues.forEach { value ->
+                        vectorValuesJsonArray.put(value)
+                    }
+                    val bodyJson = JSONObject().apply {
+                        put("vectors", JSONArray().apply {
+                            put(JSONObject().apply {
+                                put("id", vectorId)
+                                put("values", vectorValuesJsonArray)
+                                put("metadata", metadataJson)
+                            })
+                        })
+                    }
+                    val body = bodyJson.toString().toRequestBody(mediaType)
+                    // Log.d("Helper", "callPineconeUpsertAPI bodyJson\n$bodyJson")
+
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(body)
+                        .addHeader("accept", "application/json")
+                        .addHeader("content-type", "application/json")
+                        .addHeader("Api-Key", pineconeApiKey)
+                        .build()
+
+                    val response = client.newCall(request).execute()
+
+                    if (response.isSuccessful) {
+                        Log.d("Helpers", "Pinecone Vector Upsert: Successful!")
+                    }
+                    else {
+                        Log.e("Helpers", "Pinecone Vector Upsert Error: $response")
+                    }
+                }
+                catch (e: Exception) {
+                    Log.e("Helpers", "Pinecone Vector Upsert Error: $e")
                     e.printStackTrace()
                 }
             }.start()
@@ -472,11 +643,12 @@ class Helpers {
                         }
                     }
 
-                    // Delete the file after upload
+                    // Delete local file after upload
                     if (it.delete()) {
-                        Log.d("Helper", "Deleted audio file after upload: ${it.name}")
-                    } else {
-                        Log.e("Helper", "Failed to delete audio file after upload: ${it.name}")
+                        Log.d("Helper", "Deleted local audio file after upload: ${it.name}")
+                    }
+                    else {
+                        Log.e("Helper", "Failed to delete local audio file after upload: ${it.name}")
                     }
                 }
             }
@@ -518,7 +690,7 @@ class Helpers {
                 timeInMillis = pullSystemTime()
             }
             finalOutput.apply {
-                put("currentTimeFormattedString", pullTimeFormattedString())
+                put("currenttimeformattedstring", pullTimeFormattedString())
                 put("day", calendar.get(Calendar.DAY_OF_MONTH))
                 put("month", calendar.get(Calendar.MONTH) + 1)
                 put("year", calendar.get(Calendar.YEAR))
@@ -529,7 +701,7 @@ class Helpers {
             // region Battery
             // Pulling current battery level
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-            finalOutput.put("batteryLevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
+            finalOutput.put("batterylevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
             // endregion
             // region Location & Climate
             if (hasLocationPermission(context)) {
@@ -543,17 +715,17 @@ class Helpers {
                         put("address", address)
                         weatherJSON?.let {
                             val weatherArray = it.getJSONArray("weather")
-                            put("firstWeatherDescription", weatherArray.getJSONObject(0).getString("description"))
+                            put("firstweatherdescription", weatherArray.getJSONObject(0).getString("description"))
 
                             val mainObject = it.getJSONObject("main")
-                            put("feelsLike", mainObject.getDouble("feels_like").toString())
+                            put("feelslike", mainObject.getDouble("feels_like").toString())
                             put("humidity", mainObject.getInt("humidity").toString())
 
                             val windObject = it.getJSONObject("wind")
-                            put("windSpeed", windObject.getDouble("speed").toString())
+                            put("windspeed", windObject.getDouble("speed").toString())
 
                             val cloudsObject = it.getJSONObject("clouds")
-                            put("cloudAll", cloudsObject.getInt("all").toString())
+                            put("cloudall", cloudsObject.getInt("all").toString())
                         }
                     }
                 }
@@ -562,7 +734,7 @@ class Helpers {
             // region Motion
             val deviceSpeed = sensorListener?.getDeviceStatus() ?: 0f
             finalOutput.apply {
-                put("movementStatus", when {
+                put("movementstatus", when {
                     deviceSpeed < 10 -> "idle"
                     deviceSpeed >= 10 && deviceSpeed < 150 -> "moving normal"
                     deviceSpeed >= 150 && deviceSpeed < 500 -> "moving fast"
@@ -602,7 +774,7 @@ class Helpers {
             return System.currentTimeMillis()
         }
         private fun pullTimeFormattedString(): String {
-            val dateFormat = SimpleDateFormat("EEE dd/MM/yy HH:mm", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             return dateFormat.format(Date())
         }
         // endregion

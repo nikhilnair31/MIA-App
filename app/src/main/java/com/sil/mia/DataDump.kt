@@ -73,7 +73,7 @@ class DataDump : AppCompatActivity() {
             buttonRefresh.isEnabled = false
             var responseJsonObject = JSONObject()
             withContext(Dispatchers.IO) {
-                Helpers.fetchPineconeVectorMetadata(this@DataDump) { success, response ->
+                Helpers.callPineconeFetchAPI(this@DataDump) { success, response ->
                     if (success) {
                         responseJsonObject = response
                     }
@@ -106,7 +106,7 @@ class DataDump : AppCompatActivity() {
                 val id2 = json2.optString("id")
                 val timestamp1 = json1.optString("currenttimeformattedstring")
                 val timestamp2 = json2.optString("currenttimeformattedstring")
-                // Log.i("DataDump", "id1: $id1\nid2: $id2\ntimestamp1: $timestamp1\ntimestamp2: $timestamp2")
+                // Log.i("DataDump", "json1\n$json1\n\njson2\n$json2")
 
                 // Convert timestamps to milliseconds
                 val millis1 = dateFormat.parse(timestamp1)

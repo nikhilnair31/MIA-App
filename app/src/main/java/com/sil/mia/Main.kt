@@ -286,7 +286,7 @@ hey i'm MIA. what's up?
         Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
         print("createMiaResponse replyPayload: $replyPayload")
         val assistantMessage = withContext(Dispatchers.IO) {
-            Helpers.callOpenaiAPI(replyPayload)
+            Helpers.callOpenAiChatAPI(replyPayload)
         }
         Log.i("Main", "createMiaResponse assistantMessage\n$assistantMessage")
 
@@ -312,7 +312,7 @@ hey i'm MIA. what's up?
         Log.i("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
 
         var taskGuess = withContext(Dispatchers.IO) {
-            Helpers.callOpenaiAPI(taskPayload)
+            Helpers.callOpenAiChatAPI(taskPayload)
         }
         taskGuess = taskGuess.replace("'", "").trim()
         Log.i("Main", "shouldMiaLookExternally taskGuess: $taskGuess")
@@ -341,7 +341,7 @@ hey i'm MIA. what's up?
         print("createMiaResponse queryGeneratorPayload: $queryGeneratorPayload")
 
         val queryResponse = withContext(Dispatchers.IO) {
-            Helpers.callOpenaiAPI(queryGeneratorPayload)
+            Helpers.callOpenAiChatAPI(queryGeneratorPayload)
         }
         val queryResultJSON = JSONObject(queryResponse)
         Log.i("Main", "lookingExternally queryResultJSON: $queryResultJSON")

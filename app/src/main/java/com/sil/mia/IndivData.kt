@@ -85,11 +85,12 @@ class IndivData : AppCompatActivity() {
         onBackPressedDispatcher.onBackPressed()
         finish()
     }
+    // FIXME: I should ideally regenerate the updated text's vector as well
     private fun updateData() {
         val vectorId = selectedData.optString("id") ?: ""
         Log.i("IndivData", "vectorId: $vectorId")
 
-        Helpers.updatePineconeVectorById(
+        Helpers.callPineconeUpdateByIdAPI(
             this,
             vectorId,
             addressTextView.text.toString(),

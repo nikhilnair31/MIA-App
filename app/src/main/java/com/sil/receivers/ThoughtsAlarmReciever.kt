@@ -154,7 +154,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
             put("temperature", 0.9)
         }
         Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakePayload: $wakePayload")
-        val wakeResponse = Helpers.callOpenaiAPI(wakePayload).lowercase()
+        val wakeResponse = Helpers.callOpenAiChatAPI(wakePayload).lowercase()
         Log.i("ThoughtsAlarm", "ThoughtsAlarmReceiver wakeResponse: $wakeResponse")
         if(wakeResponse != "null") {
             saveMessages(wakeResponse)
@@ -208,7 +208,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
             put("temperature", 0)
         }
         // Log.i("ThoughtsAlarm", "pullLatestRecordings queryGeneratorPayload: $queryGeneratorPayload")
-        val queryResponse = Helpers.callOpenaiAPI(queryGeneratorPayload)
+        val queryResponse = Helpers.callOpenAiChatAPI(queryGeneratorPayload)
         // Log.i("ThoughtsAlarm", "pullLatestRecordings queryResponse: $queryResponse")
         val queryResultJSON = JSONObject(queryResponse)
         // Log.i("ThoughtsAlarm", "pullLatestRecordings queryResultJSON: $queryResultJSON")
