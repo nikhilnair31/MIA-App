@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.legacy.content.WakefulBroadcastReceiver
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
@@ -24,7 +25,7 @@ import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
-class ThoughtsAlarmReceiver : BroadcastReceiver() {
+class ThoughtsAlarmReceiver : WakefulBroadcastReceiver() {
     // region Vars
     private val systemPromptBase: String = """
 Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
@@ -41,55 +42,15 @@ If nothing relevant to send then respond with "null"
     """
     private val messageHistorySummarySystemPrompt: String = """
 You are a system that takes in a dump of message history between a user and an assistant.
-You are to summarize the conversation in a few bullet points
+You are to summarize the conversation in a maximum of ten bullet points. 
+You should merge similar summaries together and remove any duplicates.
     """
     private val latestRecordingsSummarySystemPrompt: String = """
-You are a system that takes in a dump of transcripts of real-world audio. The conversation could be between one or many speakers marked S0, S1, S2 etc. 
-You are to summarize these transcripts it in a few bullet points
-    """
-    private val queryGeneratorSystemPrompt: String = """
-You are a system that takes system data context as a JSON and outputs a JSON payload to query a vector database.
-
-The input contains:
-- systemTime (Unix timestamp in milliseconds) 
-- currentTimeFormattedString (in format '2023-12-28T12:02:00')
-- day (1-31)
-- month (1-12)
-- year (in format 20XX)
-- hours (in 24h format)
-- minutes (0-59)
-The output should contain:
-- empty query text ""
-- any of the time filters with a $\gte and $\lte value based on user's request
-
-Create a JSON payload best suited to help the user. Output only the filter JSON.
-
-Examples:
-Example #1:
-Input:
-summarize my marketing project's presentation from last week for me
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/2023 10:48", "day": 29, "month": 12, "year": 2023, "hours": 10, "minutes": 48}
-Output: {"query": "marketing project presentation", "query_filter": {"day": { "$\gte": 22, "$\lte": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
-
-Example #2:
-Input:
-what were the highlights of last month
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 02/02/2024 06:00", "day": 2, "month": 2, "year": 2024, "hours": 6, "minutes": 0}
-Output: {"query": "", "query_filter": {"month": { "$\gte": 1, "$\lte": 2 }, "year": { "$\eq": 2024 }}}
-Input:
-hmm what about the last hour?
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 02/02/2024 06:03", "day": 13, "month": 2, "year": 2024, "hours": 6, "minutes": 3}
-Output: {"query": "", "query_filter": {"hours": { "\gte": 5, "\lte": 6 }, "day": { "\eq": 2 }, "month": { "\eq": 2 }, "year": { "\eq": 2024 }}}
-
-Example #3:
-Input:
-recap my day
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:48", "day": 29, "month": 12, "year": 2023, "hours": 22, "minutes": 48}
-Output: {"query": "", "query_filter": {"day": { "$\eq": 29 }, "month": { "$\eq": 12 }, "year": { "$\eq": 2023 }}}
-Input:
-give me more details about the first point early in the day
-Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 10:50", "day": 29, "month": 12, "year": 2023, "hours": 22, "minutes": 50}
-Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day": { "\eq": 29 }, "month": { "\eq": 12 }, "year": { "\eq": 2023 }}}
+You are a system that takes in a dump of transcripts of real-world audio. 
+The conversation could be between one or many speakers marked S0, S1, S2 etc. 
+You are to create a single short paragraph of daily summaries of these transcripts in chronological order. 
+Format it like:
+- <DATE>: <SUMMARY>
     """
 
     private var contextMain: Context? = null
@@ -100,8 +61,8 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
     private lateinit var dataDumpSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
 
-    private val maxConversationHistoryMessages: Int = 10
-    private val maxRecordingsContextItems: Int = 10
+    private val maxConversationHistoryMessages: Int = 20
+    private val maxRecordingsContextItems: Int = 20
 
     private val thoughtChannelId = "MIAThoughtChannel"
     private val thoughtChannelName = "MIA Thoughts Channel"
@@ -118,6 +79,9 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
 
         contextMain = context
 
+        // Acquire wake lock
+        startWakefulService(context, intent)
+
         dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
 
@@ -133,6 +97,9 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
                 if (isNotificationAllowed()) {
                     Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
                     miaThought()
+
+                    // Release wake lock when done
+                    completeWakefulIntent(intent)
                 } else {
                     Log.i("ThoughtsAlarm", "Do Not Disturb time. Not showing notification.")
                 }
@@ -181,6 +148,13 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
 
         val latestRecordingsDumpString = pullLatestRecordings(maxRecordingsContextItems)
+        val latestRecordingsDumpStringWithRealtimeData = """
+Audio Transcript Dump
+$latestRecordingsDumpString
+
+Real-Time System Data
+$deviceData
+"""
         val latestRecordingsDumpPayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
             put("messages", JSONArray().apply {
@@ -190,7 +164,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
                 })
                 put(JSONObject().apply {
                     put("role", "user")
-                    put("content", latestRecordingsDumpString)
+                    put("content", latestRecordingsDumpStringWithRealtimeData)
                 })
             })
             put("seed", 48)
@@ -200,7 +174,9 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         val latestRecordingsSummaryString = Helpers.callOpenAiChatAPI(latestRecordingsDumpPayload)
         Log.i("ThoughtsAlarm", "miaThought latestRecordingsSummaryString\n$latestRecordingsSummaryString")
 
-        val userMessage = """
+        val updatedSystemPrompt = """
+$systemPromptBase
+
 Real-Time System Data
 $deviceData
 
@@ -210,18 +186,14 @@ $messageHistorySummaryString
 Audio Transcript Summary
 $latestRecordingsSummaryString
 """
-        Log.i("ThoughtsAlarm", "miaThought userMessage\n$userMessage")
+        Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
 
         val wakePayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
+            put("model", contextMain?.getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
-                    put("content", systemPromptBase)
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", userMessage)
+                    put("content", updatedSystemPrompt)
                 })
             })
             put("seed", 48)
@@ -249,20 +221,29 @@ $latestRecordingsSummaryString
 
         // Pulling context memory vector data from shared prefs
         val dataDumpString = dataDumpSharedPref.getString("dataDump", "")
-        val dataJsonArray = if (!dataDumpString.isNullOrBlank()) JSONArray(dataDumpString) else JSONArray()
+        val dataJsonArray = if (!dataDumpString.isNullOrBlank()) JSONArray(dataDumpString) else return ""
         val dataListSortedDesc = Helpers.sortJsonDescending(dataJsonArray)
-        val contextMemory = if (dataListSortedDesc.isNotEmpty()) JSONArray(dataListSortedDesc.subList(0, maxMessages)).toString() else ""
+        val contextMemory = if (dataListSortedDesc.isNotEmpty()) JSONArray(dataListSortedDesc.subList(0, maxMessages)) else JSONArray()
+        // Log.i("ThoughtsAlarm", "pullLatestRecordings contextMemory: ${contextMemory.length()}")
+        val contextMemoryString = contextMemory.toString()
 
-        return contextMemory
+        return contextMemoryString
     }
     @Suppress("UnnecessaryVariable")
-    private fun pullConversationHistory(maxMessages: Int?): String {
+    private fun pullConversationHistory(maxMessages: Int): String {
         Log.i("ThoughtsAlarm", "pullConversationHistory")
 
-        val messagesString = messagesSharedPref.getString("ui", maxMessages.toString())
-        val conversationHistory = JSONArray(messagesString).toString()
+        val messagesString = messagesSharedPref.getString("ui", "")
+        val messagesJsonArray = if (!messagesString.isNullOrBlank()) JSONArray(messagesString) else return ""
+        val endIndex = Math.min(maxMessages, messagesJsonArray.length())
+        val conversationHistory = JSONArray()
+        for (i in 0 until endIndex) {
+            conversationHistory.put(messagesJsonArray.getJSONObject(i))
+        }
+        // Log.i("ThoughtsAlarm", "pullConversationHistory conversationHistory: ${conversationHistory.length()}")
+        val conversationHistoryString = conversationHistory.toString()
 
-        return conversationHistory
+        return conversationHistoryString
     }
     // endregion
 
