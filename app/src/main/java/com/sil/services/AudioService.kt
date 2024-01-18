@@ -156,11 +156,13 @@ DO THE FOLLOWING:
                 stop()
                 release()
             }
-        } catch (e: Exception) {
+        }
+        catch (e: Exception) {
             Log.e("AudioRecord", "Error stopping media recorder", e)
-        } finally {
+        }
+        finally {
             mediaRecorder = null
-            latestAudioFile?.let { uploadAudioFileAndMetadata(it) }
+            latestAudioFile?.let { uploadAudioFileWithMetadata(it) }
         }
     }
     private fun stopRecordingAndUpload(audioFile: File) {
@@ -169,7 +171,7 @@ DO THE FOLLOWING:
             release()
         }
         mediaRecorder = null
-        uploadAudioFileAndMetadata(audioFile)
+        uploadAudioFileWithMetadata(audioFile)
         startListening()
     }
 
@@ -180,56 +182,36 @@ DO THE FOLLOWING:
         Log.i("AudioRecord", "Created New Audio File: $audioFileName")
         return File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
     }
-    private fun uploadAudioFileAndMetadata(audioFile: File) {
+    private fun uploadAudioFileWithMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
-            // Add username and audio related metadata
-            val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-            val userName = sharedPrefs.getString("userName", null)
-            // Pull system data for metadata
-            val metadataJson = Helpers.pullDeviceData(this@AudioService, sensorListener)
-
-            metadataJson.put("source", "audio")
-            metadataJson.put("username", userName)
-            metadataJson.put("filename", audioFile.name)
-
             // Start upload process
-            Helpers.scheduleUploadWork(this@AudioService, audioFile, metadataJson)
-
-            // Start processing audio
-            withContext(Dispatchers.IO) {
-                // Generate transcript from audio file
-                val transcriptOutput = Helpers.callDeepgramAPI(audioFile)
-                Log.i("Helpers", "transcriptOutput: $transcriptOutput")
-
-                val cleanTranscriptPayload = JSONObject().apply {
-                    put("model", getString(R.string.gpt3_5turbo))
-                    put("messages", JSONArray().apply {
-                        put(JSONObject().apply {
-                            put("role", "system")
-                            put("content", cleaningSystemPrompt)
-                        })
-                        put(JSONObject().apply {
-                            put("role", "user")
-                            put("content", transcriptOutput)
-                        })
-                    })
-                    put("seed", 48)
-                    put("max_tokens", 512)
-                    put("temperature", 0)
-                }
-                val cleanedTranscript = Helpers.callOpenAiChatAPI(cleanTranscriptPayload)
-                Log.i("Main", "cleanedTranscript: $cleanedTranscript")
-
-                // Generate embeddings from transcript
-                val embeddingsOutput = Helpers.callOpenAiEmbeddingAPI(cleanedTranscript)
-                Log.i("Helpers", "embeddingsOutput: $embeddingsOutput")
-
-                // Upsert embeddings
-                val vectorId = UUID.randomUUID().toString()
-                metadataJson.put("text", cleanedTranscript)
-                Helpers.callPineconeUpsertAPI(vectorId, embeddingsOutput, metadataJson)
-            }
+            Helpers.scheduleUploadWork(
+                this@AudioService,
+                audioFile,
+                createMetadataJson(audioFile.name)
+            )
         }
+    }
+    private suspend fun createMetadataJson(audioFileName: String): JSONObject {
+        val metadataJson = JSONObject()
+
+        // Add some extra keys to metadata JSON
+        metadataJson.put("filename", audioFileName)
+        metadataJson.put("source", "audio")
+
+        // Add username and audio related metadata
+        val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+        val userName = sharedPrefs.getString("userName", null)
+        metadataJson.put("username", userName)
+
+        // Pull individual keys and values from system data into metadata JSON
+        val systemData = Helpers.pullDeviceData(this@AudioService, sensorListener)
+        for (key in systemData.keys()) {
+            metadataJson.put(key, systemData[key])
+        }
+        // Log.d("Helper", "createMetadataJson systemData: $systemData")
+
+        return metadataJson
     }
     // endregion
 }

@@ -153,7 +153,7 @@ hey i'm MIA. what's up?
 
     // region Audio Related Functions
     private fun audioRelated() {
-        // Log.i("Main", "audioRelated")
+        Log.i("Main", "audioRelated")
         
         toggleButton = findViewById(R.id.toggleButton)
         if (isServiceRunning(AudioService::class.java)) {

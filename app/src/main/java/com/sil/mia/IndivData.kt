@@ -51,14 +51,14 @@ class IndivData : AppCompatActivity() {
         if (jsonString != null) {
             selectedData = JSONObject(jsonString)
 
-            val timeString = selectedData.getString("currenttimeformattedstring") ?: ""
-            val fileNameString = selectedData.getString("filename") ?: ""
+            val timeString = selectedData.optString("currenttimeformattedstring", "-")
+            val fileNameString = selectedData.optString("filename", "-")
             titleTextView.text = "$timeString\n$fileNameString"
 
-            addressTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("address"))
-            weatherTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("firstweatherdescription"))
-            sourceTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("source"))
-            textTextView.text = Editable.Factory.getInstance().newEditable(selectedData.getString("text"))
+            addressTextView.text = Editable.Factory.getInstance().newEditable(selectedData.optString("address", "-"))
+            weatherTextView.text = Editable.Factory.getInstance().newEditable(selectedData.optString("firstweatherdescription", "-"))
+            sourceTextView.text = Editable.Factory.getInstance().newEditable(selectedData.optString("source", "-"))
+            textTextView.text = Editable.Factory.getInstance().newEditable(selectedData.optString("text", "-"))
         }
         else {
             addressTextView.visibility = View.GONE
@@ -81,6 +81,7 @@ class IndivData : AppCompatActivity() {
             onBackPressed()
         }
     }
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         onBackPressedDispatcher.onBackPressed()
         finish()

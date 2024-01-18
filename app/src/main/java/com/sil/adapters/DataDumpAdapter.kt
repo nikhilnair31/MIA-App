@@ -1,6 +1,7 @@
 package com.sil.adapters
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
@@ -65,7 +66,7 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
         }
 
         holder.deleteButton.setOnClickListener {
-            handleDeleteButtonClick(position)
+            showDeleteConfirmationDialog(position)
         }
         holder.downloadButton.setOnClickListener {
             handleDownloadButtonClick(position, holder.downloadButton)
@@ -94,6 +95,11 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
                 context.runOnUiThread {
                     dataDumpList.remove(adapterPosition)
                     notifyItemRemoved(adapterPosition)
+
+                    // Update indices of the remaining items
+                    for (i in adapterPosition until dataDumpList.length()) {
+                        notifyItemChanged(i)
+                    }
                 }
             }
         }
@@ -112,6 +118,7 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
             if (!folder.exists()) folder.mkdirs()
             val destinationFile = File(folder, fileName)
 
+            // TODO: Check first if the file exists only then show the download button
             // TODO: Manage its enabled/disabled state on leaving the activity
             downloadButton.isEnabled = false
             Helpers.downloadFromS3(context, fileName, destinationFile) { success ->
@@ -125,6 +132,25 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
                 }
             }
         }
+    }
+
+    private fun showDeleteConfirmationDialog(adapterPosition: Int) {
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Confirm Delete")
+        builder.setMessage("Are you sure you want to delete this item?")
+
+        builder.setPositiveButton("Yes") { dialog, which ->
+            // Handle delete when the user clicks "Yes"
+            handleDeleteButtonClick(adapterPosition)
+        }
+
+        builder.setNegativeButton("No") { dialog, which ->
+            // Do nothing when the user clicks "No"
+            dialog.dismiss()
+        }
+
+        val dialog = builder.create()
+        dialog.show()
     }
 
     override fun getItemCount() = dataDumpList.length()

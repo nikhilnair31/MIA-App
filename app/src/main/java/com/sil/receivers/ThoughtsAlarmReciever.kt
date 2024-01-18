@@ -30,21 +30,22 @@ class ThoughtsAlarmReceiver : BroadcastReceiver() {
 Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
 Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
 Use the context of their real world live audio recording transcripts and its metadata. Remember that the transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
-Don't just repeat something you've already said. 
+DO NOT repeat something you've already said like commenting on the weather repeatedly.
 Using this data message the user with something:
-- conversational like justa general "what's up"
-- helpful based on noticing a change in something like address, weather, battery life etc. like "the weather seems to have changed from sunny to rainy so stay protected"
-- factual like "you're in this neighborhood there's a great bbq restaurant there that you'd like"
-- morning greeting "morning <\user>! these are some tasks for the day ..."
-- suggestion like "please sleep on time today at least"
+- conversational like just a general "what's up"
+- helpful based on noticing a CHANGE in something like address, weather, battery life etc. like "the weather seems to have changed from sunny to rainy so stay protected"
+- FACTUAL like "you're in this neighborhood there's a great bbq restaurant there that you'd like"
+- morning GREETING "morning <\user>! these are some tasks for the day ..."
+- SUGGESTION like "please sleep on time today at least"
 If nothing relevant to send then respond with "null"
     """
     private val messageHistorySummarySystemPrompt: String = """
-You are a system that takes in a dump of message history between a user and an assistant and are to summarize the conversation in a single paragraph
+You are a system that takes in a dump of message history between a user and an assistant.
+You are to summarize the conversation in a few bullet points
     """
     private val latestRecordingsSummarySystemPrompt: String = """
 You are a system that takes in a dump of transcripts of real-world audio. The conversation could be between one or many speakers marked S0, S1, S2 etc. 
-You are to summarize these transcripts it in a single paragraph
+You are to summarize these transcripts it in a few bullet points
     """
     private val queryGeneratorSystemPrompt: String = """
 You are a system that takes system data context as a JSON and outputs a JSON payload to query a vector database.
@@ -99,6 +100,9 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
     private lateinit var dataDumpSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
 
+    private val maxConversationHistoryMessages: Int = 10
+    private val maxRecordingsContextItems: Int = 10
+
     private val thoughtChannelId = "MIAThoughtChannel"
     private val thoughtChannelName = "MIA Thoughts Channel"
     private val thoughtChannelGroup = "MIA Thoughts Channel"
@@ -144,10 +148,11 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
             (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
         }
     }
-    // TODO: Check if you can get user's Bedtime schedule
+
+    // TODO: Make this user controllable
     private fun isNotificationAllowed(): Boolean {
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        return currentHour !in 0..5 // Do Not Disturb between 12 AM and 6 AM
+        return currentHour !in 0..5
     }
     // endregion
 
@@ -155,7 +160,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
     private suspend fun miaThought() {
         Log.i("ThoughtsAlarm", "miaThought")
 
-        val messageHistoryDumpString = pullConversationHistory(10)
+        val messageHistoryDumpString = pullConversationHistory(maxConversationHistoryMessages)
         val messageHistoryDumpPayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
             put("messages", JSONArray().apply {
@@ -175,7 +180,7 @@ Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day"
         val messageHistorySummaryString = Helpers.callOpenAiChatAPI(messageHistoryDumpPayload)
         Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
 
-        val latestRecordingsDumpString = pullLatestRecordings(10)
+        val latestRecordingsDumpString = pullLatestRecordings(maxRecordingsContextItems)
         val latestRecordingsDumpPayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
             put("messages", JSONArray().apply {
@@ -208,7 +213,7 @@ $latestRecordingsSummaryString
         Log.i("ThoughtsAlarm", "miaThought userMessage\n$userMessage")
 
         val wakePayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.gpt4turbo))
+            put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")

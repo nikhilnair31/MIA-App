@@ -114,79 +114,6 @@ class Helpers {
             }
             return ""
         }
-        suspend fun callDeepgramAPI(audioFile: File?): String {
-            var lastException: IOException? = null
-
-            repeat(3) { attempt ->
-                try {
-                    val client = OkHttpClient()
-                    val url = "https://api.deepgram.com/v1/listen"
-                    val params = JSONObject().apply {
-                        put("model", "nova-2-general")
-                        put("version", "latest")
-                        // put("detect_language", true)
-                        put("language", "hi")
-                        put("diarize", true)
-                        put("smart_format", true)
-                        put("filler_words", true)
-                        put("measurements", true)
-                        put("dictation", true)
-                    }
-                    val queryParams = StringBuilder()
-                    var firstParam = true
-                    for (key in params.keys()) {
-                        if (!firstParam) queryParams.append("&")
-                        else firstParam = false
-                        queryParams.append(key).append("=").append(params.get(key))
-                    }
-                    val finalUrl = "$url?$queryParams"
-                    val audioData = audioFile?.readBytes()
-                    Log.d("Helper", "callDeepgramAPI finalUrl: $finalUrl")
-
-                    audioData?.let {
-                        val mediaType = "audio/wav".toMediaTypeOrNull()
-                        val body = audioData.toRequestBody(mediaType)
-                        val request = Request.Builder()
-                            .url(url)
-                            .post(body)
-                            .addHeader("Content-Type", "audio/wav")
-                            .addHeader("Accept", "application/json")
-                            .addHeader("Authorization", "Token $deepgramApiKey")
-                            .url(finalUrl)
-                            .build()
-
-                        val response = client.newCall(request).execute()
-                        val responseCode = response.code
-
-                        return if (responseCode == 200) {
-                            val jsonResponse = JSONObject(response.body.string())
-                            // Log.d("Helper", "Deepgram API Response: $jsonResponse")
-                            val transcript = jsonResponse.getJSONObject("results").getJSONArray("channels")
-                                .getJSONObject(0).getJSONArray("alternatives").getJSONObject(0)
-                                .getJSONObject("paragraphs").getString("transcript")
-                            transcript
-                        }
-                        else {
-                            Log.e("Helper", "Deepgram API Error Response: ${response.body.string()}")
-                            ""
-                        }
-                    }
-                }
-                catch (e: IOException) {
-                    Log.e("Helper", "Deepgram API IO Exception on attempt $attempt: ${e.message}")
-                    lastException = e
-                    delay(1500L * (attempt + 1))
-                }
-                catch (e: Exception) {
-                    Log.e("Helper", "Deepgram API Unexpected Exception: $e")
-                    return ""
-                }
-            }
-            lastException?.let {
-                throw it
-            }
-            return ""
-        }
         suspend fun callOpenAiChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
@@ -288,7 +215,7 @@ class Helpers {
 
                 if (response.isSuccessful) {
                     val jsonResponse = JSONObject(response.body.string())
-                    // Log.d("Helper", "callGeocodingAPI Response\n$jsonResponse")
+                    Log.d("Helper", "callGeocodingAPI Response\n$jsonResponse")
                     val content = jsonResponse.getString("display_name")
                     content
                 } else {
@@ -596,7 +523,6 @@ class Helpers {
                     // Convert JSONObject to Map and add to metadata
                     val metadataMap = metadataJson.toMap()
 
-                    // TODO: Add extra variables defining each variable's type
                     val metadataSize = calculateMetadataSize(metadataMap)
                     Log.d("Helper", "User-defined metadata size: $metadataSize")
 
@@ -617,6 +543,7 @@ class Helpers {
                         }
                     }
 
+                    // TODO: Make S3 file's deletion user controllable
                     // Delete local file after upload
                     if (it.delete()) {
                         Log.d("Helper", "Deleted local audio file after upload: ${it.name}")
@@ -678,9 +605,12 @@ class Helpers {
             finalOutput.put("batterylevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
             // endregion
             // region Location & Climate
+            Log.d("Helper", "Getting location...")
             if (hasLocationPermission(context)) {
                 val location = getLastKnownLocation(context)
+                Log.d("Helper", "Got location $location...")
                 location?.let { locIt ->
+                    Log.d("Helper", "Have location getting lat and long...")
                     val (latitude, longitude) = Pair(locIt.latitude, locIt.longitude)
                     val address = callGeocodingAPI(context, latitude, longitude)
                     val weatherJSON = callWeatherAPI(context, latitude, longitude)
@@ -718,7 +648,7 @@ class Helpers {
             // Log.d("Helper", "deviceSpeed: $deviceSpeed")
             // endregion
 
-            // Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
+            Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
         }
         private fun hasLocationPermission(context: Context): Boolean {
@@ -733,8 +663,10 @@ class Helpers {
         }
         private fun getLastKnownLocation(context: Context): Location? {
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            Log.d("Helper", "Getting locationManager: $locationManager...")
 
             return try {
+                Log.d("Helper", "Getting last known location...")
                 if (hasLocationPermission(context)) {
                     locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                 } else null

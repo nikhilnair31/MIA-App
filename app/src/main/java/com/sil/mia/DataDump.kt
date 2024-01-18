@@ -34,6 +34,7 @@ class DataDump : AppCompatActivity() {
     private lateinit var dataSharedPref: SharedPreferences
     private lateinit var adapter: DataDumpAdapter
     private var dataDumpList = JSONArray()
+    private val maxFetchCount: Int = 100
     // endregion
 
     // region Common
@@ -105,7 +106,7 @@ class DataDump : AppCompatActivity() {
             }
 
             withContext(Dispatchers.IO) {
-                Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 30) { success, response ->
+                Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, maxFetchCount) { success, response ->
                     if (success) {
                         responseJsonObject = response
                     }
@@ -159,6 +160,7 @@ class DataDump : AppCompatActivity() {
     // endregion
 
     // region Back Related
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         onBackPressedDispatcher.onBackPressed()
         finish()
