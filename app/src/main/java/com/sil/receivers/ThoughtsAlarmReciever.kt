@@ -30,15 +30,16 @@ class ThoughtsAlarmReceiver : WakefulBroadcastReceiver() {
     private val systemPromptBase: String = """
 Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
 Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
-Use the context of their real world live audio recording transcripts and its metadata. Remember that the transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
-DO NOT repeat something you've already said like commenting on the weather repeatedly.
+Use the context of their real world live audio recording transcripts and its metadata. DO NOT show the user the Real-Time System Data unless asked.
+Remember that the transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
+DO NOT repeat something you've already said like commenting on the weather repeatedly. Respect the user's message if they request you to not respond.
 Using this data message the user with something:
 - conversational like just a general "what's up"
 - helpful based on noticing a CHANGE in something like address, weather, battery life etc. like "the weather seems to have changed from sunny to rainy so stay protected"
 - FACTUAL like "you're in this neighborhood there's a great bbq restaurant there that you'd like"
 - morning GREETING "morning <\user>! these are some tasks for the day ..."
 - SUGGESTION like "please sleep on time today at least"
-If nothing relevant to send then respond with "null"
+If nothing relevant to send then ONLY respond with "null"
     """
     private val messageHistorySummarySystemPrompt: String = """
 You are a system that takes in a dump of message history between a user and an assistant.
@@ -61,8 +62,8 @@ Format it like:
     private lateinit var dataDumpSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
 
-    private val maxConversationHistoryMessages: Int = 20
-    private val maxRecordingsContextItems: Int = 20
+    private val maxConversationHistoryMessages: Int = 50
+    private val maxRecordingsContextItems: Int = 50
 
     private val thoughtChannelId = "MIAThoughtChannel"
     private val thoughtChannelName = "MIA Thoughts Channel"
@@ -86,9 +87,6 @@ Format it like:
         messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
 
         CoroutineScope(Dispatchers.IO).launch {
-            sensorListener = SensorListener(context)
-            deviceData = context.let { Helpers.pullDeviceData(it, sensorListener) }
-
             if (isAppInForeground()) {
                 Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
             }
@@ -96,6 +94,8 @@ Format it like:
                 // Check if it's within the allowed notification time
                 if (isNotificationAllowed()) {
                     Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
+                    sensorListener = SensorListener(context)
+                    deviceData = context.let { Helpers.pullDeviceData(it, sensorListener) }
                     miaThought()
 
                     // Release wake lock when done
@@ -129,7 +129,7 @@ Format it like:
 
         val messageHistoryDumpString = pullConversationHistory(maxConversationHistoryMessages)
         val messageHistoryDumpPayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
+            put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -141,10 +141,10 @@ Format it like:
                 })
             })
             put("seed", 48)
-            put("max_tokens", 512)
+            put("max_tokens", 1024)
             put("temperature", 0.9)
         }
-        val messageHistorySummaryString = Helpers.callOpenAiChatAPI(messageHistoryDumpPayload)
+        val messageHistorySummaryString = Helpers.callTogetherChatAPI(messageHistoryDumpPayload)
         Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
 
         val latestRecordingsDumpString = pullLatestRecordings(maxRecordingsContextItems)
@@ -156,7 +156,7 @@ Real-Time System Data
 $deviceData
 """
         val latestRecordingsDumpPayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.gpt3_5turbo_16k))
+            put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -168,10 +168,10 @@ $deviceData
                 })
             })
             put("seed", 48)
-            put("max_tokens", 512)
+            put("max_tokens", 1024)
             put("temperature", 0.9)
         }
-        val latestRecordingsSummaryString = Helpers.callOpenAiChatAPI(latestRecordingsDumpPayload)
+        val latestRecordingsSummaryString = Helpers.callTogetherChatAPI(latestRecordingsDumpPayload)
         Log.i("ThoughtsAlarm", "miaThought latestRecordingsSummaryString\n$latestRecordingsSummaryString")
 
         val updatedSystemPrompt = """
@@ -189,10 +189,10 @@ $latestRecordingsSummaryString
         Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
 
         val wakePayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.gpt4turbo))
+            put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
-                    put("role", "system")
+                    put("role", "user")
                     put("content", updatedSystemPrompt)
                 })
             })
@@ -200,7 +200,7 @@ $latestRecordingsSummaryString
             put("max_tokens", 128)
             put("temperature", 0.9)
         }
-        val wakeResponse = Helpers.callOpenAiChatAPI(wakePayload)
+        val wakeResponse = Helpers.callTogetherChatAPI(wakePayload)
 
         if(wakeResponse.lowercase() != "null") {
             saveMessages(wakeResponse)
@@ -223,7 +223,8 @@ $latestRecordingsSummaryString
         val dataDumpString = dataDumpSharedPref.getString("dataDump", "")
         val dataJsonArray = if (!dataDumpString.isNullOrBlank()) JSONArray(dataDumpString) else return ""
         val dataListSortedDesc = Helpers.sortJsonDescending(dataJsonArray)
-        val contextMemory = if (dataListSortedDesc.isNotEmpty()) JSONArray(dataListSortedDesc.subList(0, maxMessages)) else JSONArray()
+        val maxLength = if (maxMessages > dataListSortedDesc.size) dataListSortedDesc.size else maxMessages
+        val contextMemory = if (dataListSortedDesc.isNotEmpty()) JSONArray(dataListSortedDesc.subList(0, maxLength)) else JSONArray()
         // Log.i("ThoughtsAlarm", "pullLatestRecordings contextMemory: ${contextMemory.length()}")
         val contextMemoryString = contextMemory.toString()
 
