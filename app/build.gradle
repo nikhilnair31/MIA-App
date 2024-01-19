@@ -23,6 +23,8 @@ android {
         buildConfigField "String", "OPENAI_API_KEY", "\"${OPENAI_API_KEY}\""
         // Deepgram Related
         buildConfigField "String", "DEEPGRAM_API_KEY", "\"${DEEPGRAM_API_KEY}\""
+        // Together Related
+        buildConfigField "String", "TOGETHER_API_KEY", "\"${TOGETHER_API_KEY}\""
         // Pinecone Related
         buildConfigField "String", "PINECONE_API_ENDPOINT", "\"${PINECONE_API_ENDPOINT}\""
         buildConfigField "String", "PINECONE_API_KEY", "\"${PINECONE_API_KEY}\""
