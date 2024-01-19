@@ -53,6 +53,7 @@ class Helpers {
         private const val awsSecretKey = BuildConfig.AWS_SECRET_KEY
         private const val openaiApiKey = BuildConfig.OPENAI_API_KEY
         private const val deepgramApiKey = BuildConfig.DEEPGRAM_API_KEY
+        private const val togetherApiKey = BuildConfig.TOGETHER_API_KEY
         private const val awsApiEndpoint = BuildConfig.AWS_API_ENDPOINT
         private const val weatherApiEndpoint = BuildConfig.WEATHER_API_KEY
         private const val locationApiEndpoint = BuildConfig.GEOLOCATION_API_KEY
@@ -106,6 +107,45 @@ class Helpers {
                     delay(1000L * (attempt + 1))
                 } catch (e: Exception) {
                     Log.e("Helper", "callContextAPI Unexpected Exception: ${e.message}")
+                    return ""
+                }
+            }
+            lastException?.let {
+                throw it
+            }
+            return ""
+        }
+        suspend fun callTogetherChatAPI(payload: JSONObject): String {
+            var lastException: IOException? = null
+
+            repeat(3) { attempt ->
+                try {
+                    val client = OkHttpClient()
+                    val url = "https://api.together.xyz/v1/chat/completions"
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                        .addHeader("Authorization", "Bearer $togetherApiKey")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+
+                    return if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val jsonResponse = JSONObject(response.body.string())
+                        Log.d("Helper", "callTogetherChatAPI Response: $jsonResponse")
+                        val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
+                        content
+                    } else {
+                        Log.e("Helper", "callTogetherChatAPI Error Response: ${response.body.string()}")
+                        ""
+                    }
+                } catch (e: IOException) {
+                    Log.e("Helper", "callTogetherChatAPI IO Exception on attempt $attempt: ${e.message}")
+                    lastException = e
+                    delay(1500L * (attempt + 1))
+                } catch (e: Exception) {
+                    Log.e("Helper", "callTogetherChatAPI Unexpected Exception: $e")
                     return ""
                 }
             }
@@ -215,7 +255,7 @@ class Helpers {
 
                 if (response.isSuccessful) {
                     val jsonResponse = JSONObject(response.body.string())
-                    Log.d("Helper", "callGeocodingAPI Response\n$jsonResponse")
+                    // Log.d("Helper", "callGeocodingAPI Response\n$jsonResponse")
                     val content = jsonResponse.getString("display_name")
                     content
                 } else {
@@ -605,12 +645,9 @@ class Helpers {
             finalOutput.put("batterylevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
             // endregion
             // region Location & Climate
-            Log.d("Helper", "Getting location...")
             if (hasLocationPermission(context)) {
                 val location = getLastKnownLocation(context)
-                Log.d("Helper", "Got location $location...")
                 location?.let { locIt ->
-                    Log.d("Helper", "Have location getting lat and long...")
                     val (latitude, longitude) = Pair(locIt.latitude, locIt.longitude)
                     val address = callGeocodingAPI(context, latitude, longitude)
                     val weatherJSON = callWeatherAPI(context, latitude, longitude)
