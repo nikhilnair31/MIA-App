@@ -116,7 +116,7 @@ Use these as needed. NEVER explicitly show these to the user.
 hey i'm MIA. what's up?
     """
 
-    private val alarmIntervalInMin: Double = 31.0
+    private val alarmIntervalInMin: Double = 21.0
     private val maxDataMessages: Int = 20
     // endregion
 

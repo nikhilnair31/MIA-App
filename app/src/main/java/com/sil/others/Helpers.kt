@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.util.Log
 import android.widget.Toast
@@ -157,9 +159,13 @@ class Helpers {
         suspend fun callOpenAiChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
-            repeat(3) { attempt ->
+            repeat(4) { attempt ->
                 try {
-                    val client = OkHttpClient()
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(15, TimeUnit.SECONDS)
+                        .readTimeout(15, TimeUnit.SECONDS)
+                        .build()
+                    // val client = OkHttpClient()
                     val url = "https://api.openai.com/v1/chat/completions"
                     val request = Request.Builder()
                         .url(url)
@@ -182,7 +188,7 @@ class Helpers {
                 } catch (e: IOException) {
                     Log.e("Helper", "callOpenAiChatAPI IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
-                    delay(1500L * (attempt + 1))
+                    delay(2000L * (attempt + 1))
                 } catch (e: Exception) {
                     Log.e("Helper", "callOpenAiChatAPI Unexpected Exception: $e")
                     return ""
@@ -291,6 +297,46 @@ class Helpers {
             } catch (e: Exception) {
                 Log.e("Helper", "callWeatherAPI Exception\n$e")
                 null
+            }
+        }
+
+        fun isApiEndpointReachableWithNetworkCheck(context: Context): Boolean {
+            return isNetworkConnected(context) && isApiEndpointReachable() != null
+        }
+        private fun isNetworkConnected(context: Context): Boolean {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val network = connectivityManager.activeNetwork ?: return false
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+            val response = when {
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+                else -> false
+            }
+            // Log.i("Helpers", "isNetworkConnected: $response")
+
+            return response
+        }
+        private fun isApiEndpointReachable(): Boolean {
+            val client = OkHttpClient()
+            val url = "https://api.together.xyz/v1/chat/completions"
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer $togetherApiKey")
+                .get()
+                .build()
+
+            return try {
+                val response = client.newCall(request).execute()
+                // Log.i("Helpers", "isApiEndpointReachable response: $response")
+
+                response.use {
+                    response.isSuccessful
+                }
+            } catch (e: IOException) {
+                Log.e("Helper", "isApiEndpointReachable: IOException: ${e.message}")
+                false
             }
         }
         // endregion
@@ -700,10 +746,8 @@ class Helpers {
         }
         private fun getLastKnownLocation(context: Context): Location? {
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            Log.d("Helper", "Getting locationManager: $locationManager...")
 
             return try {
-                Log.d("Helper", "Getting last known location...")
                 if (hasLocationPermission(context)) {
                     locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                 } else null

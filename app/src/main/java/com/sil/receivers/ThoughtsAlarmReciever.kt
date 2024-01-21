@@ -144,8 +144,11 @@ Format it like:
             put("max_tokens", 1024)
             put("temperature", 0.9)
         }
-        val messageHistorySummaryString = Helpers.callTogetherChatAPI(messageHistoryDumpPayload)
-        Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
+        var messageHistorySummaryString = ""
+        if(contextMain?.let { Helpers.isApiEndpointReachableWithNetworkCheck(it) } == true) {
+            messageHistorySummaryString = Helpers.callTogetherChatAPI(messageHistoryDumpPayload)
+            Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
+        }
 
         val latestRecordingsDumpString = pullLatestRecordings(maxRecordingsContextItems)
         val latestRecordingsDumpStringWithRealtimeData = """
@@ -171,8 +174,11 @@ $deviceData
             put("max_tokens", 1024)
             put("temperature", 0.9)
         }
-        val latestRecordingsSummaryString = Helpers.callTogetherChatAPI(latestRecordingsDumpPayload)
-        Log.i("ThoughtsAlarm", "miaThought latestRecordingsSummaryString\n$latestRecordingsSummaryString")
+        var latestRecordingsSummaryString = ""
+        if(contextMain?.let { Helpers.isApiEndpointReachableWithNetworkCheck(it) } == true) {
+            latestRecordingsSummaryString = Helpers.callTogetherChatAPI(latestRecordingsDumpPayload)
+            Log.i("ThoughtsAlarm", "miaThought latestRecordingsSummaryString\n$latestRecordingsSummaryString")
+        }
 
         val updatedSystemPrompt = """
 $systemPromptBase
@@ -200,7 +206,11 @@ $latestRecordingsSummaryString
             put("max_tokens", 128)
             put("temperature", 0.9)
         }
-        val wakeResponse = Helpers.callTogetherChatAPI(wakePayload)
+        var wakeResponse = "null"
+        if(contextMain?.let { Helpers.isApiEndpointReachableWithNetworkCheck(it) } == true) {
+            wakeResponse = Helpers.callTogetherChatAPI(wakePayload)
+            Log.i("ThoughtsAlarm", "miaThought wakeResponse\n$wakeResponse")
+        }
 
         if(wakeResponse.lowercase() != "null") {
             saveMessages(wakeResponse)
