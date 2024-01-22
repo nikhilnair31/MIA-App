@@ -19,6 +19,7 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.sil.listeners.SensorListener
 import com.sil.mia.R
 import com.sil.mia.BuildConfig
@@ -72,7 +73,7 @@ class Helpers {
         suspend fun callContextAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
-            repeat(3) { attempt ->
+            repeat(5) { attempt ->
                 try {
                     val client = OkHttpClient.Builder()
                         .connectTimeout(15000, TimeUnit.MILLISECONDS)
@@ -99,16 +100,19 @@ class Helpers {
                         Log.e("Helper", "callContextAPI Error Response: ${response.body.string()}")
                         ""
                     }
-                } catch (e: IOException) {
+                }
+                catch (e: IOException) {
                     val message = e.message ?: "Unknown IO exception"
                     Log.e("Helper", "callContextAPI IO Exception on attempt $attempt: $message", e)
                     if (e is java.net.SocketException) {
                         Log.e("Helper", "SocketException details: ", e)
                     }
                     lastException = e
-                    delay(1000L * (attempt + 1))
-                } catch (e: Exception) {
+                    delay(2000L * (attempt + 1))
+                }
+                catch (e: Exception) {
                     Log.e("Helper", "callContextAPI Unexpected Exception: ${e.message}")
+                    FirebaseCrashlytics.getInstance().recordException(e)
                     return ""
                 }
             }
@@ -119,9 +123,20 @@ class Helpers {
         }
         suspend fun callTogetherChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
+            val minRequestInterval = 2000L  // Minimum interval between requests in milliseconds
+            var lastRequestTime = 0L
 
-            repeat(3) { attempt ->
+            repeat(5) { attempt ->
                 try {
+                    // Check if enough time has passed since the last request
+                    val currentTime = System.currentTimeMillis()
+                    val timeSinceLastRequest = currentTime - lastRequestTime
+                    if (timeSinceLastRequest < minRequestInterval) {
+                        delay(minRequestInterval - timeSinceLastRequest)
+                    }
+                    // Update the last request time
+                    lastRequestTime = System.currentTimeMillis()
+                    
                     val client = OkHttpClient()
                     val url = "https://api.together.xyz/v1/chat/completions"
                     val request = Request.Builder()
@@ -142,24 +157,28 @@ class Helpers {
                         Log.e("Helper", "callTogetherChatAPI Error Response: ${response.body.string()}")
                         ""
                     }
-                } catch (e: IOException) {
+                }
+                catch (e: IOException) {
                     Log.e("Helper", "callTogetherChatAPI IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
-                    delay(1500L * (attempt + 1))
-                } catch (e: Exception) {
+                    delay(2000L * (attempt + 1))
+                }
+                catch (e: Exception) {
                     Log.e("Helper", "callTogetherChatAPI Unexpected Exception: $e")
+                    FirebaseCrashlytics.getInstance().recordException(e)
                     return ""
                 }
             }
             lastException?.let {
-                throw it
+                // throw it
+                return ""
             }
             return ""
         }
         suspend fun callOpenAiChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
-            repeat(4) { attempt ->
+            repeat(5) { attempt ->
                 try {
                     val client = OkHttpClient.Builder()
                         .connectTimeout(15, TimeUnit.SECONDS)
@@ -185,12 +204,15 @@ class Helpers {
                         Log.e("Helper", "callOpenAiChatAPI Error Response: ${response.body.string()}")
                         ""
                     }
-                } catch (e: IOException) {
+                }
+                catch (e: IOException) {
                     Log.e("Helper", "callOpenAiChatAPI IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
                     delay(2000L * (attempt + 1))
-                } catch (e: Exception) {
+                }
+                catch (e: Exception) {
                     Log.e("Helper", "callOpenAiChatAPI Unexpected Exception: $e")
+                    FirebaseCrashlytics.getInstance().recordException(e)
                     return ""
                 }
             }
@@ -203,7 +225,7 @@ class Helpers {
             var lastException: IOException? = null
             val vectorArray = FloatArray(1536)
 
-            repeat(3) { attempt ->
+            repeat(5) { attempt ->
                 try {
                     val client = OkHttpClient()
                     val url = "https://api.openai.com/v1/embeddings"
@@ -232,12 +254,15 @@ class Helpers {
                         Log.e("Helper", "callOpenAiChatAPI Error Response: ${response.body.string()}")
                         vectorArray
                     }
-                } catch (e: IOException) {
+                }
+                catch (e: IOException) {
                     Log.e("Helper", "callOpenAiEmbeddingAPI IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
-                    delay(1500L * (attempt + 1))
-                } catch (e: Exception) {
+                    delay(2000L * (attempt + 1))
+                }
+                catch (e: Exception) {
                     Log.e("Helper", "callOpenAiEmbeddingAPI Unexpected Exception: $e")
+                    FirebaseCrashlytics.getInstance().recordException(e)
                     return vectorArray
                 }
             }
@@ -268,8 +293,10 @@ class Helpers {
                     Log.e("Helper", "callGeocodingAPI Error Response\n${response.body.string()}")
                     ""
                 }
-            } catch (e: Exception) {
+            }
+            catch (e: Exception) {
                 Log.e("Helper", "callGeocodingAPI Exception\n$e")
+                FirebaseCrashlytics.getInstance().recordException(e)
                 ""
             }
         }
@@ -294,8 +321,10 @@ class Helpers {
                     Log.e("Helper", "callWeatherAPI Error Response\n${response.body.string()}")
                     null
                 }
-            } catch (e: Exception) {
+            }
+            catch (e: Exception) {
                 Log.e("Helper", "callWeatherAPI Exception\n$e")
+                FirebaseCrashlytics.getInstance().recordException(e)
                 null
             }
         }

@@ -45,7 +45,7 @@ DO THE FOLLOWING:
     private lateinit var sensorListener: SensorListener
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
-    private val maxRecordingTimeInMin = 20
+    private val maxRecordingTimeInMin = 8
 
     private val listeningChannelId = "AudioRecordingServiceChannel"
     private val listeningChannelName = "MIA Listening Channel"

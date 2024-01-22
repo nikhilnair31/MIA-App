@@ -62,8 +62,8 @@ Format it like:
     private lateinit var dataDumpSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
 
-    private val maxConversationHistoryMessages: Int = 50
-    private val maxRecordingsContextItems: Int = 50
+    private val maxConversationHistoryMessages: Int = 25
+    private val maxRecordingsContextItems: Int = 25
 
     private val thoughtChannelId = "MIAThoughtChannel"
     private val thoughtChannelName = "MIA Thoughts Channel"
@@ -128,6 +128,7 @@ Format it like:
         Log.i("ThoughtsAlarm", "miaThought")
 
         val messageHistoryDumpString = pullConversationHistory(maxConversationHistoryMessages)
+        Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpString\n$messageHistoryDumpString")
         val messageHistoryDumpPayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
@@ -151,6 +152,7 @@ Format it like:
         }
 
         val latestRecordingsDumpString = pullLatestRecordings(maxRecordingsContextItems)
+        Log.i("ThoughtsAlarm", "miaThought latestRecordingsDumpString\n$latestRecordingsDumpString")
         val latestRecordingsDumpStringWithRealtimeData = """
 Audio Transcript Dump
 $latestRecordingsDumpString
@@ -193,7 +195,6 @@ Audio Transcript Summary
 $latestRecordingsSummaryString
 """
         Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
-
         val wakePayload = JSONObject().apply {
             put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
@@ -206,13 +207,13 @@ $latestRecordingsSummaryString
             put("max_tokens", 128)
             put("temperature", 0.9)
         }
-        var wakeResponse = "null"
+        var wakeResponse = ""
         if(contextMain?.let { Helpers.isApiEndpointReachableWithNetworkCheck(it) } == true) {
             wakeResponse = Helpers.callTogetherChatAPI(wakePayload)
             Log.i("ThoughtsAlarm", "miaThought wakeResponse\n$wakeResponse")
         }
 
-        if(wakeResponse.lowercase() != "null") {
+        if(wakeResponse.lowercase() != "null" && wakeResponse.lowercase() != "") {
             saveMessages(wakeResponse)
 
             withContext(Dispatchers.Main) {
