@@ -14,7 +14,7 @@ class ApiCallWorker (context: Context, params: WorkerParameters) : CoroutineWork
 
             if (!payloadString.isNullOrEmpty()) {
                 val payload = JSONObject(payloadString)
-                Helpers.callContextAPI(payload)
+                Helpers.callTogetherChatAPI(payload)
             }
             Result.success()
         }

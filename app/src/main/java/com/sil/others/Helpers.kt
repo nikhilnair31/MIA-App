@@ -70,57 +70,6 @@ class Helpers {
         // endregion
         
         // region APIs Related
-        suspend fun callContextAPI(payload: JSONObject): String {
-            var lastException: IOException? = null
-
-            repeat(5) { attempt ->
-                try {
-                    val client = OkHttpClient.Builder()
-                        .connectTimeout(15000, TimeUnit.MILLISECONDS)
-                        .readTimeout(15000, TimeUnit.MILLISECONDS)
-                        .build()
-
-                    val url = awsApiEndpoint
-                    val request = Request.Builder()
-                        .url(url)
-                        .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
-                        .addHeader("Content-Type", "application/json")
-                        .build()
-
-                    val response = client.newCall(request).execute()
-                    val responseCode = response.code
-
-                    return if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val responseJson = response.body.string()
-                        val jsonResponse = JSONArray(responseJson)
-                        Log.d("Helper", "callContextAPI Response: $jsonResponse")
-                        val content = jsonResponse.toString()
-                        content
-                    } else {
-                        Log.e("Helper", "callContextAPI Error Response: ${response.body.string()}")
-                        ""
-                    }
-                }
-                catch (e: IOException) {
-                    val message = e.message ?: "Unknown IO exception"
-                    Log.e("Helper", "callContextAPI IO Exception on attempt $attempt: $message", e)
-                    if (e is java.net.SocketException) {
-                        Log.e("Helper", "SocketException details: ", e)
-                    }
-                    lastException = e
-                    delay(2000L * (attempt + 1))
-                }
-                catch (e: Exception) {
-                    Log.e("Helper", "callContextAPI Unexpected Exception: ${e.message}")
-                    FirebaseCrashlytics.getInstance().recordException(e)
-                    return ""
-                }
-            }
-            lastException?.let {
-                throw it
-            }
-            return ""
-        }
         suspend fun callTogetherChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
             val minRequestInterval = 2000L  // Minimum interval between requests in milliseconds
@@ -217,7 +166,8 @@ class Helpers {
                 }
             }
             lastException?.let {
-                throw it
+                return ""
+                // throw it
             }
             return ""
         }
@@ -267,7 +217,8 @@ class Helpers {
                 }
             }
             lastException?.let {
-                throw it
+                // throw it
+                return vectorArray
             }
             return vectorArray
         }
@@ -388,7 +339,7 @@ class Helpers {
                         put("includeMetadata", true)
                     }
                     val body = bodyJson.toString().toRequestBody(mediaType)
-                    Log.d("Helper", "callPineconeFetchAPI bodyJson\n$bodyJson")
+                    // Log.d("Helper", "callPineconeFetchAPI bodyJson\n$bodyJson")
 
                     val request = Request.Builder()
                         .url("https://mia-170756d.svc.gcp-starter.pinecone.io/query")
@@ -424,7 +375,8 @@ class Helpers {
                 }
             }
             lastException?.let {
-                throw it
+                // throw it
+                return JSONObject()
             }
             return JSONObject()
         }
