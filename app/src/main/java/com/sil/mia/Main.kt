@@ -115,8 +115,15 @@ Use these as needed. NEVER explicitly show these to the user.
     private val initAssistantPrompt = """
 hey i'm MIA. what's up?
     """
+    private val latestRecordingsSummarySystemPrompt: String = """
+You are a system that takes in a dump of transcripts of real-world audio. 
+The conversation could be between one or many speakers marked S0, S1, S2 etc. 
+You are to create a summary of these transcripts in chronological order. 
+Format it like:
+- <TIME>: <SUMMARY>
+    """
 
-    private val alarmIntervalInMin: Double = 31.0
+    private val alarmIntervalInMin: Double = 61.0
     private val maxDataMessages: Int = 20
     // endregion
 
@@ -247,10 +254,15 @@ hey i'm MIA. what's up?
     private suspend fun createMiaResponse(): String {
         val systemData = Helpers.pullDeviceData(this@Main, null)
         Log.i("Main", "createMiaResponse systemData\n$systemData")
-        val updatedUserMessage = "$userMessage\nExtra Data Dump:\n$systemData"
+        val updatedUserMessage = """
+$userMessage
+
+Real-Time System Data:
+$systemData
+""".trimIndent()
         Log.i("Main", "createMiaResponse updatedUserMessage\n$updatedUserMessage")
 
-        val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 5)
+        val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 15)
         messagesListUiCopy.put(JSONObject().apply {
             put("role", "user")
             put("content", updatedUserMessage)
@@ -264,7 +276,12 @@ hey i'm MIA. what's up?
                 lookingExternally(conversationHistoryText)
             else
                 ""
-        val finalUserMessage = "$updatedUserMessage\nContext Memory:\n$withOrWithoutContextMemory"
+        val finalUserMessage = """
+$updatedUserMessage
+
+Context Memory Summary:
+$withOrWithoutContextMemory
+"""
         Log.i("Main", "createMiaResponse finalUserMessage\n$finalUserMessage")
 
         // Append JSON for user's message with/without context
@@ -378,11 +395,35 @@ hey i'm MIA. what's up?
         }
 
         // Final output vectors to be used as context memory
-        val contextMemory = withContext(Dispatchers.IO) {
+        val contextMemoryDumpString = withContext(Dispatchers.IO) {
             Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 10) { _ , _ -> }
         }.toString()
 
-        return contextMemory
+        val contextMemoryDumpPayload = JSONObject().apply {
+            put("model", this@Main.getString(R.string.mixtral_8x7b_instruct_v1))
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", latestRecordingsSummarySystemPrompt)
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", contextMemoryDumpString)
+                })
+            })
+            put("seed", 48)
+            put("max_tokens", 1024)
+            put("temperature", 0.9)
+        }
+        var contextMemorySummaryString = ""
+        withContext(Dispatchers.IO) {
+            if(Helpers.isApiEndpointReachableWithNetworkCheck(this@Main)) {
+                contextMemorySummaryString = Helpers.callTogetherChatAPI(contextMemoryDumpPayload)
+                Log.i("Main", "lookingExternally contextMemorySummaryString\n$contextMemorySummaryString")
+            }
+        }
+
+        return contextMemorySummaryString
     }
 
     private fun loadMessages() {
