@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.sil.services.AudioService
 import com.sil.others.Helpers
 import com.sil.adapters.MessagesAdapter
+import com.sil.receivers.RefreshAlarmReceiver
 import com.sil.receivers.ThoughtsAlarmReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -124,6 +125,7 @@ Format it like:
     """
 
     private val alarmIntervalInMin: Double = 61.0
+    private val refreshIntervalInMin: Double = 1.0
     private val maxDataMessages: Int = 20
     // endregion
 
@@ -138,6 +140,7 @@ Format it like:
         audioRelated()
         chatRelated()
         thoughtsRelated()
+        refreshRelated()
     }
     // endregion
 
@@ -495,6 +498,22 @@ $withOrWithoutContextMemory
 
         // `setInexactRepeating()` is battery-friendly as it allows the system to adjust the alarm's timing to match other alarms
         alarmManager.setInexactRepeating(
+            AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis(),
+            intervalInMin.toLong(),
+            pendingIntent
+        )
+    }
+    private fun refreshRelated() {
+        val refreshManager = this.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, RefreshAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(this, 1, intent, FLAG_IMMUTABLE)
+
+        // Set the alarm to wake up the device and fire approximately every N minutes
+        val intervalInMin : Double = refreshIntervalInMin * 60 * 1000
+
+        // `setInexactRepeating()` is battery-friendly as it allows the system to adjust the alarm's timing to match other alarms
+        refreshManager.setInexactRepeating(
             AlarmManager.RTC_WAKEUP,
             System.currentTimeMillis(),
             intervalInMin.toLong(),

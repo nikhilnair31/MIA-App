@@ -180,7 +180,8 @@ class Helpers {
                     val client = OkHttpClient()
                     val url = "https://api.openai.com/v1/embeddings"
                     val payload = JSONObject().apply {
-                        put("model", "text-embedding-ada-002")
+                        put("model", "text-embedding-3-large")
+                        put("dimensions", 1536)
                         put("input", inputText)
                     }
                     val request = Request.Builder()

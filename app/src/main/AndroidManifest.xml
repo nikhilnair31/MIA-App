@@ -36,6 +36,10 @@
                 <action android:name="com.sil.mia.THOUGHT_ALARM_RECEIVER_ACTION" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name="com.sil.receivers.RefreshAlarmReceiver"
+            android:exported="false" >
+        </receiver>
 
         <service
             android:name="com.sil.services.AudioService"

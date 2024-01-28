@@ -28,20 +28,6 @@ import java.util.Locale
 import java.util.UUID
 
 class AudioService : Service() {
-    // region Vars
-    private val cleaningSystemPrompt = """
-You will receive a user's transcribed speech and are to process it to correct potential errors. 
-DO NOT DO THE FOLLOWING: 
-- Generate any additional content 
-- Censor any of the content 
-- Print repetitive content 
-DO THE FOLLOWING: 
-- Account for transcript include speech of multiple users 
-- Translate everything to English
-- Only output corrected text 
-- If too much of the content seems erroneous return '.'
-    """
-
     private lateinit var sensorListener: SensorListener
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
