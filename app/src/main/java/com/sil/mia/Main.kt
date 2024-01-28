@@ -125,7 +125,7 @@ Format it like:
     """
 
     private val alarmIntervalInMin: Double = 61.0
-    private val refreshIntervalInMin: Double = 1.0
+    private val refreshIntervalInMin: Double = 31.0
     private val maxDataMessages: Int = 20
     // endregion
 
@@ -401,6 +401,7 @@ $withOrWithoutContextMemory
         val contextMemoryDumpString = withContext(Dispatchers.IO) {
             Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 10) { _ , _ -> }
         }.toString()
+        Log.d("Main", "contextMemoryDumpString contextMemoryDumpString\n$contextMemoryDumpString")
 
         val contextMemoryDumpPayload = JSONObject().apply {
             put("model", this@Main.getString(R.string.mixtral_8x7b_instruct_v1))

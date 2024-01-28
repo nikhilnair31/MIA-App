@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageButton
+import com.sil.others.DatabaseHelper
 
 class Welcome : AppCompatActivity() {
     // region Vars
