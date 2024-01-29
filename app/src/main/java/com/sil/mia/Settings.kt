@@ -14,9 +14,16 @@ class Settings : AppCompatActivity() {
     // region Vars
     private lateinit var generalSharedPreferences: SharedPreferences
 
-    private lateinit var usernameText: TextView
-    private lateinit var audioSaveCheckbox: CheckBox
     private lateinit var backButton: ImageButton
+
+    private lateinit var usernameText: TextView
+
+    private lateinit var audioSaveCheckbox: CheckBox
+    private lateinit var cleanAudioCheckbox: CheckBox
+    private lateinit var filterMusicCheckbox: CheckBox
+    private lateinit var normalizeLoudnessCheckbox: CheckBox
+    private lateinit var removeSilenceCheckbox: CheckBox
+
     private lateinit var dataDumpButton: Button
     // endregion
 
@@ -38,18 +45,55 @@ class Settings : AppCompatActivity() {
         usernameText = findViewById(R.id.usernameTextView)
 
         val userName = generalSharedPreferences.getString("userName", "")
-        usernameText.text = "$userName"
+        usernameText.text = "Username: $userName"
     }
 
     private fun checkboxSetup() {
-        // FIXME: Customize its style
         audioSaveCheckbox = findViewById(R.id.audioSaveCheckbox)
+        cleanAudioCheckbox = findViewById(R.id.cleanAudioCheckbox)
+        filterMusicCheckbox = findViewById(R.id.filterMusicCheckbox)
+        normalizeLoudnessCheckbox = findViewById(R.id.normalizeLoudnessCheckbox)
+        removeSilenceCheckbox = findViewById(R.id.removeSilenceCheckbox)
 
-        val currSaveAudioFilesFlag = generalSharedPreferences.getString("saveAudioFiles", "false")
-        audioSaveCheckbox.isChecked = currSaveAudioFilesFlag.toBoolean()
+        audioSaveCheckbox.isChecked =  generalSharedPreferences.getString("saveAudioFiles", "false").toBoolean()
+        cleanAudioCheckbox.isChecked =  generalSharedPreferences.getString("cleanAudio", "false").toBoolean()
+        filterMusicCheckbox.isChecked =  generalSharedPreferences.getString("filterMusic", "false").toBoolean()
+        normalizeLoudnessCheckbox.isChecked =  generalSharedPreferences.getString("normalizeLoudness", "false").toBoolean()
+        removeSilenceCheckbox.isChecked =  generalSharedPreferences.getString("removeSilence", "false").toBoolean()
+
+        // Check clean audio if any of the other checkboxes is checked
+        if (audioSaveCheckbox.isChecked || filterMusicCheckbox.isChecked || normalizeLoudnessCheckbox.isChecked || removeSilenceCheckbox.isChecked) {
+            cleanAudioCheckbox.isChecked = true
+        }
 
         audioSaveCheckbox.setOnCheckedChangeListener { _, isChecked ->
             generalSharedPreferences.edit().putString("saveAudioFiles", isChecked.toString()).apply()
+        }
+        cleanAudioCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            generalSharedPreferences.edit().putString("cleanAudio", isChecked.toString()).apply()
+            if (!isChecked) {
+                filterMusicCheckbox.isChecked = false
+                normalizeLoudnessCheckbox.isChecked = false
+                removeSilenceCheckbox.isChecked = false
+            }
+        }
+        filterMusicCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            generalSharedPreferences.edit().putString("filterMusic", isChecked.toString()).apply()
+            if (isChecked) {
+                cleanAudioCheckbox.isChecked = true
+            }
+        }
+        normalizeLoudnessCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            generalSharedPreferences.edit().putString("normalizeLoudness", isChecked.toString()).apply()
+            if (isChecked) {
+                cleanAudioCheckbox.isChecked = true
+            }
+        }
+        removeSilenceCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            generalSharedPreferences.edit().putString("removeSilence", isChecked.toString()).apply()
+            if (isChecked) {
+                cleanAudioCheckbox.isChecked = true
+            }
         }
     }
 

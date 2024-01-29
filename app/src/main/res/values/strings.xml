@@ -19,9 +19,13 @@
 
     <string name="settingsText">SETTINGS</string>
     <string name="settingsImageDescription">user image</string>
-    <string name="settingsUsernameText">Username</string>
-    <string name="settingsDataDumpText">Weekly Dump</string>
-    <string name="settingsAudioSaveText">Save Audio Recordings</string>
+    <string name="settingsUsernameText">USERNAME: abc</string>
+    <string name="settingsDataDumpText">WEEKLY DUMP</string>
+    <string name="settingsAudioSaveText">SAVE AUDIO FILES</string>
+    <string name="settingsCleanAudioText">CLEAN AUDIO</string>
+    <string name="settingsFilterMusicText">FILTER MUSIC</string>
+    <string name="settingsNormalizeLoudnessText">NORMALIZE LOUDNESS</string>
+    <string name="settingsRemoveSilenceText">REMOVE SILENCE</string>
 
     <string name="dataDumpText">WEEKLY DUMP</string>
     <string name="noDataText">NO DATA</string>

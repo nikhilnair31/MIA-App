@@ -21,7 +21,7 @@
         <layer-list>
             <item>
                 <shape>
-                    <solid android:color="@color/gray_5"/>
+                    <solid android:color="@color/gray_8"/>
                     <corners android:radius="@dimen/roundedCorners"/>
                 </shape>
             </item>

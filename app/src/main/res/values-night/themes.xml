@@ -2,12 +2,12 @@
     <!-- Base application theme. -->
     <style name="Theme.MIA" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/black_0</item>
+        <item name="colorPrimary">@color/accent_0</item>
+        <item name="colorPrimaryVariant">@color/accent_1</item>
         <item name="colorOnPrimary">@color/black_0</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
+        <item name="colorSecondary">@color/accent_0</item>
+        <item name="colorSecondaryVariant">@color/accent_1</item>
         <item name="colorOnSecondary">@color/black_0</item>
         <!-- Customize -->
         <item name="android:navigationBarColor">@android:color/transparent</item>

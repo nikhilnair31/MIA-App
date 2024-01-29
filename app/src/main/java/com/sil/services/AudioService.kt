@@ -180,18 +180,28 @@ class AudioService : Service() {
         }
     }
     private suspend fun createMetadataJson(audioFileName: String): JSONObject {
+        val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
         val metadataJson = JSONObject()
 
         // Add some extra keys to metadata JSON
         metadataJson.put("filename", audioFileName)
         metadataJson.put("source", "audio")
 
-        // Add username and audio related metadata
-        val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+        // Add username and audio downloading/cleaning related metadata
         val userName = sharedPrefs.getString("userName", null)
         metadataJson.put("username", userName)
+
+        // Add audio downloading/cleaning related metadata
         val saveAudioFilesState = sharedPrefs.getString("saveAudioFiles", "false")
         metadataJson.put("saveaudiofiles", saveAudioFilesState)
+        val cleanAudioFilesState = sharedPrefs.getString("cleanAudio", "false")
+        metadataJson.put("cleanaudio", cleanAudioFilesState)
+        val filterMusicState = sharedPrefs.getString("filterMusic", "false")
+        metadataJson.put("filtermusic", filterMusicState)
+        val normalizeLoudnessState = sharedPrefs.getString("normalizeLoudness", "false")
+        metadataJson.put("normalizeloudness", normalizeLoudnessState)
+        val removeSilenceState = sharedPrefs.getString("removeSilence", "false")
+        metadataJson.put("removesilence", removeSilenceState)
 
         // Pull individual keys and values from system data into metadata JSON
         val systemData = Helpers.pullDeviceData(this@AudioService, sensorListener)

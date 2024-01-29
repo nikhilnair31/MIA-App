@@ -128,7 +128,6 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
             if (!folder.exists()) folder.mkdirs()
             val destinationFile = File(folder, fileName)
 
-            // TODO: Check first if the file exists only then show the download button
             // TODO: Manage its enabled/disabled state on leaving the activity
             downloadButton.isEnabled = false
             Helpers.downloadFromS3(context, fileName, destinationFile) { success ->

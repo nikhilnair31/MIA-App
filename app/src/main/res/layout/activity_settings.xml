@@ -63,46 +63,34 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageView
-            android:id="@+id/centeredImage"
-            android:layout_width="match_parent"
-            android:layout_height="128dp"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="16dp"
-            android:contentDescription="@string/settingsImageDescription"
-            android:src="@drawable/rounded_user_image"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
         <TextView
             android:id="@+id/usernameTextView"
             android:layout_width="match_parent"
             android:layout_height="72dp"
 
-            android:layout_marginTop="16dp"
-            android:padding="16dp"
-
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/centeredImage"
-
+            android:layout_marginTop="8dp"
             android:background="@drawable/message_background"
 
             android:fontFamily="@font/venus_cormier"
+            android:gravity="start|center_vertical"
+
+            android:hint="@string/settingsUsernameText"
+
+            android:padding="16dp"
+            android:textAllCaps="false"
             android:textColor="@color/accent_0"
             android:textColorHint="@color/accent_0"
-            android:gravity="center"
-            android:textAllCaps="false"
-            android:hint="@string/settingsUsernameText"
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/audioSaveLayout"
             android:layout_width="0dp"
             android:layout_height="72dp"
 
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
 
             android:background="@drawable/message_background"
 
@@ -115,12 +103,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
 
+                android:layout_marginStart="8dp"
                 android:fontFamily="@font/venus_cormier"
+                android:gravity="start|center_vertical"
                 android:text="@string/settingsAudioSaveText"
                 android:textColor="@color/gray_70"
-                android:gravity="start|center_vertical"
-                android:textSize="18sp"
 
+                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -131,15 +120,203 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
 
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-
-                android:checked="false"
+                android:checked="true"
 
                 android:text=""
                 android:textColor="@color/accent_0"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/audioCleanLayout"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+
+            android:layout_marginTop="8dp"
+
+            android:background="@drawable/message_background"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/audioSaveLayout">
+
+            <TextView
+                android:id="@+id/textView3"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="start|center_vertical"
+                android:text="@string/settingsCleanAudioText"
+                android:textColor="@color/gray_70"
+
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <CheckBox
+                android:id="@+id/cleanAudioCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+
+                android:checked="false"
+                android:text=""
+                android:textColor="@color/accent_0"
+
+                android:textSize="18sp"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/audioFilterMusicLayout"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+
+            android:layout_marginTop="8dp"
+
+            android:background="@drawable/message_background"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/audioCleanLayout">
+
+            <TextView
+                android:id="@+id/textView4"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="start|center_vertical"
+
+                android:text="@string/settingsFilterMusicText"
+                android:textColor="@color/gray_70"
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <CheckBox
+                android:id="@+id/filterMusicCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+
+                android:checked="false"
+                android:text=""
+                android:textColor="@color/accent_0"
+
+                android:textSize="18sp"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/audioNormalizeLoudnessLayout"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+
+            android:layout_marginTop="8dp"
+
+            android:background="@drawable/message_background"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/audioFilterMusicLayout">
+
+            <TextView
+                android:id="@+id/textView5"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="start|center_vertical"
+
+                android:text="@string/settingsNormalizeLoudnessText"
+                android:textColor="@color/gray_70"
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <CheckBox
+                android:id="@+id/normalizeLoudnessCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+
+                android:checked="false"
+                android:text=""
+                android:textColor="@color/accent_0"
+
+                android:textSize="18sp"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/removeSilenceLayout"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+
+            android:layout_marginTop="8dp"
+
+            android:background="@drawable/message_background"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/audioNormalizeLoudnessLayout">
+
+            <TextView
+                android:id="@+id/textView6"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/venus_cormier"
+                android:gravity="start|center_vertical"
+
+                android:text="@string/settingsRemoveSilenceText"
+                android:textColor="@color/gray_70"
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <CheckBox
+                android:id="@+id/removeSilenceCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+
+                android:checked="false"
+                android:text=""
+                android:textColor="@color/accent_0"
+
+                android:textSize="18sp"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -147,21 +324,21 @@
             android:id="@+id/dataDumpButton"
             android:layout_width="match_parent"
             android:layout_height="72dp"
-            android:layout_marginTop="16dp"
 
+            android:layout_marginTop="4dp"
             android:backgroundTint="@color/gray_5"
-            android:radius="8dp"
 
-            android:text="@string/settingsDataDumpText"
-            android:textColor="@color/gray_70"
-            android:textSize="18sp"
-            android:gravity="start|center_vertical"
-            android:textAllCaps="false"
             android:fontFamily="@font/venus_cormier"
+            android:gravity="start|center_vertical"
+            android:radius="8dp"
+            android:text="@string/settingsDataDumpText"
+            android:textAllCaps="false"
+            android:textColor="@color/gray_70"
 
+            android:textSize="18sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/audioSaveLayout" />
+            app:layout_constraintTop_toBottomOf="@+id/removeSilenceLayout" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
