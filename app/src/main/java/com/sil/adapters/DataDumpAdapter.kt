@@ -60,7 +60,7 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
             holder.vectorIdAndFilenameTextView.setTextColor(context.resources.getColor(R.color.accent_0, null))
 
             // Check if the data contains the key "keepFile"
-            val allowDownload = !data.has("saveAudioFiles") || data.optString("saveAudioFiles", "").lowercase() == "true"
+            val allowDownload = !data.has("saveaudiofiles") || data.optString("saveaudiofiles", "").lowercase() == "true"
 
             holder.downloadButton.visibility = if (allowDownload) View.VISIBLE else View.GONE
 

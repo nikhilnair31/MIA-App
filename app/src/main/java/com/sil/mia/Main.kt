@@ -153,6 +153,7 @@ Format it like:
         val userName = generalSharedPref.getString("userName", null)
         Log.i("Main", "initRelated userName: $userName")
 
+        // FIXME: Update this to a settings icon
         settingsButton = findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener {
             val intent = Intent(this, Settings::class.java)

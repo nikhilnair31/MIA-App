@@ -42,6 +42,7 @@ class Settings : AppCompatActivity() {
     }
 
     private fun checkboxSetup() {
+        // FIXME: Customize its style
         audioSaveCheckbox = findViewById(R.id.audioSaveCheckbox)
 
         val currSaveAudioFilesFlag = generalSharedPreferences.getString("saveAudioFiles", "false")
@@ -57,6 +58,8 @@ class Settings : AppCompatActivity() {
         backButton.setOnClickListener {
             onBackPressed()
         }
+
+        // TODO: Figure out how to replicate the ripple effect for all other buttons
         dataDumpButton = findViewById(R.id.dataDumpButton)
         dataDumpButton.setOnClickListener {
             val intent = Intent(this, DataDump::class.java)
