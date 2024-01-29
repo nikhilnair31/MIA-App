@@ -31,7 +31,7 @@ class Main : AppCompatActivity() {
     private lateinit var editText: EditText
     private lateinit var sendButton: ImageButton
     private lateinit var toggleButton: ToggleButton
-    private lateinit var dataButton: ImageButton
+    private lateinit var settingsButton: ImageButton
 
     private lateinit var generalSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
@@ -125,7 +125,7 @@ Format it like:
     """
 
     private val alarmIntervalInMin: Double = 61.0
-    private val refreshIntervalInMin: Double = 1.0
+    private val refreshIntervalInMin: Double = 31.0
     private val maxDataMessages: Int = 20
     // endregion
 
@@ -153,9 +153,9 @@ Format it like:
         val userName = generalSharedPref.getString("userName", null)
         Log.i("Main", "initRelated userName: $userName")
 
-        dataButton = findViewById(R.id.dataButton)
-        dataButton.setOnClickListener {
-            val intent = Intent(this, DataDump::class.java)
+        settingsButton = findViewById(R.id.settingsButton)
+        settingsButton.setOnClickListener {
+            val intent = Intent(this, Settings::class.java)
             this.startActivity(intent)
         }
     }

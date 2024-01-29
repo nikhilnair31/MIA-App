@@ -592,7 +592,7 @@ class Helpers {
                     val metadataMap = metadataJson.toMap()
 
                     val metadataSize = calculateMetadataSize(metadataMap)
-                    Log.d("Helper", "User-defined metadata size: $metadataSize")
+                    Log.d("Helper", "Settings-defined metadata size: $metadataSize")
 
                     metadataMap.forEach { (key, value) ->
                         // Log.d("Helper", "Metadata - Key: $key, Value: $value")

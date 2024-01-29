@@ -13,9 +13,15 @@
     <string name="permissionsText">PERMISSIONS</string>
     <string name="givePermissionsText">GIVE PERMISSIONS</string>
 
-    <string name="dataButtonDescription">data button</string>
+    <string name="settingsButtonDescription">settings button</string>
     <string name="sendButtonDescription">send</string>
     <string name="talkToMiaHint">TALK TO MIA…</string>
+
+    <string name="settingsText">SETTINGS</string>
+    <string name="settingsImageDescription">user image</string>
+    <string name="settingsUsernameText">Username</string>
+    <string name="settingsDataDumpText">Weekly Dump</string>
+    <string name="settingsAudioSaveText">Save Audio Recordings</string>
 
     <string name="dataDumpText">WEEKLY DUMP</string>
     <string name="noDataText">NO DATA</string>

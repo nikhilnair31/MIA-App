@@ -11,7 +11,7 @@ import android.widget.TextView
 import com.sil.others.Helpers
 import org.json.JSONObject
 
-class IndivData : AppCompatActivity() {
+class DataIndividual : AppCompatActivity() {
     // region Vars
     private lateinit var titleTextView: TextView
 
@@ -29,7 +29,7 @@ class IndivData : AppCompatActivity() {
     // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_indivdata)
+        setContentView(R.layout.activity_data_individual)
 
         dataRelated()
         buttonSetup()
@@ -38,7 +38,7 @@ class IndivData : AppCompatActivity() {
 
     // region Data Related
     private fun dataRelated() {
-        Log.i("IndivData", "dataRelated")
+        Log.i("DataIndividual", "dataRelated")
 
         titleTextView = findViewById(R.id.titleTextView)
         addressTextView = findViewById(R.id.addressTextView)
@@ -89,7 +89,7 @@ class IndivData : AppCompatActivity() {
     // FIXME: I should ideally regenerate the updated text's vector as well
     private fun updateData() {
         val vectorId = selectedData.optString("id") ?: ""
-        Log.i("IndivData", "vectorId: $vectorId")
+        Log.i("DataIndividual", "vectorId: $vectorId")
 
         Helpers.callPineconeUpdateByIdAPI(
             this,

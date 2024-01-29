@@ -18,10 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.util.Collections
-import java.util.Locale
 
 class DataDump : AppCompatActivity() {
     // region Vars
@@ -40,7 +37,7 @@ class DataDump : AppCompatActivity() {
     // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_datadump)
+        setContentView(R.layout.activity_data_dump)
 
         dataRelated()
         buttonSetup()

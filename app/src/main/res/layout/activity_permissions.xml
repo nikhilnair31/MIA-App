@@ -26,7 +26,7 @@
         android:layout_width="256dp"
         android:layout_height="72dp"
 
-        android:backgroundTint="@color/accent_1"
+        android:backgroundTint="@color/gray_8"
 
         android:textColor="@color/accent_0"
         android:text="@string/givePermissionsText"

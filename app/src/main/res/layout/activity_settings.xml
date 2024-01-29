@@ -1,0 +1,168 @@
+<!-- activity_second.xml -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Settings">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintLayout0"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/buttonBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/baseline_arrow_back_ios_new_24"
+            android:contentDescription="@string/backButton"
+            android:scaleType="centerCrop"
+            android:scaleX="0.5"
+            android:scaleY="0.45"
+            android:text=""
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginStart="8dp"
+
+            android:fontFamily="@font/venus_cormier"
+            android:gravity="start|center_vertical"
+            android:text="@string/settingsText"
+            android:textColor="@color/accent_0"
+            android:textSize="24sp"
+
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/buttonBack"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintLayout2"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="64dp"
+
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/data_background"
+        app:layout_constraintBottom_toBottomOf="parent"
+
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/centeredImage"
+            android:layout_width="match_parent"
+            android:layout_height="128dp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="16dp"
+            android:contentDescription="@string/settingsImageDescription"
+            android:src="@drawable/rounded_user_image"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/usernameTextView"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+
+            android:layout_marginTop="16dp"
+            android:padding="16dp"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/centeredImage"
+
+            android:background="@drawable/message_background"
+
+            android:fontFamily="@font/venus_cormier"
+            android:textColor="@color/accent_0"
+            android:textColorHint="@color/accent_0"
+            android:gravity="center"
+            android:textAllCaps="false"
+            android:hint="@string/settingsUsernameText"
+            android:textSize="18sp" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/audioSaveLayout"
+            android:layout_width="0dp"
+            android:layout_height="72dp"
+
+            android:layout_marginTop="16dp"
+
+            android:background="@drawable/message_background"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/usernameTextView">
+
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+
+                android:fontFamily="@font/venus_cormier"
+                android:text="@string/settingsAudioSaveText"
+                android:textColor="@color/gray_70"
+                android:gravity="start|center_vertical"
+                android:textSize="18sp"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <CheckBox
+                android:id="@+id/audioSaveCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+
+                android:checked="false"
+
+                android:text=""
+                android:textColor="@color/accent_0"
+                android:textSize="18sp" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <Button
+            android:id="@+id/dataDumpButton"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="16dp"
+
+            android:backgroundTint="@color/gray_5"
+            android:radius="8dp"
+
+            android:text="@string/settingsDataDumpText"
+            android:textColor="@color/gray_70"
+            android:textSize="18sp"
+            android:gravity="start|center_vertical"
+            android:textAllCaps="false"
+            android:fontFamily="@font/venus_cormier"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/audioSaveLayout" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

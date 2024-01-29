@@ -15,15 +15,14 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
-import com.sil.mia.IndivData
+import com.sil.mia.DataIndividual
 import com.sil.mia.R
 import com.sil.others.Helpers
 import org.json.JSONArray
 import java.io.File
 
 
-class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: Context) :
-    RecyclerView.Adapter<DataDumpAdapter.MessageViewHolder>() {
+class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: Context) : RecyclerView.Adapter<DataDumpAdapter.MessageViewHolder>() {
 
     class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val vectorIdAndFilenameTextView: TextView = view.findViewById(R.id.vectorIdAndFilenameTextView)
@@ -59,6 +58,17 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
             holder.textTextView.text = data.getString("text")
 
             holder.vectorIdAndFilenameTextView.setTextColor(context.resources.getColor(R.color.accent_0, null))
+
+            // Check if the data contains the key "keepFile"
+            val allowDownload = !data.has("saveAudioFiles") || data.optString("saveAudioFiles", "").lowercase() == "true"
+
+            holder.downloadButton.visibility = if (allowDownload) View.VISIBLE else View.GONE
+
+            if (allowDownload) {
+                holder.downloadButton.setOnClickListener {
+                    handleDownloadButtonClick(position, holder.downloadButton)
+                }
+            }
         }
         else {
             holder.vectorIdAndFilenameTextView.visibility = View.GONE
@@ -72,7 +82,7 @@ class DataDumpAdapter(private var dataDumpList: JSONArray, private val context: 
             handleDownloadButtonClick(position, holder.downloadButton)
         }
         holder.dataIndivConstraintLayout.setOnClickListener {
-            val intent = Intent(context, IndivData::class.java)
+            val intent = Intent(context, DataIndividual::class.java)
             intent.putExtra("selectedData", data.toString())
             context.startActivity(intent)
         }

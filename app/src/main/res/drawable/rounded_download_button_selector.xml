@@ -13,7 +13,7 @@
             </item>
 
             <item
-                android:drawable="@drawable/baseline_file_download_24"
+                android:drawable="@drawable/baseline_cloud_download_24"
                 android:gravity="center"/>
         </layer-list>
     </item>

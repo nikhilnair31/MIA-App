@@ -28,6 +28,7 @@ import java.util.Locale
 import java.util.UUID
 
 class AudioService : Service() {
+    // region Vars
     private lateinit var sensorListener: SensorListener
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
@@ -189,6 +190,8 @@ class AudioService : Service() {
         val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
         val userName = sharedPrefs.getString("userName", null)
         metadataJson.put("username", userName)
+        val saveAudioFilesState = sharedPrefs.getString("saveAudioFiles", "false")
+        metadataJson.put("saveaudiofiles", saveAudioFilesState)
 
         // Pull individual keys and values from system data into metadata JSON
         val systemData = Helpers.pullDeviceData(this@AudioService, sensorListener)
