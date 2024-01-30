@@ -11,11 +11,11 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.sil.services.AudioService
-import com.sil.others.Helpers
 import com.sil.adapters.MessagesAdapter
+import com.sil.others.Helpers
 import com.sil.receivers.RefreshAlarmReceiver
 import com.sil.receivers.ThoughtsAlarmReceiver
+import com.sil.services.AudioService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -122,9 +122,9 @@ Format it like:
 - <TIME>: <SUMMARY>
     """
 
-    private val alarmIntervalInMin: Double = 61.0
-    private val refreshIntervalInMin: Double = 31.0
-    private val maxDataMessages: Int = 20
+    private var alarmIntervalInMin: Double = 5.0
+    private var refreshIntervalInMin: Double = 5.0
+    private var maxDataMessages: Int = 20
     // endregion
 
     // region Common
@@ -149,7 +149,11 @@ Format it like:
 
         generalSharedPref.edit().putBoolean("isFirstRun", false).apply()
         val userName = generalSharedPref.getString("userName", null)
-        Log.i("Main", "initRelated userName: $userName")
+
+        // Set integer values
+        alarmIntervalInMin = resources.getInteger(R.integer.alarmIntervalInMin).toDouble()
+        refreshIntervalInMin = resources.getInteger(R.integer.refreshIntervalInMin).toDouble()
+        maxDataMessages = resources.getInteger(R.integer.maxDataMessages).toInt()
 
         settingsButton = findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener {

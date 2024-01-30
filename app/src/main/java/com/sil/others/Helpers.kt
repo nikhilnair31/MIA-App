@@ -70,6 +70,67 @@ class Helpers {
         // endregion
         
         // region APIs Related
+        private suspend fun callGeocodingAPI(context: Context, latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val url = context.getString(R.string.addressURL)
+                val params = mapOf("lat" to latitude, "lon" to longitude, "api_key" to locationApiEndpoint)
+
+                val request = Request.Builder()
+                    .url("$url?${params.entries.joinToString("&") { "${it.key}=${it.value}" }}")
+                    .get()
+                    .build()
+
+                val response = client.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val jsonResponse = JSONObject(response.body.string())
+                    // Log.d("Helper", "callGeocodingAPI Response\n$jsonResponse")
+                    val content = jsonResponse.getString("display_name")
+                    content
+                } else {
+                    Log.e("Helper", "callGeocodingAPI Error Response\n${response.body.string()}")
+                    ""
+                }
+            }
+            catch (e: Exception) {
+                Log.e("Helper", "callGeocodingAPI Exception\n$e")
+                FirebaseCrashlytics.getInstance().recordException(e)
+                ""
+            }
+        }
+
+        private suspend fun callWeatherAPI(context: Context, latitude: Double, longitude: Double): JSONObject? = withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val url = context.getString(R.string.weatherURL)
+                val params = mapOf("lat" to latitude, "lon" to longitude, "units" to "metric", "appid" to weatherApiEndpoint)
+
+                val request = Request.Builder()
+                    .url("$url?${params.entries.joinToString("&") { "${it.key}=${it.value}" }}")
+                    .get()
+                    .build()
+
+                val response = client.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val jsonResponse = JSONObject(response.body.string())
+                    // Log.d("Helper", "callWeatherAPI Response\n$jsonResponse")
+                    jsonResponse
+                } else {
+                    Log.e("Helper", "callWeatherAPI Error Response\n${response.body.string()}")
+                    null
+                }
+            }
+            catch (e: Exception) {
+                Log.e("Helper", "callWeatherAPI Exception\n$e")
+                FirebaseCrashlytics.getInstance().recordException(e)
+                null
+            }
+        }
+        // endregion
+
+        // region LLM Related
         suspend fun callTogetherChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
             val minRequestInterval = 2000L  // Minimum interval between requests in milliseconds
@@ -85,7 +146,7 @@ class Helpers {
                     }
                     // Update the last request time
                     lastRequestTime = System.currentTimeMillis()
-                    
+
                     val client = OkHttpClient()
                     val url = "https://api.together.xyz/v1/chat/completions"
                     val request = Request.Builder()
@@ -124,6 +185,7 @@ class Helpers {
             }
             return ""
         }
+
         suspend fun callOpenAiChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
 
@@ -171,6 +233,7 @@ class Helpers {
             }
             return ""
         }
+
         suspend fun callOpenAiEmbeddingAPI(inputText: String): FloatArray {
             var lastException: IOException? = null
             val vectorArray = FloatArray(1536)
@@ -222,103 +285,6 @@ class Helpers {
                 return vectorArray
             }
             return vectorArray
-        }
-        private suspend fun callGeocodingAPI(context: Context, latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
-            try {
-                val client = OkHttpClient()
-                val url = context.getString(R.string.addressURL)
-                val params = mapOf("lat" to latitude, "lon" to longitude, "api_key" to locationApiEndpoint)
-
-                val request = Request.Builder()
-                    .url("$url?${params.entries.joinToString("&") { "${it.key}=${it.value}" }}")
-                    .get()
-                    .build()
-
-                val response = client.newCall(request).execute()
-
-                if (response.isSuccessful) {
-                    val jsonResponse = JSONObject(response.body.string())
-                    // Log.d("Helper", "callGeocodingAPI Response\n$jsonResponse")
-                    val content = jsonResponse.getString("display_name")
-                    content
-                } else {
-                    Log.e("Helper", "callGeocodingAPI Error Response\n${response.body.string()}")
-                    ""
-                }
-            }
-            catch (e: Exception) {
-                Log.e("Helper", "callGeocodingAPI Exception\n$e")
-                FirebaseCrashlytics.getInstance().recordException(e)
-                ""
-            }
-        }
-        private suspend fun callWeatherAPI(context: Context, latitude: Double, longitude: Double): JSONObject? = withContext(Dispatchers.IO) {
-            try {
-                val client = OkHttpClient()
-                val url = context.getString(R.string.weatherURL)
-                val params = mapOf("lat" to latitude, "lon" to longitude, "units" to "metric", "appid" to weatherApiEndpoint)
-
-                val request = Request.Builder()
-                    .url("$url?${params.entries.joinToString("&") { "${it.key}=${it.value}" }}")
-                    .get()
-                    .build()
-
-                val response = client.newCall(request).execute()
-
-                if (response.isSuccessful) {
-                    val jsonResponse = JSONObject(response.body.string())
-                    // Log.d("Helper", "callWeatherAPI Response\n$jsonResponse")
-                    jsonResponse
-                } else {
-                    Log.e("Helper", "callWeatherAPI Error Response\n${response.body.string()}")
-                    null
-                }
-            }
-            catch (e: Exception) {
-                Log.e("Helper", "callWeatherAPI Exception\n$e")
-                FirebaseCrashlytics.getInstance().recordException(e)
-                null
-            }
-        }
-
-        fun isApiEndpointReachableWithNetworkCheck(context: Context): Boolean {
-            return isNetworkConnected(context) && isApiEndpointReachable() != null
-        }
-        private fun isNetworkConnected(context: Context): Boolean {
-            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val network = connectivityManager.activeNetwork ?: return false
-            val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-
-            val response = when {
-                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
-                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
-                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
-                else -> false
-            }
-            // Log.i("Helpers", "isNetworkConnected: $response")
-
-            return response
-        }
-        private fun isApiEndpointReachable(): Boolean {
-            val client = OkHttpClient()
-            val url = "https://api.together.xyz/v1/chat/completions"
-            val request = Request.Builder()
-                .url(url)
-                .addHeader("Authorization", "Bearer $togetherApiKey")
-                .get()
-                .build()
-
-            return try {
-                val response = client.newCall(request).execute()
-                // Log.i("Helpers", "isApiEndpointReachable response: $response")
-
-                response.use {
-                    response.isSuccessful
-                }
-            } catch (e: IOException) {
-                Log.e("Helper", "isApiEndpointReachable: IOException: ${e.message}")
-                false
-            }
         }
         // endregion
 
@@ -381,6 +347,7 @@ class Helpers {
             }
             return JSONObject()
         }
+
         fun callPineconeDeleteByIdAPI(context: Context, vectorId: String) {
             Log.i("Helpers", "Deleting from Pinecone...")
 
@@ -430,6 +397,7 @@ class Helpers {
                 }
             }.start()
         }
+
         fun callPineconeUpdateByIdAPI(context: Context, vectorId: String, addressText: String, weatherText: String, sourceText: String, textText: String) {
             Log.i("Helpers", "Updating Pinecone Vector...")
 
@@ -473,6 +441,7 @@ class Helpers {
                 }
             }.start()
         }
+
         fun callPineconeUpsertAPI(vectorId: String, vectorValues: FloatArray, metadataJson: JSONObject) {
             Log.i("Helpers", "Upserting Pinecone Vector...")
 
@@ -567,6 +536,7 @@ class Helpers {
                 }
             }.start()
         }
+
         fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
             Log.i("Helpers", "Uploading to S3...")
 
@@ -611,7 +581,6 @@ class Helpers {
                         }
                     }
 
-                    // TODO: Make S3 file's deletion user controllable
                     // Delete local file after upload
                     if (it.delete()) {
                         Log.d("Helper", "Deleted local audio file after upload: ${it.name}")
@@ -630,6 +599,7 @@ class Helpers {
                 e.printStackTrace()
             }
         }
+
         fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -716,6 +686,7 @@ class Helpers {
             Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
         }
+
         private fun hasLocationPermission(context: Context): Boolean {
             return ContextCompat.checkSelfPermission(
                 context,
@@ -726,6 +697,7 @@ class Helpers {
                         android.Manifest.permission.ACCESS_COARSE_LOCATION
                     ) == PackageManager.PERMISSION_GRANTED
         }
+
         private fun getLastKnownLocation(context: Context): Location? {
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
@@ -739,23 +711,14 @@ class Helpers {
                 null
             }
         }
+
         private fun pullSystemTime(): Long {
             return System.currentTimeMillis()
         }
+
         private fun pullTimeFormattedString(): String {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             return dateFormat.format(Date())
-        }
-        fun sortJsonDescending(dataJsonArray: JSONArray): MutableList<JSONObject> {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            val comparator = Comparator<JSONObject> { json1, json2 ->
-                val millis1 = dateFormat.parse(json1.optString("currenttimeformattedstring"))
-                val millis2 = dateFormat.parse(json2.optString("currenttimeformattedstring"))
-                millis2?.compareTo(millis1) ?: 0
-            }
-            val dataList = (0 until dataJsonArray.length()).mapTo(mutableListOf()) { dataJsonArray.getJSONObject(it) }
-            Collections.sort(dataList, comparator)
-            return dataList
         }
         // endregion
 
@@ -809,12 +772,64 @@ class Helpers {
 
         // region Other
         private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
+        fun sortJsonDescending(dataJsonArray: JSONArray): MutableList<JSONObject> {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val comparator = Comparator<JSONObject> { json1, json2 ->
+                val millis1 = dateFormat.parse(json1.optString("currenttimeformattedstring"))
+                val millis2 = dateFormat.parse(json2.optString("currenttimeformattedstring"))
+                millis2?.compareTo(millis1) ?: 0
+            }
+            val dataList = (0 until dataJsonArray.length()).mapTo(mutableListOf()) { dataJsonArray.getJSONObject(it) }
+            Collections.sort(dataList, comparator)
+            return dataList
+        }
+
         private fun calculateMetadataSize(metadataMap: Map<String, Any>): Int {
             // Calculate the UTF-8 encoded size of each key and value
             val size = metadataMap.entries.sumOf { entry ->
                 entry.key.toByteArray(Charsets.UTF_8).size + entry.value.toString().toByteArray(Charsets.UTF_8).size
             }
             return size
+        }
+
+        fun isApiEndpointReachableWithNetworkCheck(context: Context): Boolean {
+            return isNetworkConnected(context) && isApiEndpointReachable() != null
+        }
+        private fun isNetworkConnected(context: Context): Boolean {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val network = connectivityManager.activeNetwork ?: return false
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+            val response = when {
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+                else -> false
+            }
+            // Log.i("Helpers", "isNetworkConnected: $response")
+
+            return response
+        }
+        private fun isApiEndpointReachable(): Boolean {
+            val client = OkHttpClient()
+            val url = "https://api.together.xyz/v1/chat/completions"
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer $togetherApiKey")
+                .get()
+                .build()
+
+            return try {
+                val response = client.newCall(request).execute()
+                // Log.i("Helpers", "isApiEndpointReachable response: $response")
+
+                response.use {
+                    response.isSuccessful
+                }
+            } catch (e: IOException) {
+                Log.e("Helper", "isApiEndpointReachable: IOException: ${e.message}")
+                false
+            }
         }
         // endregion
     }

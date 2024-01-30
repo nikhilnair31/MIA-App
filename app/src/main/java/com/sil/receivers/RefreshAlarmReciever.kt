@@ -37,7 +37,7 @@ class RefreshAlarmReceiver : BroadcastReceiver() {
     private var contextMain: Context? = null
 
     private var dataDumpList = JSONArray()
-    private val maxFetchCount: Int = 100
+    private var maxFetchCount: Int = 100
     // endregion
 
     // region Initial
@@ -48,6 +48,9 @@ class RefreshAlarmReceiver : BroadcastReceiver() {
 
         generalSharedPref = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
         dataSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
+
+        // Set integer values
+        maxFetchCount = context.resources.getInteger(R.integer.maxFetchCount)
 
         CoroutineScope(Dispatchers.IO).launch {
             if (isAppInForeground()) {

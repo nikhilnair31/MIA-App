@@ -15,8 +15,10 @@ import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
 import com.sil.listeners.SensorListener
+import com.sil.receivers.ThoughtsAlarmReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -32,7 +34,7 @@ class AudioService : Service() {
     private lateinit var sensorListener: SensorListener
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
-    private val maxRecordingTimeInMin = 5
+    private var maxRecordingTimeInMin = 5
 
     private val listeningChannelId = "AudioRecordingServiceChannel"
     private val listeningChannelName = "MIA Listening Channel"
@@ -47,10 +49,7 @@ class AudioService : Service() {
     // region Common
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.i("AudioRecord", "onStartCommand")
-
-        sensorListener = SensorListener(this@AudioService)
-        startForeground(listeningNotificationId, createNotification())
-        startListening()
+        initRelated()
         return START_STICKY
     }
     override fun onDestroy() {
@@ -62,6 +61,16 @@ class AudioService : Service() {
     }
     override fun onBind(intent: Intent): IBinder? {
         return null
+    }
+
+    private fun initRelated() {
+        // Service related
+        sensorListener = SensorListener(this@AudioService)
+        startForeground(listeningNotificationId, createNotification())
+        startListening()
+
+        // Set integer values
+        maxRecordingTimeInMin = resources.getInteger(R.integer.maxRecordingTimeInMin)
     }
     // endregion
 
@@ -177,7 +186,12 @@ class AudioService : Service() {
                 audioFile,
                 createMetadataJson(audioFile.name)
             )
-            // TODO: Add Thoughts system here to comment on last upload
+
+            // Using an instance of ThoughtsAlarmReceiver for Thoughts system to comment on recent uploads
+            ThoughtsAlarmReceiver().miaThought(
+                0,
+                3
+            )
         }
     }
     private suspend fun createMetadataJson(audioFileName: String): JSONObject {

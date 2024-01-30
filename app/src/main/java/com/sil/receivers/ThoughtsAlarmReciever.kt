@@ -61,9 +61,10 @@ Format it like:
 
     private lateinit var dataDumpSharedPref: SharedPreferences
     private lateinit var messagesSharedPref: SharedPreferences
+    private lateinit var generalSharedPref: SharedPreferences
 
-    private val maxConversationHistoryMessages: Int = 25
-    private val maxRecordingsContextItems: Int = 25
+    private var maxConversationHistoryMessages: Int = 25
+    private var maxRecordingsContextItems: Int = 25
 
     private val thoughtChannelId = "MIAThoughtChannel"
     private val thoughtChannelName = "MIA Thoughts Channel"
@@ -80,12 +81,18 @@ Format it like:
 
         contextMain = context
 
+        dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
+        messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
+        generalSharedPref = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+
+        // Set integer values
+        maxConversationHistoryMessages = context.resources.getInteger(R.integer.maxConversationHistoryMessages)
+        maxRecordingsContextItems = context.resources.getInteger(R.integer.maxRecordingsContextItems)
+
         // Acquire wake lock
         startWakefulService(context, intent)
 
-        dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
-        messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
-
+        // Check if Thought should be made
         CoroutineScope(Dispatchers.IO).launch {
             if (isAppInForeground()) {
                 Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
@@ -96,7 +103,7 @@ Format it like:
                     Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
                     sensorListener = SensorListener(context)
                     deviceData = context.let { Helpers.pullDeviceData(it, sensorListener) }
-                    miaThought()
+                    miaThought(maxConversationHistoryMessages, maxRecordingsContextItems)
 
                     // Release wake lock when done
                     completeWakefulIntent(intent)
@@ -115,16 +122,17 @@ Format it like:
             (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
         }
     }
-
-    // TODO: Make this user controllable
     private fun isNotificationAllowed(): Boolean {
+        val thoughtsStartTime = generalSharedPref.getInt("thoughtsStartTime", 6)
+        val thoughtsEndTime = generalSharedPref.getInt("thoughtsEndTime", 0)
+
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        return currentHour !in 0..5
+        return currentHour in thoughtsStartTime..thoughtsEndTime
     }
     // endregion
 
     // region Thought Generation
-    private suspend fun miaThought() {
+    suspend fun miaThought(maxConversationHistoryMessages: Int, maxRecordingsContextItems: Int) {
         Log.i("ThoughtsAlarm", "miaThought")
 
         val messageHistoryDumpString = pullConversationHistory(maxConversationHistoryMessages)
@@ -226,7 +234,6 @@ $latestRecordingsSummaryString
         sensorListener.unregister()
     }
 
-    @Suppress("UnnecessaryVariable")
     private fun pullLatestRecordings(maxMessages: Int): String {
         Log.i("ThoughtsAlarm", "pullLatestRecordings")
 
@@ -241,7 +248,6 @@ $latestRecordingsSummaryString
 
         return contextMemoryString
     }
-    @Suppress("UnnecessaryVariable")
     private fun pullConversationHistory(maxMessages: Int): String {
         Log.i("ThoughtsAlarm", "pullConversationHistory")
 

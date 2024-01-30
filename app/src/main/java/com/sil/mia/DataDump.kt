@@ -31,13 +31,17 @@ class DataDump : AppCompatActivity() {
     private lateinit var dataSharedPref: SharedPreferences
     private lateinit var adapter: DataDumpAdapter
     private var dataDumpList = JSONArray()
-    private val maxFetchCount: Int = 100
+    private var maxFetchCount: Int = 100
     // endregion
 
     // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_data_dump)
+
+        loadingTextView = findViewById(R.id.loadingTextView)
+        buttonRefresh = findViewById(R.id.buttonRefresh)
+        recyclerView = findViewById(R.id.recyclerView)
 
         dataRelated()
         buttonSetup()
@@ -48,9 +52,8 @@ class DataDump : AppCompatActivity() {
     private fun dataRelated() {
         Log.i("DataDump", "DataDump dataRelated")
 
-        loadingTextView = findViewById(R.id.loadingTextView)
-        buttonRefresh = findViewById(R.id.buttonRefresh)
-        recyclerView = findViewById(R.id.recyclerView)
+        // Set integer values
+        maxFetchCount = resources.getInteger(R.integer.maxFetchCount)
 
         dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         val dataDumpString = dataSharedPref.getString("dataDump", "")

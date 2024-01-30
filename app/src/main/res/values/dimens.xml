@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- UI -->
     <dimen name="roundedCorners">48dp</dimen>
     <dimen name="softCorners">8dp</dimen>
     <dimen name="lineThickness">2dp</dimen>
+
+    <!-- Vars -->
+    <integer name="alarmIntervalInMin">5</integer>
+    <integer name="refreshIntervalInMin">5</integer>
+    <integer name="maxDataMessages">20</integer>
+    <integer name="maxRecordingTimeInMin">5</integer>
+    <integer name="maxFetchCount">100</integer>
+    <integer name="maxConversationHistoryMessages">25</integer>
+    <integer name="maxRecordingsContextItems">25</integer>
 </resources>
