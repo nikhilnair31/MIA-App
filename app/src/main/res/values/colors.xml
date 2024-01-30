@@ -12,6 +12,13 @@
     <color name="accent_2">#be95c4</color>
     <color name="accent_3">#5e548e</color>
     <color name="accent_4">#231942</color>
+    <!--    Transparent Palette     -->
+    <color name="accent_0a">#40E0B1CB</color>
+    <color name="accent_1a">#409F86C0</color>
+    <color name="accent_2a">#40BE95C4</color>
+    <color name="accent_3a">#405E548E</color>
+    <color name="accent_4a">#40231942</color>
+    <!--    Basic Palette     -->
     <color name="white">#FFFFFFFF</color>
     <color name="gray_70">#B3B3B3</color>
     <color name="gray_50">#808080</color>
