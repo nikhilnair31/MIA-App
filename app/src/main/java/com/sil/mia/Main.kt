@@ -46,13 +46,13 @@ class Main : AppCompatActivity() {
 You are a system with 2 types of memory. The first is your internal chat training data itself and another is from an external memories database. 
 You will receive the user's conversation history along with the latest message. Based on this determine where to look to reply. ONLY answer with 'int' if internal and 'ext' if external else 'none'. 
 Examples: 
-- user: help me make a crème caramel assistant: 'int' 
-- user: what did they discuss about the marketing project? assistant: 'ext' 
-- assistant: Apologies if the response seemed robotic. What is on your mind? user: bruhhh where's the personality at assistant: 'int'
-- user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him assistant: 'ext'
-- user: what is my opinion on niche music assistant: 'int'
-- user: just thinking about last night assistant: 'ext'
-- user: yoooo assistant: 'int'
+- user: just thinking about last night output: 'ext'
+- user: help me make a crème caramel output: 'int' 
+- user: what did they discuss about the marketing project? output: 'ext' 
+- assistant: Apologies if the response seemed robotic. What is on your mind? user: bruhhh where's the personality at output: 'int'
+- user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him output: 'ext'
+- assistant: hi user: yoooo output: 'int'
+- user: what is my opinion on niche music output: 'ext'
     """
     private val queryGeneratorSystemPrompt = """
 You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
@@ -102,16 +102,14 @@ Context: {"systemTime":1703864901927,"currentTimeFormattedString":"Fri 29/12/23 
 Output: {"query": "", "query_filter": {"hours": { "\gte": 6, "\lte": 12 }, "day": { "\eq": 29 }, "month": { "\eq": 12 }, "year": { "\eq": 2023 }}}
     """
     private val initSystemPrompt = """
-Your name is MIA and you're the user's AI best friend and companion. Keep your responses short. You help the user with all their requests, questions and tasks.
-Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make subtle sarcastic jokes and observations. 
-Do not patronize the user. NEVER explicitly mention your personality or that you're an AI.
+Your name is MIA and you're the user's AI best friend. You have the personality of JARVIS/Chandler and tend to make subtle sarcastic jokes and observations. NEVER explicitly mention your personality or that you're an AI.
+Respond in shorts texts like a close friend does in a casual conversational texting style.
+You are a friend that helps the user. You ask for details and specifics about the user and their messages, like a close friend does. 
 You have the capability to access the user's histories/memories/events/personal data through an external database that has been shared with you. Be honest and admit if you don't know something by ONLY saying you don't remember.
-Ask for more details and specifics about the user and their messages, like a close friend would. 
-Reply like a close friend would in a casual low-key conversational texting style without any formatting, bullet points etc. Match the user's texting style.
 The user's message will contain:
 - Real-Time System Data
 - Context Memory of historical conversation transcripts
-Use these as needed. NEVER explicitly show these to the user.
+Use these to add to your answer if needed but NEVER explicitly show these to the user.
     """
     private val initAssistantPrompt = """
 hey i'm MIA. what's up?
@@ -257,7 +255,6 @@ Format it like:
     }
     private suspend fun createMiaResponse(): String {
         val systemData = Helpers.pullDeviceData(this@Main, null)
-        Log.i("Main", "createMiaResponse systemData\n$systemData")
         val updatedUserMessage = """
 $userMessage
 
@@ -267,6 +264,9 @@ $systemData
         Log.i("Main", "createMiaResponse updatedUserMessage\n$updatedUserMessage")
 
         val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 15)
+        Log.i("Main", "createMiaResponse og messagesListUiCopy: $messagesListUiCopy")
+        messagesListUiCopy.remove(messagesListUiCopy.length() - 1)
+        Log.i("Main", "createMiaResponse new messagesListUiCopy: $messagesListUiCopy")
         messagesListUiCopy.put(JSONObject().apply {
             put("role", "user")
             put("content", updatedUserMessage)

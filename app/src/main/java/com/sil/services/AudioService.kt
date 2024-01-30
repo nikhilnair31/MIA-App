@@ -32,7 +32,7 @@ class AudioService : Service() {
     private lateinit var sensorListener: SensorListener
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
-    private val maxRecordingTimeInMin = 8
+    private val maxRecordingTimeInMin = 5
 
     private val listeningChannelId = "AudioRecordingServiceChannel"
     private val listeningChannelName = "MIA Listening Channel"
@@ -177,6 +177,7 @@ class AudioService : Service() {
                 audioFile,
                 createMetadataJson(audioFile.name)
             )
+            // TODO: Add Thoughts system here to comment on last upload
         }
     }
     private suspend fun createMetadataJson(audioFileName: String): JSONObject {

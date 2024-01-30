@@ -89,7 +89,7 @@
             android:layout_marginStart="20dp"
             android:background="@drawable/rounded_mic_toggle_selector"
             android:checked="false"
-            android:elevation="0dp"
+            app:elevation="0dp"
             android:textOff=""
             android:textOn=""
             app:layout_constraintBottom_toBottomOf="parent"
