@@ -73,10 +73,12 @@ class RefreshAlarmReceiver : BroadcastReceiver() {
             (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
         }
     }
-    // TODO: Make this user controllable
     private fun isNotificationAllowed(): Boolean {
+        val thoughtsStartTime = generalSharedPref.getInt("thoughtsStartTime", 6)
+        val thoughtsEndTime = generalSharedPref.getInt("thoughtsEndTime", 0)
+
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        return currentHour !in 0..5
+        return currentHour in thoughtsStartTime..thoughtsEndTime
     }
     // endregion
 

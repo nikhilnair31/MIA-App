@@ -89,9 +89,9 @@
             android:layout_marginStart="20dp"
             android:background="@drawable/rounded_mic_toggle_selector"
             android:checked="false"
-            app:elevation="0dp"
             android:textOff=""
             android:textOn=""
+            app:elevation="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -104,7 +104,7 @@
             android:layout_marginEnd="8dp"
 
             android:autofillHints="@string/talkToMiaHint"
-            android:background="@drawable/rounded_edittext_main"
+            android:background="@drawable/rounded_edittext_chat_main"
             android:elevation="0dp"
 
             android:fontFamily="@font/venus_cormier"

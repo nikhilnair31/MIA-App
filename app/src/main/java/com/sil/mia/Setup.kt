@@ -26,9 +26,12 @@ class Setup : AppCompatActivity() {
     private val backgroundLocationRequestCode = 102
     private val batteryUnrestrictedRequestCode = 103
 
-    private lateinit var editText: EditText
+    private lateinit var usernameEditText: EditText
     
     private lateinit var permissionButton: Button
+
+    private lateinit var thoughtsStartTimeEditText: EditText
+    private lateinit var thoughtsEndTimeEditText: EditText
     
     private lateinit var audioSaveCheckbox: CheckBox
     private lateinit var cleanAudioCheckbox: CheckBox
@@ -46,8 +49,10 @@ class Setup : AppCompatActivity() {
 
         generalSharedPreferences = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
-        editText = findViewById(R.id.editText)
+        usernameEditText = findViewById(R.id.usernameEditText)
         permissionButton = findViewById(R.id.buttonPermission)
+        thoughtsStartTimeEditText = findViewById(R.id.thoughtsStartTimeEditText)
+        thoughtsEndTimeEditText = findViewById(R.id.thoughtsEndTimeEditText)
         audioSaveCheckbox = findViewById(R.id.audioSaveCheckbox)
         cleanAudioCheckbox = findViewById(R.id.cleanAudioCheckbox)
         filterMusicCheckbox = findViewById(R.id.filterMusicCheckbox)
@@ -70,11 +75,16 @@ class Setup : AppCompatActivity() {
         }
     }
     private fun goToMain() {
-        val userNameText = editText.text.toString()
-        if (userNameText.isNotEmpty()) {
-            Log.i("Setup", "goToMain userName: $userNameText")
+        val userNameText = usernameEditText.text.toString()
+        val thoughtsStartTime = thoughtsStartTimeEditText.toString()
+        val thoughtsEndTime = thoughtsEndTimeEditText.toString()
+
+        if (userNameText.isNotEmpty() && thoughtsStartTime.isNotEmpty() && thoughtsEndTime.isNotEmpty()) {
+            Log.i("Setup", "goToMain\nuserName: $userNameText\nthoughtsStartTime: $thoughtsStartTime - thoughtsEndTime: $thoughtsEndTime")
 
             generalSharedPreferences.edit().putString("userName", userNameText).apply()
+            generalSharedPreferences.edit().putInt("thoughtsStartTime", thoughtsStartTime.toInt()).apply()
+            generalSharedPreferences.edit().putInt("thoughtsEndTime", thoughtsEndTime.toInt()).apply()
             generalSharedPreferences.edit().putString("saveAudioFiles", audioSaveCheckbox.isChecked.toString().lowercase()).apply()
             generalSharedPreferences.edit().putString("cleanAudio", cleanAudioCheckbox.isChecked.toString().lowercase()).apply()
             generalSharedPreferences.edit().putString("filterMusic", filterMusicCheckbox.isChecked.toString().lowercase()).apply()
@@ -84,7 +94,7 @@ class Setup : AppCompatActivity() {
             launchChatActivity()
         }
         else {
-            Helpers.showToast(this, "Not a a valid username :(")
+            Helpers.showToast(this, "Invalid entries")
         }
     }
     private fun launchChatActivity() {

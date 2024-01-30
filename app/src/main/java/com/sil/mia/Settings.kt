@@ -3,12 +3,17 @@ package com.sil.mia
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.sil.others.Helpers
+
 
 class Settings : AppCompatActivity() {
     // region Vars
@@ -18,13 +23,16 @@ class Settings : AppCompatActivity() {
 
     private lateinit var usernameText: TextView
 
+    private lateinit var dataDumpButton: Button
+
+    private lateinit var thoughtsStartTimeEditText: EditText
+    private lateinit var thoughtsEndTimeEditText: EditText
+
     private lateinit var audioSaveCheckbox: CheckBox
     private lateinit var cleanAudioCheckbox: CheckBox
     private lateinit var filterMusicCheckbox: CheckBox
     private lateinit var normalizeLoudnessCheckbox: CheckBox
     private lateinit var removeSilenceCheckbox: CheckBox
-
-    private lateinit var dataDumpButton: Button
     // endregion
 
     // region Common
@@ -34,7 +42,19 @@ class Settings : AppCompatActivity() {
 
         generalSharedPreferences = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
+        usernameText = findViewById(R.id.usernameText)
+        dataDumpButton = findViewById(R.id.dataDumpButton)
+        thoughtsStartTimeEditText = findViewById(R.id.thoughtsStartTimeEditText)
+        thoughtsEndTimeEditText = findViewById(R.id.thoughtsEndTimeEditText)
+        backButton = findViewById(R.id.buttonBack)
+        audioSaveCheckbox = findViewById(R.id.audioSaveCheckbox)
+        cleanAudioCheckbox = findViewById(R.id.cleanAudioCheckbox)
+        filterMusicCheckbox = findViewById(R.id.filterMusicCheckbox)
+        normalizeLoudnessCheckbox = findViewById(R.id.normalizeLoudnessCheckbox)
+        removeSilenceCheckbox = findViewById(R.id.removeSilenceCheckbox)
+
         textSetup()
+        editTextSetup()
         checkboxSetup()
         buttonSetup()
     }
@@ -42,19 +62,52 @@ class Settings : AppCompatActivity() {
 
     // region UI Related
     private fun textSetup() {
-        usernameText = findViewById(R.id.usernameText)
+        usernameText.text = generalSharedPreferences.getString("userName", "")
+    }
 
-        val userName = generalSharedPreferences.getString("userName", "")
-        usernameText.text = userName
+    private fun editTextSetup() {
+        thoughtsStartTimeEditText.text = Editable.Factory.getInstance().newEditable(generalSharedPreferences.getInt("thoughtsStartTime", 6).toString())
+        thoughtsEndTimeEditText.text = Editable.Factory.getInstance().newEditable(generalSharedPreferences.getInt("thoughtsEndTime", 0).toString())
+
+        thoughtsStartTimeEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {}
+            override fun onTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {}
+            override fun afterTextChanged(editable: Editable) {
+                try {
+                    val thoughtsStartTime = editable.toString()
+                    if (thoughtsStartTime.isNotEmpty()) {
+                        generalSharedPreferences.edit().putInt("thoughtsStartTime", thoughtsStartTime.toInt()).apply()
+                    }
+                    else {
+                        Helpers.showToast(this@Settings, "Invalid start time")
+                    }
+                }
+                catch (e: NumberFormatException) {
+                    e.printStackTrace()
+                }
+            }
+        })
+        thoughtsEndTimeEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {}
+            override fun onTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {}
+            override fun afterTextChanged(editable: Editable) {
+                try {
+                    val thoughtsEndTime = editable.toString()
+                    if (thoughtsEndTime.isNotEmpty()) {
+                        generalSharedPreferences.edit().putInt("thoughtsEndTime", thoughtsEndTime.toInt()).apply()
+                    }
+                    else {
+                        Helpers.showToast(this@Settings, "Invalid end time")
+                    }
+                }
+                catch (e: NumberFormatException) {
+                    e.printStackTrace()
+                }
+            }
+        })
     }
 
     private fun checkboxSetup() {
-        audioSaveCheckbox = findViewById(R.id.audioSaveCheckbox)
-        cleanAudioCheckbox = findViewById(R.id.cleanAudioCheckbox)
-        filterMusicCheckbox = findViewById(R.id.filterMusicCheckbox)
-        normalizeLoudnessCheckbox = findViewById(R.id.normalizeLoudnessCheckbox)
-        removeSilenceCheckbox = findViewById(R.id.removeSilenceCheckbox)
-
         audioSaveCheckbox.isChecked =  generalSharedPreferences.getString("saveAudioFiles", "false").toBoolean()
         cleanAudioCheckbox.isChecked =  generalSharedPreferences.getString("cleanAudio", "false").toBoolean()
         filterMusicCheckbox.isChecked =  generalSharedPreferences.getString("filterMusic", "false").toBoolean()
@@ -98,13 +151,10 @@ class Settings : AppCompatActivity() {
     }
 
     private fun buttonSetup() {
-        backButton = findViewById(R.id.buttonBack)
         backButton.setOnClickListener {
             onBackPressed()
         }
 
-        // TODO: Figure out how to replicate the ripple effect for all other buttons
-        dataDumpButton = findViewById(R.id.dataDumpButton)
         dataDumpButton.setOnClickListener {
             val intent = Intent(this, DataDump::class.java)
             this.startActivity(intent)

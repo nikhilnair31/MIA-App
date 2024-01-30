@@ -19,16 +19,18 @@
             android:id="@+id/buttonBack"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="8dp"
-            android:src="@drawable/baseline_arrow_back_ios_new_24"
-            android:background="?attr/actionBarItemBackground"
-            android:contentDescription="@string/backButton"
-            android:scaleType="centerCrop"
-            android:scaleX="0.5"
-            android:scaleY="0.45"
-            android:text=""
+
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+
+            android:layout_marginStart="8dp"
+
+            android:background="@drawable/baseline_keyboard_arrow_left_24"
+            android:scaleX="0.8"
+            android:scaleY="0.8"
+
+            android:contentDescription="@string/backButton"
+            android:text="" />
 
         <TextView
             android:id="@+id/textView"

@@ -11,6 +11,10 @@
     <string name="setupUsernameHint">SET A USERNAME</string>
     <string name="setupUsernameText">USERNAME</string>
     <string name="setupPermissionsText">PERMISSIONS</string>
+    <string name="setupThoughtsText">MIA THOUGHTS</string>
+    <string name="setupThoughtsTimingText">SHOW TIME</string>
+    <string name="setupThoughtsStartTimeText">6</string>
+    <string name="setupThoughtsEndTimeText">0</string>
     <string name="setupAudioSavingText">SAVING</string>
     <string name="setupAudioCleaningText">AUDIO CLEANING</string>
     <string name="setupDataText">DATA</string>

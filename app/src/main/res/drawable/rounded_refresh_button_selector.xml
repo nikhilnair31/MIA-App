@@ -13,7 +13,7 @@
             </item>
 
             <item
-                android:drawable="@drawable/baseline_refresh_24"
+                android:drawable="@drawable/baseline_loop_24"
                 android:gravity="center"/>
 
             <item android:id="@android:id/background">

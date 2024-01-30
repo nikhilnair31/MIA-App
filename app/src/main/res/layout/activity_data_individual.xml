@@ -8,7 +8,7 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout0"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -20,19 +20,19 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
-            android:src="@drawable/baseline_arrow_back_ios_new_24"
-            android:background="?attr/actionBarItemBackground"
+
+            android:background="@drawable/baseline_keyboard_arrow_left_24"
+            android:scaleX="0.8"
+            android:scaleY="0.8"
+
             android:contentDescription="@string/backButton"
-            android:scaleType="centerCrop"
-            android:scaleX="0.5"
-            android:scaleY="0.45"
             android:text=""
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/titleTextView"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:layout_marginStart="8dp"
 
@@ -46,7 +46,6 @@
             android:textSize="16sp"
 
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/buttonBack"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -65,21 +64,23 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:id="@+id/constraintLayout2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
             android:layout_marginBottom="72dp"
+
             android:background="@drawable/data_background"
+            android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
+            <!-- Address -->
             <TextView
                 android:id="@+id/addressTitleTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
@@ -95,23 +96,24 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
             <EditText
                 android:id="@+id/addressTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
                 android:layout_marginTop="8dp"
-                android:padding="24dp"
+                android:autofillHints="address"
 
                 android:background="@drawable/message_background"
 
-                android:autofillHints="address"
                 android:fontFamily="@font/venus_cormier"
                 android:hint="1805, Pearl Street, Judge's Hill Historic District, Austin, Travis County, Texas, 78701, United States"
                 android:inputType="textMultiLine"
                 android:lineSpacingMultiplier="1.5"
+                android:padding="24dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
@@ -121,9 +123,10 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/addressTitleTextView" />
 
+            <!-- Weather -->
             <TextView
                 android:id="@+id/weatherTitleTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
@@ -140,23 +143,24 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/addressTextView" />
+
             <EditText
                 android:id="@+id/weatherTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
                 android:layout_marginTop="8dp"
-                android:padding="24dp"
+                android:autofillHints="weather"
 
                 android:background="@drawable/message_background"
 
-                android:autofillHints="weather"
                 android:fontFamily="@font/venus_cormier"
                 android:hint="clear sky"
                 android:inputType="text"
                 android:lineSpacingMultiplier="1.5"
+                android:padding="24dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
@@ -166,9 +170,10 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/weatherTitleTextView" />
 
+            <!-- Source -->
             <TextView
                 android:id="@+id/sourceTitleTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
@@ -184,39 +189,43 @@
                 android:textColorHint="@color/accent_1"
 
                 android:textSize="14sp"
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/weatherTextView" />
+
             <EditText
                 android:id="@+id/sourceTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginEnd="8dp"
-                android:padding="24dp"
+                android:autofillHints="source"
 
                 android:background="@drawable/message_background"
 
-                android:autofillHints="source"
                 android:fontFamily="@font/venus_cormier"
                 android:hint="recording"
                 android:inputType="text"
                 android:lineSpacingMultiplier="1.5"
+                android:padding="24dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
 
                 android:textSize="14sp"
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/sourceTitleTextView" />
 
+            <!-- Transcript -->
             <TextView
                 android:id="@+id/textTitleTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
@@ -235,25 +244,26 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/sourceTextView" />
+
             <EditText
                 android:id="@+id/textTextView"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
+                android:layout_gravity="start"
                 android:layout_margin="4dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginEnd="8dp"
-                android:padding="24dp"
+
+                android:autofillHints="text"
 
                 android:background="@drawable/message_background"
-
-                android:layout_gravity="start"
-                android:autofillHints="text"
                 android:fontFamily="@font/venus_cormier"
                 android:gravity="top|start"
                 android:hint="S0: Testing at this part. EFT withdrawal. We're gonna switch it. We're gonna switch it.\n\nS1: When did we say that?\n\nS0: No, I remember that. That cannot be.\n\nS1: I don't remember what I was thinking. I think it was...\n\nS2: Gamers cannot afford this. If you're a gamer, you cannot afford this. I'm sorry."
                 android:inputType="textMultiLine"
                 android:lineSpacingMultiplier="1.5"
+                android:padding="24dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
@@ -263,13 +273,13 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/textTitleTextView" />
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
 
     </ScrollView>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout1"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_marginBottom="8dp"
         app:layout_constraintBottom_toBottomOf="parent"

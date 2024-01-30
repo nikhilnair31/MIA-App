@@ -54,20 +54,23 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:id="@+id/constraintLayout1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
-            android:layout_marginEnd= "16dp"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/data_background"
+            android:orientation="vertical"
 
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
 
+            android:layout_marginEnd= "16dp"
+            android:layout_marginBottom="16dp"
+
+            android:background="@drawable/data_background">
+
+            <!-- Username Related-->
             <TextView
                 android:id="@+id/usernameTextView"
                 android:layout_width="match_parent"
@@ -84,9 +87,8 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
-
             <EditText
-                android:id="@+id/editText"
+                android:id="@+id/usernameEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
@@ -96,7 +98,7 @@
                 android:paddingEnd="16dp"
 
                 android:autofillHints="@string/setupUsernameHint"
-                android:background="@drawable/rounded_edittext_setup"
+                android:background="@drawable/rounded_edittext_username_setup"
 
                 android:fontFamily="@font/venus_cormier"
                 android:textSize="14sp"
@@ -111,6 +113,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/usernameTextView" />
 
+            <!-- Permission Related-->
             <TextView
                 android:id="@+id/permissionsTextView"
                 android:layout_width="match_parent"
@@ -148,6 +151,107 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/permissionsTextView" />
 
+            <!-- Thoughts Related-->
+            <TextView
+                android:id="@+id/thoughtsTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="8dp"
+                android:padding="12dp"
+
+                android:fontFamily="@font/venus_cormier"
+
+                android:gravity="center"
+                android:text="@string/setupThoughtsText"
+                android:textColor="@color/accent_1"
+                android:textSize="14sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/miaThoughtsTimingsLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="8dp"
+
+                android:background="@drawable/message_background"
+
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/audioSettingsTextView">
+
+                <TextView
+                    android:id="@+id/thoughtsTimingTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+
+                    android:gravity="center"
+
+                    android:padding="12dp"
+
+                    android:fontFamily="@font/venus_cormier"
+                    android:text="@string/setupThoughtsTimingText"
+                    android:textColor="@color/gray_70"
+                    android:textSize="14sp" />
+                <EditText
+                    android:id="@+id/thoughtsStartTimeEditText"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/thoughtsEndTimeEditText"
+                    app:layout_constraintTop_toTopOf="@id/miaThoughtsTimingsLayout"
+
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:layout_marginEnd="8dp"
+
+                    android:background="@drawable/rounded_edittext_timings_setup"
+                    android:gravity="center"
+                    android:inputType="number|numberDecimal"
+
+                    android:autofillHints="@string/setupThoughtsStartTimeText"
+                    android:text="@string/setupThoughtsStartTimeText"
+                    android:hint="@string/setupThoughtsStartTimeText"
+                    android:fontFamily="@font/venus_cormier"
+                    android:textColor="@color/gray_70"
+                    android:textColorHint="@color/gray_15"
+                    android:textCursorDrawable="@drawable/cursor_color"
+                    android:textSize="14sp" />
+                <EditText
+                    android:id="@+id/thoughtsEndTimeEditText"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/miaThoughtsTimingsLayout"
+
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+
+                    android:background="@drawable/rounded_edittext_timings_setup"
+                    android:inputType="number|numberDecimal"
+                    android:gravity="center"
+
+                    android:autofillHints="@string/setupThoughtsEndTimeText"
+                    android:text="@string/setupThoughtsEndTimeText"
+                    android:hint="@string/setupThoughtsEndTimeText"
+                    android:fontFamily="@font/venus_cormier"
+                    android:textColor="@color/gray_70"
+                    android:textColorHint="@color/gray_15"
+                    android:textCursorDrawable="@drawable/cursor_color"
+                    android:textSize="14sp" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Saving Related-->
             <TextView
                 android:id="@+id/audioSavingTextView"
                 android:layout_width="match_parent"
@@ -167,7 +271,7 @@
                 app:layout_constraintTop_toBottomOf="@+id/buttonPermission" />
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/audioSaveLayout"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
@@ -213,6 +317,7 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <!-- Audio Cleaning Related-->
             <TextView
                 android:id="@+id/audioSettingsTextView"
                 android:layout_width="match_parent"
@@ -232,7 +337,7 @@
                 app:layout_constraintTop_toBottomOf="@+id/audioSaveLayout" />
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/audioCleanLayout"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
@@ -279,7 +384,7 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/audioFilterMusicLayout"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
@@ -326,7 +431,7 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/audioNormalizeLoudnessLayout"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
@@ -373,7 +478,7 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/removeSilenceLayout"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
@@ -424,18 +529,17 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_marginTop="16dp"
-                android:background="@drawable/baseline_arrow_back_ios_new_24"
-                android:contentDescription="@string/nextButton"
-                android:rotation="180"
-                android:scaleType="centerCrop"
-                android:scaleX="0.7"
-                android:scaleY="0.6"
-                android:text=""
+
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/removeSilenceLayout" />
+                app:layout_constraintTop_toBottomOf="@+id/removeSilenceLayout"
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+                android:background="@drawable/baseline_keyboard_arrow_right_24"
+                android:layout_gravity="center_horizontal"
+                android:contentDescription="@string/nextButton"
+                android:text="" />
+
+        </LinearLayout>
 
     </ScrollView>
 

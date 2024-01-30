@@ -9,7 +9,7 @@
     </item>
 
     <item
-        android:drawable="@drawable/baseline_done_24"
+        android:drawable="@drawable/baseline_mode_edit_24"
         android:gravity="center"
     />
 
