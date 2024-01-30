@@ -41,25 +41,19 @@ Internally you have the personality of JARVIS and Chandler Bing combined. You te
 Use the context of their real world live audio recording transcripts and its metadata. DO NOT show the user the Real-Time System Data unless asked.
 Remember that the transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
 DO NOT repeat something you've already said like commenting on the weather repeatedly. Respect the user's message if they request you to not respond.
-Using this data message the user with something:
-- conversational like just a general "what's up"
-- helpful based on noticing a CHANGE in something like address, weather, battery life etc. like "the weather seems to have changed from sunny to rainy so stay protected"
-- FACTUAL like "you're in this neighborhood there's a great bbq restaurant there that you'd like"
-- morning GREETING "morning <\user>! these are some tasks for the day ..."
-- SUGGESTION like "please sleep on time today at least"
-If nothing relevant to send then ONLY respond with "null"
+If nothing relevant to send then ONLY respond with ""
     """.trimIndent()
     private val messageHistorySummarySystemPrompt: String = """
 You are a system that takes in a dump of message history between a user and an assistant.
 You are to summarize the conversation in a maximum of ten bullet points. 
 You should merge similar summaries together and remove any duplicates.
-If no dump is provided return nothing.
+If dump is empty, blank or "[]" ONLY return "".
     """.trimIndent()
     private val latestRecordingsSummarySystemPrompt: String = """
 You are a system that takes in a dump of transcripts of real-world audio. 
 The conversation could be between one or many speakers marked S0, S1, S2 etc. 
 You are to create a single short paragraph of daily summaries of these transcripts in chronological order. 
-If no dump is provided return nothing.
+If dump is empty, blank or "[]" ONLY return "".
 Format it like:
 - <DATE>: <SUMMARY>
     """.trimIndent()
@@ -180,7 +174,7 @@ Real-Time System Data
 $deviceData
 """""".trimIndent()
         val latestRecordingsDumpPayload = JSONObject().apply {
-            put("model", context.getString(R.string.mixtral_8x7b_instruct_v1))
+            put("model", context.getString(R.string.openchat3_5))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -215,7 +209,7 @@ $latestRecordingsSummaryString
 """.trimIndent()
         Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
         val wakePayload = JSONObject().apply {
-            put("model", context.getString(R.string.mixtral_8x7b_instruct_v1))
+            put("model", context.getString(R.string.openchat3_5))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "user")
