@@ -42,10 +42,10 @@ class Settings : AppCompatActivity() {
 
     // region UI Related
     private fun textSetup() {
-        usernameText = findViewById(R.id.usernameTextView)
+        usernameText = findViewById(R.id.usernameText)
 
         val userName = generalSharedPreferences.getString("userName", "")
-        usernameText.text = "Username: $userName"
+        usernameText.text = userName
     }
 
     private fun checkboxSetup() {

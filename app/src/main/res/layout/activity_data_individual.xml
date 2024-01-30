@@ -11,8 +11,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/constraintLayout2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -84,38 +82,35 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
-
-                android:background="@drawable/message_background"
 
                 android:fontFamily="@font/venus_cormier"
                 android:gravity="center"
                 android:padding="12dp"
                 android:text="@string/address"
-                android:textColor="@color/accent_2"
-                android:textColorHint="@color/accent_2"
+                android:textColor="@color/accent_1"
+                android:textColorHint="@color/accent_1"
                 android:textSize="14sp"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
-
             <EditText
                 android:id="@+id/addressTextView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
+                android:padding="24dp"
+
+                android:background="@drawable/message_background"
 
                 android:autofillHints="address"
-                android:background="@android:color/transparent"
-
                 android:fontFamily="@font/venus_cormier"
                 android:hint="1805, Pearl Street, Judge's Hill Historic District, Austin, Travis County, Texas, 78701, United States"
                 android:inputType="textMultiLine"
                 android:lineSpacingMultiplier="1.5"
-                android:padding="12dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
@@ -131,9 +126,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
-
-                android:background="@drawable/message_background"
+                android:layout_marginTop="8dp"
 
                 android:fontFamily="@font/venus_cormier"
                 android:gravity="center"
@@ -146,23 +139,23 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/addressTextView" />
-
             <EditText
                 android:id="@+id/weatherTextView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
+                android:padding="24dp"
+
+                android:background="@drawable/message_background"
 
                 android:autofillHints="weather"
-                android:background="@android:color/transparent"
-
                 android:fontFamily="@font/venus_cormier"
                 android:hint="clear sky"
                 android:inputType="text"
                 android:lineSpacingMultiplier="1.5"
-                android:padding="12dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
@@ -178,43 +171,44 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
 
-                android:background="@drawable/message_background"
+                android:layout_marginEnd="8dp"
 
                 android:fontFamily="@font/venus_cormier"
                 android:gravity="center"
                 android:padding="12dp"
                 android:text="@string/source"
-                android:textColor="@color/accent_3"
-                android:textColorHint="@color/accent_3"
-                android:textSize="14sp"
+                android:textColor="@color/accent_1"
+                android:textColorHint="@color/accent_1"
 
+                android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/weatherTextView" />
-
             <EditText
                 android:id="@+id/sourceTextView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:padding="24dp"
+
+                android:background="@drawable/message_background"
 
                 android:autofillHints="source"
-                android:background="@android:color/transparent"
-
                 android:fontFamily="@font/venus_cormier"
                 android:hint="recording"
                 android:inputType="text"
                 android:lineSpacingMultiplier="1.5"
-                android:padding="12dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
-                android:textSize="14sp"
 
+                android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/sourceTitleTextView" />
@@ -225,44 +219,45 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="start"
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
 
-                android:background="@drawable/message_background"
+                android:layout_marginEnd="8dp"
 
                 android:fontFamily="@font/venus_cormier"
                 android:gravity="center"
                 android:padding="12dp"
                 android:text="@string/transcript"
-                android:textColor="@color/accent_4"
-                android:textColorHint="@color/accent_4"
-                android:textSize="14sp"
+                android:textColor="@color/accent_1"
+                android:textColorHint="@color/accent_1"
 
+                android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/sourceTextView" />
-
             <EditText
                 android:id="@+id/textTextView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="start"
+
                 android:layout_margin="4dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:padding="24dp"
 
+                android:background="@drawable/message_background"
+
+                android:layout_gravity="start"
                 android:autofillHints="text"
-                android:background="@android:color/transparent"
-
                 android:fontFamily="@font/venus_cormier"
                 android:gravity="top|start"
                 android:hint="S0: Testing at this part. EFT withdrawal. We're gonna switch it. We're gonna switch it.\n\nS1: When did we say that?\n\nS0: No, I remember that. That cannot be.\n\nS1: I don't remember what I was thinking. I think it was...\n\nS2: Gamers cannot afford this. If you're a gamer, you cannot afford this. I'm sorry."
                 android:inputType="textMultiLine"
                 android:lineSpacingMultiplier="1.5"
-                android:padding="12dp"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
                 android:textCursorDrawable="@drawable/cursor_color"
-                android:textSize="14sp"
 
+                android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/textTitleTextView" />
@@ -284,7 +279,7 @@
             android:id="@+id/updateButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="16dp"
             android:background="@drawable/rounded_done_button"
             android:contentDescription="@string/sendButtonDescription"
             android:text="@string/updated"

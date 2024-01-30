@@ -56,7 +56,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".Username"
+            android:name=".Setup"
             android:exported="false" />
         <activity
             android:name=".Permissions"

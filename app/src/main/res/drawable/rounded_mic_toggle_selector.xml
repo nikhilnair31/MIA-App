@@ -6,8 +6,7 @@
             <item>
                 <shape>
                     <solid android:color="@color/accent_0"/>
-                    <corners android:radius="@dimen/roundedCorners"/>
-                    <stroke android:color="@color/white" android:width="@dimen/lineThickness"/>
+                    <corners android:radius="@dimen/softCorners"/>
                 </shape>
             </item>
 
@@ -22,7 +21,7 @@
             <item>
                 <shape>
                     <solid android:color="@color/gray_8"/>
-                    <corners android:radius="@dimen/roundedCorners"/>
+                    <corners android:radius="@dimen/softCorners"/>
                 </shape>
             </item>
 

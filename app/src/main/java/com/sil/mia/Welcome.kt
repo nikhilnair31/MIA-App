@@ -39,7 +39,7 @@ class Welcome : AppCompatActivity() {
     private fun usernamePageButtonSetup() {
         nextButton = findViewById(R.id.buttonNext)
         nextButton.setOnClickListener {
-            launchNextActivity(Username::class.java)
+            launchNextActivity(Setup::class.java)
         }
     }
     private fun launchNextActivity(activityClass: Class<*>) {

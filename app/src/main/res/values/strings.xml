@@ -7,8 +7,13 @@
 
     <string name="appLogoDescription">app logo</string>
 
-    <string name="usernameText">USERNAME</string>
-    <string name="usernameHint">SET A USERNAME</string>
+    <string name="setupText">SETUP</string>
+    <string name="setupUsernameHint">SET A USERNAME</string>
+    <string name="setupUsernameText">USERNAME</string>
+    <string name="setupPermissionsText">PERMISSIONS</string>
+    <string name="setupAudioSavingText">SAVING</string>
+    <string name="setupAudioCleaningText">AUDIO CLEANING</string>
+    <string name="setupDataText">DATA</string>
 
     <string name="permissionsText">PERMISSIONS</string>
     <string name="givePermissionsText">GIVE PERMISSIONS</string>
