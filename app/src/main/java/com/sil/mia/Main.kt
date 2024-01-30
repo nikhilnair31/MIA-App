@@ -129,8 +129,6 @@ Format it like:
 
     // region Common
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Log.i("Main", "onCreate")
-
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -153,12 +151,22 @@ Format it like:
         // Set integer values
         alarmIntervalInMin = resources.getInteger(R.integer.alarmIntervalInMin).toDouble()
         refreshIntervalInMin = resources.getInteger(R.integer.refreshIntervalInMin).toDouble()
-        maxDataMessages = resources.getInteger(R.integer.maxDataMessages).toInt()
+        maxDataMessages = resources.getInteger(R.integer.maxDataMessages)
+
+        // Register the BroadcastReceiver
+        val filter = IntentFilter(ThoughtsAlarmReceiver.UPDATE_UI_ACTION)
+        registerReceiver(updateUIReceiver, filter)
 
         settingsButton = findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener {
             val intent = Intent(this, Settings::class.java)
             this.startActivity(intent)
+        }
+    }
+
+    private val updateUIReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            setupChat()
         }
     }
     // endregion
@@ -206,8 +214,6 @@ Format it like:
         }
     }
     private fun setupChat() {
-        // Log.i("Main", "setupChat")
-
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 

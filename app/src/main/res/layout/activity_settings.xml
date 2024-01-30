@@ -213,8 +213,8 @@
 
                 <EditText
                     android:id="@+id/thoughtsStartTimeEditText"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
 
                     android:layout_marginEnd="8dp"
                     android:autofillHints="@string/setupThoughtsStartTimeText"
@@ -239,8 +239,8 @@
 
                 <EditText
                     android:id="@+id/thoughtsEndTimeEditText"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
 
                     android:autofillHints="@string/setupThoughtsEndTimeText"
                     android:background="@drawable/rounded_edittext_timings_setup"

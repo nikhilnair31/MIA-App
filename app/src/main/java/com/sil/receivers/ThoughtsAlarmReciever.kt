@@ -2,6 +2,7 @@ package com.sil.receivers
 
 import android.app.ActivityManager
 import android.app.NotificationChannel
+
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
@@ -12,6 +13,9 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.legacy.content.WakefulBroadcastReceiver
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.sil.adapters.MessagesAdapter
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
@@ -27,6 +31,10 @@ import java.util.*
 
 class ThoughtsAlarmReceiver : WakefulBroadcastReceiver() {
     // region Vars
+    companion object {
+        const val UPDATE_UI_ACTION = "com.sil.mia.UPDATE_UI_ACTION"
+    }
+
     private val systemPromptBase: String = """
 Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
 Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
@@ -40,21 +48,21 @@ Using this data message the user with something:
 - morning GREETING "morning <\user>! these are some tasks for the day ..."
 - SUGGESTION like "please sleep on time today at least"
 If nothing relevant to send then ONLY respond with "null"
-    """
+    """.trimIndent()
     private val messageHistorySummarySystemPrompt: String = """
 You are a system that takes in a dump of message history between a user and an assistant.
 You are to summarize the conversation in a maximum of ten bullet points. 
 You should merge similar summaries together and remove any duplicates.
-    """
+If no dump is provided return nothing.
+    """.trimIndent()
     private val latestRecordingsSummarySystemPrompt: String = """
 You are a system that takes in a dump of transcripts of real-world audio. 
 The conversation could be between one or many speakers marked S0, S1, S2 etc. 
 You are to create a single short paragraph of daily summaries of these transcripts in chronological order. 
+If no dump is provided return nothing.
 Format it like:
 - <DATE>: <SUMMARY>
-    """
-
-    private var contextMain: Context? = null
+    """.trimIndent()
 
     private lateinit var sensorListener: SensorListener
     private lateinit var deviceData: JSONObject
@@ -79,8 +87,6 @@ Format it like:
     override fun onReceive(context: Context, intent: Intent) {
         Log.i("ThoughtsAlarm", "onReceive")
 
-        contextMain = context
-
         dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
         generalSharedPref = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
@@ -94,16 +100,14 @@ Format it like:
 
         // Check if Thought should be made
         CoroutineScope(Dispatchers.IO).launch {
-            if (isAppInForeground()) {
+            if (isAppInForeground(context)) {
                 Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
             }
             else {
                 // Check if it's within the allowed notification time
                 if (isNotificationAllowed()) {
                     Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
-                    sensorListener = SensorListener(context)
-                    deviceData = context.let { Helpers.pullDeviceData(it, sensorListener) }
-                    miaThought(maxConversationHistoryMessages, maxRecordingsContextItems)
+                    miaThought(context, maxConversationHistoryMessages, maxRecordingsContextItems)
 
                     // Release wake lock when done
                     completeWakefulIntent(intent)
@@ -113,11 +117,11 @@ Format it like:
             }
         }
     }
-    private fun isAppInForeground(): Boolean {
-        val activityManager = contextMain?.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    private fun isAppInForeground(context: Context): Boolean {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val appProcesses = activityManager.runningAppProcesses ?: return false
 
-        val packageName = contextMain?.packageName
+        val packageName = context.packageName
         return appProcesses.any { processInfo ->
             (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
         }
@@ -132,13 +136,19 @@ Format it like:
     // endregion
 
     // region Thought Generation
-    suspend fun miaThought(maxConversationHistoryMessages: Int, maxRecordingsContextItems: Int) {
+    suspend fun miaThought(context: Context, maxConversationHistoryMessages: Int, maxRecordingsContextItems: Int) {
         Log.i("ThoughtsAlarm", "miaThought")
+
+        sensorListener = SensorListener(context)
+        deviceData = context.let { Helpers.pullDeviceData(it, sensorListener) }
+        dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
+        messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
+        generalSharedPref = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
         val messageHistoryDumpString = pullConversationHistory(maxConversationHistoryMessages)
         Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpString\n$messageHistoryDumpString")
         val messageHistoryDumpPayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
+            put("model", context.getString(R.string.openchat3_5))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -153,8 +163,9 @@ Format it like:
             put("max_tokens", 1024)
             put("temperature", 0.9)
         }
+        Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpPayload\n$messageHistoryDumpPayload")
         var messageHistorySummaryString = ""
-        if(contextMain?.let { Helpers.isApiEndpointReachableWithNetworkCheck(it) } == true) {
+        if(Helpers.isApiEndpointReachableWithNetworkCheck(context)) {
             messageHistorySummaryString = Helpers.callTogetherChatAPI(messageHistoryDumpPayload)
             Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
         }
@@ -167,9 +178,9 @@ $latestRecordingsDumpString
 
 Real-Time System Data
 $deviceData
-"""
+"""""".trimIndent()
         val latestRecordingsDumpPayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
+            put("model", context.getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -185,7 +196,7 @@ $deviceData
             put("temperature", 0.9)
         }
         var latestRecordingsSummaryString = ""
-        if(contextMain?.let { Helpers.isApiEndpointReachableWithNetworkCheck(it) } == true) {
+        if(Helpers.isApiEndpointReachableWithNetworkCheck(context)) {
             latestRecordingsSummaryString = Helpers.callTogetherChatAPI(latestRecordingsDumpPayload)
             Log.i("ThoughtsAlarm", "miaThought latestRecordingsSummaryString\n$latestRecordingsSummaryString")
         }
@@ -201,10 +212,10 @@ $messageHistorySummaryString
 
 Audio Transcript Summary
 $latestRecordingsSummaryString
-"""
+""".trimIndent()
         Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
         val wakePayload = JSONObject().apply {
-            put("model", contextMain?.getString(R.string.mixtral_8x7b_instruct_v1))
+            put("model", context.getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "user")
@@ -216,16 +227,16 @@ $latestRecordingsSummaryString
             put("temperature", 0.9)
         }
         var wakeResponse = ""
-        if(contextMain?.let { Helpers.isApiEndpointReachableWithNetworkCheck(it) } == true) {
+        if(Helpers.isApiEndpointReachableWithNetworkCheck(context)) {
             wakeResponse = Helpers.callTogetherChatAPI(wakePayload)
             Log.i("ThoughtsAlarm", "miaThought wakeResponse\n$wakeResponse")
         }
 
         if(wakeResponse.lowercase() != "null" && wakeResponse.lowercase() != "") {
-            saveMessages(wakeResponse)
+            saveMessages(context, wakeResponse)
 
             withContext(Dispatchers.Main) {
-                showNotification(wakeResponse)
+                showNotification(context, wakeResponse)
             }
         }
 
@@ -266,7 +277,7 @@ $latestRecordingsSummaryString
     // endregion
 
     // region Messages Related
-    private fun saveMessages(assistantMessage: String) {
+    private fun saveMessages(context: Context, assistantMessage: String) {
         val keysList = listOf("complete", "data", "ui")
         for (key in keysList) {
             val messagesString = messagesSharedPref.getString(key, null)
@@ -278,31 +289,33 @@ $latestRecordingsSummaryString
             val messagesStringNew = messagesList.toString()
             messagesSharedPref.edit().putString(key, messagesStringNew).apply()
         }
+
+        // Send broadcast to update UI
+        val updateIntent = Intent(UPDATE_UI_ACTION)
+        context.sendBroadcast(updateIntent)
     }
     // endregion
 
     // region Notification
-    private fun showNotification(content: String) {
+    private fun showNotification(context: Context, content: String) {
         val channel = NotificationChannel(thoughtChannelId, thoughtChannelName, thoughtChannelImportance)
 
-        val notificationManager = contextMain?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
 
         // Intent to open the main activity
-        val intent = Intent(contextMain, Main::class.java)
+        val intent = Intent(context, Main::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        val pendingIntent = PendingIntent.getActivity(contextMain, 0, intent, FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getActivity(context, 0, intent, FLAG_IMMUTABLE)
 
-        val notification = contextMain?.let {
-            NotificationCompat.Builder(it, thoughtChannelId)
-                .setContentTitle(thoughtNotificationTitle)
-                .setSmallIcon(thoughtNotificationIcon)
-                .setGroup(thoughtChannelGroup)
-                .setContentText(content)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true)
-                .build()
-        }
+        val notification = NotificationCompat.Builder(context, thoughtChannelId)
+            .setContentTitle(thoughtNotificationTitle)
+            .setSmallIcon(thoughtNotificationIcon)
+            .setGroup(thoughtChannelGroup)
+            .setContentText(content)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
 
         notificationManager.notify(thoughtNotificationId, notification)
     }

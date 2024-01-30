@@ -188,7 +188,9 @@ class AudioService : Service() {
             )
 
             // Using an instance of ThoughtsAlarmReceiver for Thoughts system to comment on recent uploads
+            // Call onReceive directly
             ThoughtsAlarmReceiver().miaThought(
+                this@AudioService,
                 0,
                 3
             )

@@ -14,7 +14,7 @@
     <string name="setupThoughtsText">MIA THOUGHTS</string>
     <string name="setupThoughtsTimingText">SHOW TIME</string>
     <string name="setupThoughtsStartTimeText">6</string>
-    <string name="setupThoughtsEndTimeText">0</string>
+    <string name="setupThoughtsEndTimeText">23</string>
     <string name="setupAudioSavingText">SAVING</string>
     <string name="setupAudioCleaningText">AUDIO CLEANING</string>
     <string name="setupDataText">DATA</string>
@@ -57,6 +57,7 @@
     <string name="gpt3_5turbo" tools:ignore="TypographyDashes">gpt-3.5-turbo</string>
     <string name="gpt3_5turbo_16k" tools:ignore="TypographyDashes">gpt-3.5-turbo-16k-0613</string>
     <string name="mixtral_8x7b_instruct_v1" tools:ignore="TypographyDashes">mistralai/Mixtral-8x7B-Instruct-v0.1</string>
+    <string name="openchat3_5" tools:ignore="TypographyDashes">openchat/openchat-3.5-1210</string>
 
     <string name="addressURL">https://geocode.maps.co/reverse</string>
     <string name="weatherURL">https://api.openweathermap.org/data/2.5/weather</string>

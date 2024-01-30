@@ -201,8 +201,8 @@
                     android:textSize="14sp" />
                 <EditText
                     android:id="@+id/thoughtsStartTimeEditText"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
 
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@+id/thoughtsEndTimeEditText"
@@ -226,8 +226,8 @@
                     android:textSize="14sp" />
                 <EditText
                     android:id="@+id/thoughtsEndTimeEditText"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
 
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
