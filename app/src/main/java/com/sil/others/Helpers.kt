@@ -318,6 +318,7 @@ class Helpers {
 
                     val response = client.newCall(request).execute()
                     val responseCode = response.code
+                    // Log.d("Helper", "callPineconeFetchAPI response\n$response")
 
                     return if (responseCode == HttpURLConnection.HTTP_OK) {
                         val responseBody = response.body.string()

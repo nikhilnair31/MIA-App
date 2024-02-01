@@ -61,7 +61,7 @@ class MessagesAdapter(private var messagesList: JSONArray) :
             else {
                 holder.textView.setTextColor(context.resources.getColor(R.color.accent_0, null))
 
-                background?.setColor(ContextCompat.getColor(context, R.color.gray_5))
+                background?.setColor(ContextCompat.getColor(context, R.color.gray_8))
 
                 layoutParams.gravity = Gravity.START
                 holder.textView.textAlignment = View.TEXT_ALIGNMENT_TEXT_START

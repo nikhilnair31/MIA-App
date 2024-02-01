@@ -76,8 +76,8 @@ class Setup : AppCompatActivity() {
     }
     private fun goToMain() {
         val userNameText = usernameEditText.text.toString()
-        val thoughtsStartTime = thoughtsStartTimeEditText.toString()
-        val thoughtsEndTime = thoughtsEndTimeEditText.toString()
+        val thoughtsStartTime = thoughtsStartTimeEditText.text.toString()
+        val thoughtsEndTime = thoughtsEndTimeEditText.text.toString()
 
         if (userNameText.isNotEmpty() && thoughtsStartTime.isNotEmpty() && thoughtsEndTime.isNotEmpty()) {
             Log.i("Setup", "goToMain\nuserName: $userNameText\nthoughtsStartTime: $thoughtsStartTime - thoughtsEndTime: $thoughtsEndTime")
@@ -106,6 +106,7 @@ class Setup : AppCompatActivity() {
 
     // region Permissions Related
     private fun permissionRelated() {
+        // TODO: Update this to change permissions bar color when all granted
         Log.i("Main", "Requesting initial permissions")
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED

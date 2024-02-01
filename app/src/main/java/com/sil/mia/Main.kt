@@ -270,18 +270,18 @@ $userMessage
 Real-Time System Data:
 $systemData
 """.trimIndent()
-        Log.i("Main", "createMiaResponse updatedUserMessage\n$updatedUserMessage")
+        // Log.i("Main", "createMiaResponse updatedUserMessage\n$updatedUserMessage")
 
         val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 15)
-        Log.i("Main", "createMiaResponse og messagesListUiCopy: $messagesListUiCopy")
+        // Log.i("Main", "createMiaResponse og messagesListUiCopy: $messagesListUiCopy")
         messagesListUiCopy.remove(messagesListUiCopy.length() - 1)
-        Log.i("Main", "createMiaResponse new messagesListUiCopy: $messagesListUiCopy")
+        // Log.i("Main", "createMiaResponse new messagesListUiCopy: $messagesListUiCopy")
         messagesListUiCopy.put(JSONObject().apply {
             put("role", "user")
             put("content", updatedUserMessage)
         })
         val conversationHistoryText = messagesListUiCopy.toString()
-        Log.i("Main", "createMiaResponse conversationHistoryText: $conversationHistoryText")
+        // Log.i("Main", "createMiaResponse conversationHistoryText: $conversationHistoryText")
 
         // If MIA should should look into Pinecone or reply directly
         val withOrWithoutContextMemory =
@@ -292,7 +292,7 @@ $systemData
         val finalUserMessage = """
 $updatedUserMessage
 
-Context Memory Summary:
+Audio Transcript:
 $withOrWithoutContextMemory
 """
         Log.i("Main", "createMiaResponse finalUserMessage\n$finalUserMessage")
@@ -313,8 +313,7 @@ $withOrWithoutContextMemory
             put("max_tokens", 512)
             put("temperature", 0)
         }
-        Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
-        print("createMiaResponse replyPayload: $replyPayload")
+        // Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
         val assistantMessage = withContext(Dispatchers.IO) {
             Helpers.callOpenAiChatAPI(replyPayload)
         }
@@ -339,7 +338,7 @@ $withOrWithoutContextMemory
             put("max_tokens", 24)
             put("temperature", 0)
         }
-        Log.i("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
+        // Log.i("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
 
         var taskGuess = withContext(Dispatchers.IO) {
             Helpers.callOpenAiChatAPI(taskPayload)
@@ -412,31 +411,19 @@ $withOrWithoutContextMemory
             Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 10) { _ , _ -> }
         }.toString()
 
-        val contextMemoryDumpPayload = JSONObject().apply {
-            put("model", this@Main.getString(R.string.mixtral_8x7b_instruct_v1))
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", latestRecordingsSummarySystemPrompt)
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", contextMemoryDumpString)
-                })
-            })
-            put("seed", 48)
-            put("max_tokens", 1024)
-            put("temperature", 0.9)
-        }
-        var contextMemorySummaryString = ""
-        withContext(Dispatchers.IO) {
-            if(Helpers.isApiEndpointReachableWithNetworkCheck(this@Main)) {
-                contextMemorySummaryString = Helpers.callTogetherChatAPI(contextMemoryDumpPayload)
-                Log.i("Main", "lookingExternally contextMemorySummaryString\n$contextMemorySummaryString")
+        val contextMemoryDumpJSONArray = JSONArray(JSONObject(contextMemoryDumpString).getString("matches"))
+        val contextMemoryDumpFormattedString = buildString {
+            for (i in 0 until contextMemoryDumpJSONArray.length()) {
+                val jsonObject = contextMemoryDumpJSONArray.getJSONObject(i)
+                val metadataObject = jsonObject.getJSONObject("metadata")
+                val date = metadataObject.getString("currenttimeformattedstring")
+                val text = metadataObject.getString("text").trimIndent().replace("\n", "")
+                append("$date - $text\n")
             }
         }
+        Log.i("Main", "lookingExternally contextMemoryDumpFormattedString\n$contextMemoryDumpFormattedString")
 
-        return contextMemorySummaryString
+        return contextMemoryDumpFormattedString
     }
 
     private fun loadMessages() {

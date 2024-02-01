@@ -192,7 +192,7 @@ class AudioService : Service() {
             ThoughtsAlarmReceiver().miaThought(
                 this@AudioService,
                 0,
-                3
+                1
             )
         }
     }

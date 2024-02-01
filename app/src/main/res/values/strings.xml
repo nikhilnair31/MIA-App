@@ -36,7 +36,7 @@
     <string name="settingsNormalizeLoudnessText">NORMALIZE LOUDNESS</string>
     <string name="settingsRemoveSilenceText">REMOVE SILENCE</string>
 
-    <string name="dataDumpText">WEEKLY DUMP</string>
+    <string name="dataDumpText">MONTHLY DUMP</string>
     <string name="noDataText">NO DATA</string>
     <string name="loadingText">LOADING…</string>
 

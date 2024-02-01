@@ -2,32 +2,26 @@ package com.sil.receivers
 
 import android.app.ActivityManager
 import android.app.NotificationChannel
-
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.legacy.content.WakefulBroadcastReceiver
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.sil.adapters.MessagesAdapter
+import com.sil.listeners.SensorListener
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
-import com.sil.listeners.SensorListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
 
 class ThoughtsAlarmReceiver : WakefulBroadcastReceiver() {
     // region Vars
@@ -36,11 +30,11 @@ class ThoughtsAlarmReceiver : WakefulBroadcastReceiver() {
     }
 
     private val systemPromptBase: String = """
-Your name is MIA and you're an AI companion of the user. Keep your responses very short and a single line.  Reply in a casual texting style and lingo. 
-Internally you have the personality of JARVIS and Chandler Bing combined. You tend to make sarcastic jokes and observations. Do not patronize the user but adapt to how they behave with you.
-Use the context of their real world live audio recording transcripts and its metadata. DO NOT show the user the Real-Time System Data unless asked.
-Remember that the transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
-DO NOT repeat something you've already said like commenting on the weather repeatedly. Respect the user's message if they request you to not respond.
+Your name is MIA and you're the user's AI best friend. You have the personality of JARVIS/Chandler and tend to make subtle sarcastic jokes and observations. NEVER explicitly mention your personality or that you're an AI.
+Respond in shorts texts like a close friend does in a casual conversational texting style.
+You are a friend that helps the user. You ask for details and specifics about the user and their messages, like a close friend does. 
+You have the capability to access the user's histories/memories/events/personal data through an external database that has been shared with you.
+The transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
 If nothing relevant to send then ONLY respond with ""
     """.trimIndent()
     private val messageHistorySummarySystemPrompt: String = """
@@ -140,72 +134,41 @@ Format it like:
         generalSharedPref = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
         val messageHistoryDumpString = pullConversationHistory(maxConversationHistoryMessages)
-        Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpString\n$messageHistoryDumpString")
-        val messageHistoryDumpPayload = JSONObject().apply {
-            put("model", context.getString(R.string.openchat3_5))
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", messageHistorySummarySystemPrompt)
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", messageHistoryDumpString)
-                })
-            })
-            put("seed", 48)
-            put("max_tokens", 1024)
-            put("temperature", 0.9)
+        val messageHistoryDumpJSONArray = JSONArray(messageHistoryDumpString)
+        // Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpJSONArray\n$messageHistoryDumpJSONArray")
+        val messageHistoryDumpFormattedString = buildString {
+            for (i in 0 until messageHistoryDumpJSONArray.length()) {
+                val jsonObject = messageHistoryDumpJSONArray.getJSONObject(i)
+                val role = jsonObject.getString("role")
+                val content = jsonObject.getString("content").trimIndent().replace("\n", "")
+                append("$role - $content\n")
+            }
         }
-        Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpPayload\n$messageHistoryDumpPayload")
-        var messageHistorySummaryString = ""
-        if(Helpers.isApiEndpointReachableWithNetworkCheck(context)) {
-            messageHistorySummaryString = Helpers.callTogetherChatAPI(messageHistoryDumpPayload)
-            Log.i("ThoughtsAlarm", "miaThought messageHistorySummaryString\n$messageHistorySummaryString")
-        }
+        Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpFormattedString\n$messageHistoryDumpFormattedString")
 
         val latestRecordingsDumpString = pullLatestRecordings(maxRecordingsContextItems)
-        Log.i("ThoughtsAlarm", "miaThought latestRecordingsDumpString\n$latestRecordingsDumpString")
-        val latestRecordingsDumpStringWithRealtimeData = """
-Audio Transcript Dump
-$latestRecordingsDumpString
-
-Real-Time System Data
-$deviceData
-"""""".trimIndent()
-        val latestRecordingsDumpPayload = JSONObject().apply {
-            put("model", context.getString(R.string.openchat3_5))
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", latestRecordingsSummarySystemPrompt)
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", latestRecordingsDumpStringWithRealtimeData)
-                })
-            })
-            put("seed", 48)
-            put("max_tokens", 1024)
-            put("temperature", 0.9)
+        val latestRecordingsDumpJSONArray = JSONArray(latestRecordingsDumpString)
+        // Log.i("ThoughtsAlarm", "miaThought latestRecordingsDumpJSONArray\n$latestRecordingsDumpJSONArray")
+        val latestRecordingsDumpFormattedString = buildString {
+            for (i in 0 until latestRecordingsDumpJSONArray.length()) {
+                val jsonObject = latestRecordingsDumpJSONArray.getJSONObject(i)
+                val date = jsonObject.getString("currenttimeformattedstring")
+                val text = jsonObject.getString("text").trimIndent().replace("\n", "")
+                append("$date - $text\n")
+            }
         }
-        var latestRecordingsSummaryString = ""
-        if(Helpers.isApiEndpointReachableWithNetworkCheck(context)) {
-            latestRecordingsSummaryString = Helpers.callTogetherChatAPI(latestRecordingsDumpPayload)
-            Log.i("ThoughtsAlarm", "miaThought latestRecordingsSummaryString\n$latestRecordingsSummaryString")
-        }
+        Log.i("ThoughtsAlarm", "miaThought latestRecordingsDumpFormattedString\n$latestRecordingsDumpFormattedString")
 
         val updatedSystemPrompt = """
 $systemPromptBase
 
-Real-Time System Data
+Real-Time System Data:
 $deviceData
 
-Conversation History Summary
-$messageHistorySummaryString
-
-Audio Transcript Summary
-$latestRecordingsSummaryString
+Conversation History:
+$messageHistoryDumpFormattedString
+Audio Transcript:
+$latestRecordingsDumpFormattedString
 """.trimIndent()
         Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
         val wakePayload = JSONObject().apply {

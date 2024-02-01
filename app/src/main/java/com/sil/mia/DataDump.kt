@@ -82,21 +82,27 @@ class DataDump : AppCompatActivity() {
                     put(value)
                 }
             }
+            // Log.i("DataDump", "queryVectorArrayJson: $queryVectorArrayJson")
 
             // Creating final filter object
             val filterJsonObject = JSONObject().apply {
-                // Objects to get last week's filter
+                // Objects to get last month's filter
                 val currentDate = LocalDate.now()
-                val oneWeekAgo = currentDate.minusWeeks(1)
-                put("day", JSONObject().apply {
-                    put("\$gte", oneWeekAgo.dayOfMonth)
-                    put("\$lte", currentDate.dayOfMonth)
-                })
+                val oneMonthAgo = currentDate.minusMonths(1)
+                // Log.i("DataDump", "currentDate: $currentDate\noneMonthAgo: $oneMonthAgo")
+
+                // Doing this to solve cases where last month was different
                 put("month", JSONObject().apply {
-                    put("\$eq", oneWeekAgo.monthValue)
+                    put("\$in", JSONArray().apply {
+                        put(oneMonthAgo.monthValue)
+                        put(currentDate.monthValue)
+                    })
                 })
                 put("year", JSONObject().apply {
-                    put("\$eq", oneWeekAgo.year)
+                    put("\$in", JSONArray().apply {
+                        put(oneMonthAgo.year)
+                        put(currentDate.year)
+                    })
                 })
 
                 // Need to filter vectors by username
@@ -104,6 +110,7 @@ class DataDump : AppCompatActivity() {
                 val userName = generalSharedPref.getString("userName", null)
                 put("username", userName)
             }
+            // Log.i("DataDump", "filterJsonObject: $filterJsonObject")
 
             withContext(Dispatchers.IO) {
                 Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, maxFetchCount) { success, response ->
