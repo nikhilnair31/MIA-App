@@ -105,7 +105,7 @@
             <TextView
                 android:id="@+id/usernameText"
                 android:layout_width="match_parent"
-                android:layout_height="72dp"
+                android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
                 android:padding="24dp"
@@ -113,7 +113,7 @@
                 android:background="@drawable/message_background"
                 android:fontFamily="@font/venus_cormier"
 
-                android:gravity="start|center_vertical"
+                android:gravity="center"
 
                 android:hint="@string/settingsUsernameText"
                 android:textAllCaps="false"
@@ -131,13 +131,14 @@
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
-                android:fontFamily="@font/venus_cormier"
+                android:padding="12dp"
 
                 android:gravity="center"
-                android:padding="12dp"
+
                 android:text="@string/setupDataText"
                 android:textColor="@color/accent_1"
                 android:textSize="14sp"
+                android:fontFamily="@font/venus_cormier"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -145,13 +146,15 @@
             <Button
                 android:id="@+id/dataDumpButton"
                 android:layout_width="match_parent"
-                android:layout_height="72dp"
+                android:layout_height="wrap_content"
 
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
+                android:padding="24dp"
+
                 android:backgroundTint="@color/gray_5"
 
                 android:fontFamily="@font/venus_cormier"
-                android:gravity="start|center_vertical"
+                android:gravity="center"
                 android:radius="@dimen/softCorners"
                 android:text="@string/settingsDataDumpText"
                 android:textAllCaps="false"

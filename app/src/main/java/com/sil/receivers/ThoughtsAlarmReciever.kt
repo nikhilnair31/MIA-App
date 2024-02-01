@@ -1,6 +1,5 @@
 package com.sil.receivers
 
-import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -21,7 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Calendar
 
 class ThoughtsAlarmReceiver : WakefulBroadcastReceiver() {
     // region Vars
@@ -36,20 +34,6 @@ You are a friend that helps the user. You ask for details and specifics about th
 You have the capability to access the user's histories/memories/events/personal data through an external database that has been shared with you.
 The transcript could be from anyone and anywhere in the user's life like background speakers, music/videos playing nearby etc.
 If nothing relevant to send then ONLY respond with ""
-    """.trimIndent()
-    private val messageHistorySummarySystemPrompt: String = """
-You are a system that takes in a dump of message history between a user and an assistant.
-You are to summarize the conversation in a maximum of ten bullet points. 
-You should merge similar summaries together and remove any duplicates.
-If dump is empty, blank or "[]" ONLY return "".
-    """.trimIndent()
-    private val latestRecordingsSummarySystemPrompt: String = """
-You are a system that takes in a dump of transcripts of real-world audio. 
-The conversation could be between one or many speakers marked S0, S1, S2 etc. 
-You are to create a single short paragraph of daily summaries of these transcripts in chronological order. 
-If dump is empty, blank or "[]" ONLY return "".
-Format it like:
-- <DATE>: <SUMMARY>
     """.trimIndent()
 
     private lateinit var sensorListener: SensorListener
@@ -73,53 +57,22 @@ Format it like:
 
     // region Initial
     override fun onReceive(context: Context, intent: Intent) {
-        Log.i("ThoughtsAlarm", "onReceive")
-
-        dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
-        messagesSharedPref = context.getSharedPreferences("com.sil.mia.messages", Context.MODE_PRIVATE)
-        generalSharedPref = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+        // Acquire wake lock
+        startWakefulService(context, intent)
 
         // Set integer values
         maxConversationHistoryMessages = context.resources.getInteger(R.integer.maxConversationHistoryMessages)
         maxRecordingsContextItems = context.resources.getInteger(R.integer.maxRecordingsContextItems)
 
-        // Acquire wake lock
-        startWakefulService(context, intent)
+        generalSharedPref = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
         // Check if Thought should be made
         CoroutineScope(Dispatchers.IO).launch {
-            if (isAppInForeground(context)) {
-                Log.i("ThoughtsAlarm", "App is in foreground. Not showing notification.")
-            }
-            else {
-                // Check if it's within the allowed notification time
-                if (isNotificationAllowed()) {
-                    Log.i("ThoughtsAlarm", "App is NOT in foreground. Showing notification!")
-                    miaThought(context, maxConversationHistoryMessages, maxRecordingsContextItems)
-
-                    // Release wake lock when done
-                    completeWakefulIntent(intent)
-                } else {
-                    Log.i("ThoughtsAlarm", "Do Not Disturb time. Not showing notification.")
-                }
+            if (Helpers.checkIfCanRun(context, generalSharedPref, "ThoughtsAlarm")) {
+                miaThought(context, maxConversationHistoryMessages, maxRecordingsContextItems)
+                completeWakefulIntent(intent)
             }
         }
-    }
-    private fun isAppInForeground(context: Context): Boolean {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val appProcesses = activityManager.runningAppProcesses ?: return false
-
-        val packageName = context.packageName
-        return appProcesses.any { processInfo ->
-            (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
-        }
-    }
-    private fun isNotificationAllowed(): Boolean {
-        val thoughtsStartTime = generalSharedPref.getInt("thoughtsStartTime", 6)
-        val thoughtsEndTime = generalSharedPref.getInt("thoughtsEndTime", 0)
-
-        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        return currentHour in thoughtsStartTime..thoughtsEndTime
     }
     // endregion
 
@@ -127,6 +80,7 @@ Format it like:
     suspend fun miaThought(context: Context, maxConversationHistoryMessages: Int, maxRecordingsContextItems: Int) {
         Log.i("ThoughtsAlarm", "miaThought")
 
+        // WARNING: Don't move since it's called from another function without going to onReceive first
         sensorListener = SensorListener(context)
         deviceData = context.let { Helpers.pullDeviceData(it, sensorListener) }
         dataDumpSharedPref = context.getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
@@ -146,6 +100,7 @@ Format it like:
         }
         Log.i("ThoughtsAlarm", "miaThought messageHistoryDumpFormattedString\n$messageHistoryDumpFormattedString")
 
+        // FIXME: Crashes on first launch here because recordings aren't locally loaded and pullLatestRecordings returns "[]" instead of ""
         val latestRecordingsDumpString = pullLatestRecordings(maxRecordingsContextItems)
         val latestRecordingsDumpJSONArray = JSONArray(latestRecordingsDumpString)
         // Log.i("ThoughtsAlarm", "miaThought latestRecordingsDumpJSONArray\n$latestRecordingsDumpJSONArray")
@@ -172,7 +127,7 @@ $latestRecordingsDumpFormattedString
 """.trimIndent()
         Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
         val wakePayload = JSONObject().apply {
-            put("model", context.getString(R.string.openchat3_5))
+            put("model", context.getString(R.string.mistral_8x7b_instruct_v2))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "user")

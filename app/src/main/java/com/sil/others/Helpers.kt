@@ -1,6 +1,7 @@
 package com.sil.others
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -622,6 +623,68 @@ class Helpers {
         // endregion
 
         // region Data Related
+        suspend fun refreshLocalContextRecordingData(userName: String, maxFetchCount: Int): JSONArray {
+            var responseJsonObject = JSONObject()
+
+            val queryVectorArray = FloatArray(1536)
+            val queryVectorArrayJson = JSONArray().apply {
+                for (value in queryVectorArray) {
+                    put(value)
+                }
+            }
+
+            val filterJsonObject = JSONObject().apply {
+                // Objects to get last month's filter
+                val currentDate = LocalDate.now()
+                val oneMonthAgo = currentDate.minusMonths(1)
+                // Log.i("DataDump", "currentDate: $currentDate\noneMonthAgo: $oneMonthAgo")
+
+                // Doing this to solve cases where last month was different
+                put("month", JSONObject().apply {
+                    put("\$in", JSONArray().apply {
+                        put(oneMonthAgo.monthValue)
+                        put(currentDate.monthValue)
+                    })
+                })
+                put("year", JSONObject().apply {
+                    put("\$in", JSONArray().apply {
+                        put(oneMonthAgo.year)
+                        put(currentDate.year)
+                    })
+                })
+
+                // Need to filter vectors by username
+                put("username", userName)
+            }
+
+            withContext(Dispatchers.IO) {
+                callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, maxFetchCount) { success, response ->
+                    if (success) {
+                        responseJsonObject = response
+                    }
+                }
+            }
+
+            // Doing this to get array in matches key
+            val bodyJsonArray = responseJsonObject.getJSONArray("matches")
+            // Selecting only metadata object from it
+            val metadataArray = JSONArray()
+            for (i in 0 until bodyJsonArray.length()) {
+                val jsonObject = bodyJsonArray.getJSONObject(i)
+                val metadataObject = jsonObject.optJSONObject("metadata")
+
+                // Doing this to include ID of the vector which isn't in the metadata JSON object
+                if (metadataObject != null) {
+                    val modifiedMetadataObject = JSONObject(metadataObject.toString())
+                    modifiedMetadataObject.put("id", jsonObject.getString("id"))
+                    metadataArray.put(modifiedMetadataObject)
+                }
+            }
+
+            val metadataList = sortJsonDescending(metadataArray)
+            return JSONArray(metadataList)
+        }
+
         suspend fun pullDeviceData(context: Context, sensorListener: SensorListener?): JSONObject {
             val finalOutput = JSONObject()
 
@@ -687,7 +750,6 @@ class Helpers {
             Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
         }
-
         private fun hasLocationPermission(context: Context): Boolean {
             return ContextCompat.checkSelfPermission(
                 context,
@@ -698,7 +760,6 @@ class Helpers {
                         android.Manifest.permission.ACCESS_COARSE_LOCATION
                     ) == PackageManager.PERMISSION_GRANTED
         }
-
         private fun getLastKnownLocation(context: Context): Location? {
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
@@ -712,11 +773,9 @@ class Helpers {
                 null
             }
         }
-
         private fun pullSystemTime(): Long {
             return System.currentTimeMillis()
         }
-
         private fun pullTimeFormattedString(): String {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             return dateFormat.format(Date())
@@ -831,6 +890,38 @@ class Helpers {
                 Log.e("Helper", "isApiEndpointReachable: IOException: ${e.message}")
                 false
             }
+        }
+
+        fun checkIfCanRun(context: Context, generalSharedPref: SharedPreferences, sourceString: String): Boolean {
+            return if (isAppInForeground(context)) {
+                Log.i(sourceString, "App is in foreground. Can't run.")
+                false
+            } else {
+                // Check if it's within the allowed notification time
+                if (isNotificationAllowed(generalSharedPref)) {
+                    Log.i(sourceString, "App is NOT in foreground. Can run!")
+                    true
+                } else {
+                    Log.i(sourceString, "Do Not Disturb time. Can't run.")
+                    false
+                }
+            }
+        }
+        private fun isAppInForeground(context: Context): Boolean {
+            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val appProcesses = activityManager.runningAppProcesses ?: return false
+
+            val packageName = context.packageName
+            return appProcesses.any { processInfo ->
+                (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
+            }
+        }
+        private fun isNotificationAllowed(generalSharedPref: SharedPreferences): Boolean {
+            val thoughtsStartTime = generalSharedPref.getInt("thoughtsStartTime", 6)
+            val thoughtsEndTime = generalSharedPref.getInt("thoughtsEndTime", 0)
+
+            val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            return currentHour in thoughtsStartTime..thoughtsEndTime
         }
         // endregion
     }
