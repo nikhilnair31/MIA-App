@@ -292,7 +292,7 @@ class Helpers {
 
         // region Pinecone Related
         suspend fun callPineconeFetchAPI(queryVectorArrayJson: JSONArray, filterJsonObject: JSONObject, topKCount: Int, onComplete: (success: Boolean, responseJsonObject: JSONObject) -> Unit): JSONObject {
-            Log.i("Helpers", "Fetching from Pinecone...")
+            Log.d("Helpers", "Fetching from Pinecone...")
 
             var lastException: IOException? = null
 

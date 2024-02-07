@@ -40,18 +40,18 @@ class Main : AppCompatActivity() {
     private var messagesListData = JSONArray()
     private var messagesListUI = JSONArray()
 
-    private val lookExtSystemPrompt = """
+    private val ragSystemPrompt = """
 You are a system with 2 types of memory. The first is your internal chat training data itself and another is from an external memories database. 
 You will receive the user's conversation history along with the latest message. Based on this determine where to look to reply.
 Examples: 
-- user: just thinking about last night output: 'ext'
-- user: help me make a crème caramel output: 'int' 
-- user: what did they discuss about the marketing project? output: 'ext' 
-- assistant: Apologies if the response seemed robotic. What is on your mind? user: bruhhh where's the personality at output: 'int'
-- user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him output: 'ext'
-- assistant: hi user: yoooo output: 'int'
-- user: what is my opinion on niche music output: 'ext'
-ONLY answer with 'int' if internal and 'ext' if external else 'none'. 
+- user: just thinking about last night output: '[rag]'
+- user: help me make a crème caramel output: '[int]' 
+- user: what did they discuss about the marketing project? output: '[rag]' 
+- assistant: Apologies if the response seemed robotic. What is on your mind? user: bruhhh where's the personality at output: '[int]'
+- user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him output: '[rag]'
+- assistant: hi user: yoooo output: '[int]'
+- user: what is my opinion on niche music output: '[rag]'
+ONLY answer with '[int]' if internal and '[rag]' if external else '[none]'. 
     """
     private val queryGeneratorSystemPrompt = """
 You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
@@ -292,8 +292,8 @@ $systemData
 
         // If MIA should should look into Pinecone or reply directly
         val withOrWithoutContextMemory =
-            if(shouldMiaLookExternally(conversationHistoryText))
-                lookingExternally(userMessage, conversationHistoryText)
+            if(shouldMiaRAG(conversationHistoryText))
+                ragStringDump(userMessage, conversationHistoryText)
             else
                 ""
         val finalUserMessage = """
@@ -333,13 +333,13 @@ $withOrWithoutContextMemory
 
         return assistantMessage
     }
-    private suspend fun shouldMiaLookExternally(conversationHistoryText: String): Boolean {
+    private suspend fun shouldMiaRAG(conversationHistoryText: String): Boolean {
         val taskPayload = JSONObject().apply {
-            put("model", getString(R.string.mixtral_8x7b_instruct_v1))
+            put("model", getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
-                    put("content", lookExtSystemPrompt)
+                    put("content", ragSystemPrompt)
                 })
                 put(JSONObject().apply {
                     put("role", "user")
@@ -350,17 +350,17 @@ $withOrWithoutContextMemory
             put("max_tokens", 24)
             put("temperature", 0)
         }
-        // Log.i("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
+        // Log.i("Main", "shouldMiaRAG taskPayload: $taskPayload")
 
         var taskGuess = withContext(Dispatchers.IO) {
-            Helpers.callTogetherChatAPI(taskPayload)
+            Helpers.callOpenAiChatAPI(taskPayload)
         }
         taskGuess = taskGuess.replace("'", "").trim()
-        Log.i("Main", "shouldMiaLookExternally taskGuess: $taskGuess")
+        Log.i("Main", "shouldMiaRAG taskGuess: $taskGuess")
 
-        return taskGuess.contains("ext")
+        return taskGuess.contains("[rag]")
     }
-    private suspend fun lookingExternally(userMessage: String, conversationHistoryText: String): String {
+    private suspend fun ragStringDump(userMessage: String, conversationHistoryText: String): String {
         // Use GPT to create a query and filter
         val queryGeneratorPayload = JSONObject().apply {
             put("model", getString(R.string.gpt3_5turbo))
@@ -433,7 +433,7 @@ $withOrWithoutContextMemory
                 append("$date - $text\n")
             }
         }
-        Log.i("Main", "lookingExternally contextMemoryDumpFormattedString\n$contextMemoryDumpFormattedString")
+        // Log.i("Main", "ragStringDump contextMemoryDumpFormattedString\n$contextMemoryDumpFormattedString")
 
         return contextMemoryDumpFormattedString
     }
