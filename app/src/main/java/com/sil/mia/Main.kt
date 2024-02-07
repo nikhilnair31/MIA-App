@@ -25,8 +25,6 @@ import org.json.JSONObject
 
 class Main : AppCompatActivity() {
     // region Vars
-    private var userMessage: String = ""
-
     private lateinit var recyclerView: RecyclerView
     private lateinit var editText: EditText
     private lateinit var sendButton: ImageButton
@@ -44,7 +42,7 @@ class Main : AppCompatActivity() {
 
     private val lookExtSystemPrompt = """
 You are a system with 2 types of memory. The first is your internal chat training data itself and another is from an external memories database. 
-You will receive the user's conversation history along with the latest message. Based on this determine where to look to reply. ONLY answer with 'int' if internal and 'ext' if external else 'none'. 
+You will receive the user's conversation history along with the latest message. Based on this determine where to look to reply.
 Examples: 
 - user: just thinking about last night output: 'ext'
 - user: help me make a crème caramel output: 'int' 
@@ -53,6 +51,7 @@ Examples:
 - user: who is steve jobs? assistant: the ceo of apple user: no tell me what i've heard about him output: 'ext'
 - assistant: hi user: yoooo output: 'int'
 - user: what is my opinion on niche music output: 'ext'
+ONLY answer with 'int' if internal and 'ext' if external else 'none'. 
     """
     private val queryGeneratorSystemPrompt = """
 You are a system that takes a user message and context as a JSON and outputs a JSON payload to query a vector database.
@@ -227,42 +226,50 @@ Format it like:
     }
 
     private fun sendMessage() {
-        userMessage = editText.text.toString()
+        val userMessage = editText.text.toString()
         if (userMessage.isNotEmpty()) {
-            // Disable send button once message sent
-            sendButton.isEnabled = false
+            // Create a User JSON object
             val userJSON = JSONObject().apply {
                 put("role", "user")
                 put("content", userMessage)
             }
+            Log.i("Main", "sendMessage userJSON: $userJSON")
+
+            // Add into array and save the data
             messagesListUI.put(userJSON)
+            saveMessages()
+
+            // Update the UI by disabling the send button, clearing edit text etc.
+            sendButton.isEnabled = false
+            editText.text.clear()
             adapter.notifyItemInserted(messagesListUI.length() - 1)
             recyclerView.scrollToPosition(adapter.itemCount - 1)
-            editText.text.clear()
-            saveMessages()
 
             // Call the API to determine if MIA should reply directly or look at Pinecone
             CoroutineScope(Dispatchers.Main).launch {
-                val assistantMessage = createMiaResponse()
+                val assistantMessage = createMiaResponse(userMessage)
 
                 // Add response to user's message, display it and save it
                 val assistantJSON = JSONObject().apply {
                     put("role", "assistant")
                     put("content", assistantMessage)
                 }
+                Log.i("Main", "sendMessage assistantJSON: $assistantJSON")
+
+                // Add into array and save the data
                 messagesListComplete.put(assistantJSON)
                 messagesListData.put(assistantJSON)
                 messagesListUI.put(assistantJSON)
-                adapter.notifyItemInserted(messagesListUI.length() - 1)
-                recyclerView.scrollToPosition(adapter.itemCount - 1)
                 saveMessages()
 
-                // Enable send button once response is received
+                // Update UI by enabling send button once response is received etc.
+                adapter.notifyItemInserted(messagesListUI.length() - 1)
+                recyclerView.scrollToPosition(adapter.itemCount - 1)
                 sendButton.isEnabled = true
             }
         }
     }
-    private suspend fun createMiaResponse(): String {
+    private suspend fun createMiaResponse(userMessage: String): String {
         val systemData = Helpers.pullDeviceData(this@Main, null)
         val updatedUserMessage = """
 $userMessage
@@ -270,23 +277,23 @@ $userMessage
 Real-Time System Data:
 $systemData
 """.trimIndent()
-        // Log.i("Main", "createMiaResponse updatedUserMessage\n$updatedUserMessage")
 
         val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 15)
         // Log.i("Main", "createMiaResponse og messagesListUiCopy: $messagesListUiCopy")
         messagesListUiCopy.remove(messagesListUiCopy.length() - 1)
         // Log.i("Main", "createMiaResponse new messagesListUiCopy: $messagesListUiCopy")
-        messagesListUiCopy.put(JSONObject().apply {
+        val initialUserJSON = JSONObject().apply {
             put("role", "user")
-            put("content", updatedUserMessage)
-        })
+            put("content", userMessage)
+        }
+        messagesListUiCopy.put(initialUserJSON)
         val conversationHistoryText = messagesListUiCopy.toString()
         // Log.i("Main", "createMiaResponse conversationHistoryText: $conversationHistoryText")
 
         // If MIA should should look into Pinecone or reply directly
         val withOrWithoutContextMemory =
             if(shouldMiaLookExternally(conversationHistoryText))
-                lookingExternally(conversationHistoryText)
+                lookingExternally(userMessage, conversationHistoryText)
             else
                 ""
         val finalUserMessage = """
@@ -295,27 +302,32 @@ $updatedUserMessage
 Audio Transcript:
 $withOrWithoutContextMemory
 """
-        Log.i("Main", "createMiaResponse finalUserMessage\n$finalUserMessage")
+        // Log.i("Main", "createMiaResponse finalUserMessage\n$finalUserMessage")
 
         // Append JSON for user's message with/without context
-        val userJSON = JSONObject().apply {
+        val finalUserJSON = JSONObject().apply {
             put("role", "user")
             put("content", finalUserMessage)
         }
-        messagesListComplete.put(userJSON)
-        messagesListData.put(userJSON)
 
-        // Generate response from user's message
-        val replyPayload = JSONObject().apply {
-            put("model", getString(R.string.gpt4turbo))
-            put("messages", messagesListData)
-            put("seed", 48)
-            put("max_tokens", 512)
-            put("temperature", 0)
-        }
-        // Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
+        // Add into array and save the data
+        messagesListUiCopy.remove(messagesListUiCopy.length() - 1)
+        messagesListUiCopy.put(finalUserJSON)
+        messagesListComplete.put(finalUserJSON)
+        messagesListData.put(finalUserJSON)
+
+        // Generate response
         val assistantMessage = withContext(Dispatchers.IO) {
-            Helpers.callOpenAiChatAPI(replyPayload)
+            // Creating payload for assistant response
+            val replyPayload = JSONObject().apply {
+                put("model", getString(R.string.openchat3_5))
+                put("messages", messagesListUiCopy)
+                put("seed", 48)
+                put("max_tokens", 512)
+                put("temperature", 0)
+            }
+            Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
+            Helpers.callTogetherChatAPI(replyPayload)
         }
         Log.i("Main", "createMiaResponse assistantMessage\n$assistantMessage")
 
@@ -323,7 +335,7 @@ $withOrWithoutContextMemory
     }
     private suspend fun shouldMiaLookExternally(conversationHistoryText: String): Boolean {
         val taskPayload = JSONObject().apply {
-            put("model", getString(R.string.gpt4turbo))
+            put("model", getString(R.string.mixtral_8x7b_instruct_v1))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -341,17 +353,17 @@ $withOrWithoutContextMemory
         // Log.i("Main", "shouldMiaLookExternally taskPayload: $taskPayload")
 
         var taskGuess = withContext(Dispatchers.IO) {
-            Helpers.callOpenAiChatAPI(taskPayload)
+            Helpers.callTogetherChatAPI(taskPayload)
         }
         taskGuess = taskGuess.replace("'", "").trim()
         Log.i("Main", "shouldMiaLookExternally taskGuess: $taskGuess")
 
         return taskGuess.contains("ext")
     }
-    private suspend fun lookingExternally(conversationHistoryText: String): String {
+    private suspend fun lookingExternally(userMessage: String, conversationHistoryText: String): String {
         // Use GPT to create a query and filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", getString(R.string.gpt4turbo))
+            put("model", getString(R.string.gpt3_5turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")

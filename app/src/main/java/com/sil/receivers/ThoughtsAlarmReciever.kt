@@ -69,7 +69,11 @@ If nothing relevant to send then ONLY respond with ""
         // Check if Thought should be made
         CoroutineScope(Dispatchers.IO).launch {
             if (Helpers.checkIfCanRun(context, generalSharedPref, "ThoughtsAlarm")) {
-                miaThought(context, maxConversationHistoryMessages, maxRecordingsContextItems)
+                miaThought(context,
+                    context.getString(R.string.mixtral_8x7b_instruct_v1),
+                    maxConversationHistoryMessages,
+                    maxRecordingsContextItems
+                )
                 completeWakefulIntent(intent)
             }
         }
@@ -77,7 +81,7 @@ If nothing relevant to send then ONLY respond with ""
     // endregion
 
     // region Thought Generation
-    suspend fun miaThought(context: Context, maxConversationHistoryMessages: Int, maxRecordingsContextItems: Int) {
+    suspend fun miaThought(context: Context, modelName:String, maxConversationHistoryMessages: Int, maxRecordingsContextItems: Int) {
         Log.i("ThoughtsAlarm", "miaThought")
 
         // WARNING: Don't move since it's called from another function without going to onReceive first
@@ -127,7 +131,7 @@ $latestRecordingsDumpFormattedString
 """.trimIndent()
         Log.i("ThoughtsAlarm", "miaThought updatedSystemPrompt\n$updatedSystemPrompt")
         val wakePayload = JSONObject().apply {
-            put("model", context.getString(R.string.mistral_8x7b_instruct_v2))
+            put("model", modelName)
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "user")

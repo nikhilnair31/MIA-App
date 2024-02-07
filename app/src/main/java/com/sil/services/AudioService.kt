@@ -190,7 +190,8 @@ class AudioService : Service() {
             // Using an instance of ThoughtsAlarmReceiver for Thoughts system to comment on recent uploads
             ThoughtsAlarmReceiver().miaThought(
                 this@AudioService,
-                0,
+                this@AudioService.getString(R.string.openhermes_2_5_mistral_7b),
+                10,
                 1
             )
         }

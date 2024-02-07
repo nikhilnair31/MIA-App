@@ -11,6 +11,6 @@
     <integer name="maxDataMessages">20</integer>
     <integer name="maxRecordingTimeInMin">5</integer>
     <integer name="maxFetchCount">100</integer>
-    <integer name="maxConversationHistoryMessages">25</integer>
-    <integer name="maxRecordingsContextItems">25</integer>
+    <integer name="maxConversationHistoryMessages">5</integer>
+    <integer name="maxRecordingsContextItems">5</integer>
 </resources>

@@ -25,8 +25,10 @@ import com.sil.listeners.SensorListener
 import com.sil.mia.R
 import com.sil.mia.BuildConfig
 import com.sil.workers.UploadWorker
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -130,7 +132,6 @@ class Helpers {
             }
         }
         // endregion
-
         // region LLM Related
         suspend fun callTogetherChatAPI(payload: JSONObject): String {
             var lastException: IOException? = null
@@ -700,36 +701,39 @@ class Helpers {
                 put("hours", calendar.get(Calendar.HOUR_OF_DAY))
                 put("minutes", calendar.get(Calendar.MINUTE))
             }
+            Log.d("Helper", "pullDeviceData calendar finalOutput: $finalOutput")
             // endregion
             // region Battery
             // Pulling current battery level
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             finalOutput.put("batterylevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
+            Log.d("Helper", "pullDeviceData Battery finalOutput: $finalOutput")
             // endregion
             // region Location & Climate
             if (hasLocationPermission(context)) {
                 val location = getLastKnownLocation(context)
                 location?.let { locIt ->
-                    val (latitude, longitude) = Pair(locIt.latitude, locIt.longitude)
-                    val address = callGeocodingAPI(context, latitude, longitude)
-                    val weatherJSON = callWeatherAPI(context, latitude, longitude)
+                    val address = callGeocodingAPI(context, locIt.latitude, locIt.longitude)
+                    Log.d("Helper", "pullDeviceData Location address: $address")
+
+                    val weatherJSON = callWeatherAPI(context, locIt.latitude, locIt.longitude)
+                    Log.d("Helper", "pullDeviceData Climate weatherJSON: $weatherJSON")
 
                     finalOutput.apply {
                         put("address", address)
-                        weatherJSON?.let {
-                            val weatherArray = it.getJSONArray("weather")
-                            put("firstweatherdescription", weatherArray.getJSONObject(0).getString("description"))
 
-                            val mainObject = it.getJSONObject("main")
-                            put("feelslike", mainObject.getDouble("feels_like").toString())
-                            put("humidity", mainObject.getInt("humidity").toString())
+                        val weatherArray = weatherJSON?.getJSONArray("weather")
+                        put("firstweatherdescription", weatherArray?.getJSONObject(0)?.getString("description"))
 
-                            val windObject = it.getJSONObject("wind")
-                            put("windspeed", windObject.getDouble("speed").toString())
+                        val mainObject = weatherJSON?.getJSONObject("main")
+                        put("feelslike", mainObject?.getDouble("feels_like").toString())
+                        put("humidity", mainObject?.getInt("humidity").toString())
 
-                            val cloudsObject = it.getJSONObject("clouds")
-                            put("cloudall", cloudsObject.getInt("all").toString())
-                        }
+                        val windObject = weatherJSON?.getJSONObject("wind")
+                        put("windspeed", windObject?.getDouble("speed").toString())
+
+                        val cloudsObject = weatherJSON?.getJSONObject("clouds")
+                        put("cloudall", cloudsObject?.getInt("all").toString())
                     }
                 }
             }
@@ -744,7 +748,7 @@ class Helpers {
                     else -> "unknown"
                 })
             }
-            // Log.d("Helper", "deviceSpeed: $deviceSpeed")
+            Log.d("Helper", "pullDeviceData Motion finalOutput: $finalOutput")
             // endregion
 
             Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
