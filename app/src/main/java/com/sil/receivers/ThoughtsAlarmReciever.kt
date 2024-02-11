@@ -144,7 +144,7 @@ $latestRecordingsDumpFormattedString
         }
         var wakeResponse = ""
         if(Helpers.isApiEndpointReachableWithNetworkCheck(context)) {
-            wakeResponse = Helpers.callTogetherChatAPI(wakePayload)
+            wakeResponse = Helpers.callTogetherChatAPI(context, wakePayload)
             Log.i("ThoughtsAlarm", "miaThought wakeResponse\n$wakeResponse")
         }
 

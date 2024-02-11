@@ -187,13 +187,14 @@ class AudioService : Service() {
                 createMetadataJson(audioFile.name)
             )
 
+            // FIXME: Improve Thoughts logic per audio recording
             // Using an instance of ThoughtsAlarmReceiver for Thoughts system to comment on recent uploads
-            ThoughtsAlarmReceiver().miaThought(
-                this@AudioService,
-                this@AudioService.getString(R.string.openhermes_2_5_mistral_7b),
-                10,
-                1
-            )
+            // ThoughtsAlarmReceiver().miaThought(
+            //     this@AudioService,
+            //     this@AudioService.getString(R.string.openhermes_2_5_mistral_7b),
+            //     10,
+            //     1
+            // )
         }
     }
     private suspend fun createMetadataJson(audioFileName: String): JSONObject {

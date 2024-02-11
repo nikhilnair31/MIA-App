@@ -134,7 +134,7 @@ Format it like:
         initRelated()
         audioRelated()
         chatRelated()
-        thoughtsRelated()
+        // thoughtsRelated()
         refreshRelated()
     }
     // endregion
@@ -327,7 +327,7 @@ $withOrWithoutContextMemory
                 put("temperature", 0)
             }
             Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
-            Helpers.callTogetherChatAPI(replyPayload)
+            Helpers.callTogetherChatAPI(this@Main, replyPayload)
         }
         Log.i("Main", "createMiaResponse assistantMessage\n$assistantMessage")
 
@@ -363,7 +363,7 @@ $withOrWithoutContextMemory
     private suspend fun ragStringDump(userMessage: String, conversationHistoryText: String): String {
         // Use GPT to create a query and filter
         val queryGeneratorPayload = JSONObject().apply {
-            put("model", getString(R.string.gpt3_5turbo))
+            put("model", getString(R.string.gpt4turbo))
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
