@@ -133,12 +133,14 @@ class Helpers {
         }
         // endregion
         // region LLM Related
-        suspend fun callTogetherChatAPI(payload: JSONObject): String {
+        suspend fun callTogetherChatAPI(context: Context, payload: JSONObject): String {
             var lastException: IOException? = null
-            val minRequestInterval = 2000L  // Minimum interval between requests in milliseconds
+            val minRequestInterval = 1000L  // Minimum interval between requests in milliseconds
             var lastRequestTime = 0L
+            var finalPayload = payload
 
-            repeat(5) { attempt ->
+            var attempt = 0
+            while (attempt < 5) {
                 try {
                     // Check if enough time has passed since the last request
                     val currentTime = System.currentTimeMillis()
@@ -153,21 +155,29 @@ class Helpers {
                     val url = "https://api.together.xyz/v1/chat/completions"
                     val request = Request.Builder()
                         .url(url)
-                        .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                        .post(finalPayload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
                         .addHeader("Authorization", "Bearer $togetherApiKey")
                         .build()
 
                     val response = client.newCall(request).execute()
                     val responseCode = response.code
 
-                    return if (responseCode == HttpURLConnection.HTTP_OK) {
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
                         val jsonResponse = JSONObject(response.body.string())
                         Log.d("Helper", "callTogetherChatAPI Response: $jsonResponse")
                         val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
-                        content
+                        return content
                     } else {
-                        Log.e("Helper", "callTogetherChatAPI Error Response: ${response.body.string()}")
-                        ""
+                        val errorResponse = JSONObject(response.body.string())
+                        Log.e("Helper", "callTogetherChatAPI Error Response: $errorResponse")
+                        if (errorResponse.has("error") && errorResponse.getJSONObject("error").getString("message").contains("must be <= 8193")) {
+                            val newModel = context.getString(R.string.mistral_8x7b_instruct_v2)
+                            Log.d("Helper", "Updating to $newModel old finalPayload: $finalPayload")
+                            finalPayload.put("model", newModel)
+                            Log.d("Helper", "Updated NEW finalPayload: $finalPayload")
+                        } else {
+                            return ""
+                        }
                     }
                 }
                 catch (e: IOException) {
@@ -180,6 +190,7 @@ class Helpers {
                     FirebaseCrashlytics.getInstance().recordException(e)
                     return ""
                 }
+                attempt++
             }
             lastException?.let {
                 // throw it
