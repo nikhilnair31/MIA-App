@@ -93,6 +93,7 @@
                 android:textColorHint="@color/accent_1"
                 android:textSize="14sp"
 
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -119,6 +120,7 @@
                 android:textCursorDrawable="@drawable/cursor_color"
                 android:textSize="14sp"
 
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/addressTitleTextView" />
@@ -140,6 +142,7 @@
                 android:textColorHint="@color/accent_1"
                 android:textSize="14sp"
 
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/addressTextView" />
@@ -166,6 +169,7 @@
                 android:textCursorDrawable="@drawable/cursor_color"
                 android:textSize="14sp"
 
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/weatherTitleTextView" />

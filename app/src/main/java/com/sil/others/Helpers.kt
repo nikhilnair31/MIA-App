@@ -199,7 +199,7 @@ class Helpers {
             return ""
         }
 
-        suspend fun callOpenAiChatAPI(payload: JSONObject): String {
+        suspend fun callOpenAiChatAPI(context: Context, payload: JSONObject): String {
             var lastException: IOException? = null
 
             repeat(5) { attempt ->

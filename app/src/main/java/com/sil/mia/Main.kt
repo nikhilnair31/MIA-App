@@ -321,7 +321,7 @@ $withOrWithoutContextMemory
             // Creating payload for assistant response
             val replyPayload = JSONObject().apply {
                 put("model", getString(R.string.openchat3_5))
-                put("messages", messagesListUiCopy)
+                put("messages", messagesListData)
                 put("seed", 48)
                 put("max_tokens", 512)
                 put("temperature", 0)
@@ -353,7 +353,7 @@ $withOrWithoutContextMemory
         // Log.i("Main", "shouldMiaRAG taskPayload: $taskPayload")
 
         var taskGuess = withContext(Dispatchers.IO) {
-            Helpers.callOpenAiChatAPI(taskPayload)
+            Helpers.callOpenAiChatAPI(this@Main, taskPayload)
         }
         taskGuess = taskGuess.replace("'", "").trim()
         Log.i("Main", "shouldMiaRAG taskGuess: $taskGuess")
@@ -379,7 +379,7 @@ $withOrWithoutContextMemory
             put("temperature", 0)
         }
         val queryResponse = withContext(Dispatchers.IO) {
-            Helpers.callOpenAiChatAPI(queryGeneratorPayload)
+            Helpers.callOpenAiChatAPI(this@Main, queryGeneratorPayload)
         }
         val queryResultJSON = JSONObject(queryResponse)
 
