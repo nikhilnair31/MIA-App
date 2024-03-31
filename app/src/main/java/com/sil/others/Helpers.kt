@@ -60,6 +60,7 @@ class Helpers {
         private const val openaiApiKey = BuildConfig.OPENAI_API_KEY
         private const val deepgramApiKey = BuildConfig.DEEPGRAM_API_KEY
         private const val togetherApiKey = BuildConfig.TOGETHER_API_KEY
+        private const val groqApiKey = BuildConfig.GROQ_API_KEY
         private const val awsApiEndpoint = BuildConfig.AWS_API_ENDPOINT
         private const val weatherApiEndpoint = BuildConfig.WEATHER_API_KEY
         private const val locationApiEndpoint = BuildConfig.GEOLOCATION_API_KEY
@@ -132,7 +133,74 @@ class Helpers {
             }
         }
         // endregion
+
         // region LLM Related
+        suspend fun callGroqChatAPI(context: Context, payload: JSONObject): String {
+            var lastException: IOException? = null
+            val minRequestInterval = 1000L  // Minimum interval between requests in milliseconds
+            var lastRequestTime = 0L
+            var finalPayload = payload
+
+            var attempt = 0
+            while (attempt < 5) {
+                try {
+                    // Check if enough time has passed since the last request
+                    val currentTime = System.currentTimeMillis()
+                    val timeSinceLastRequest = currentTime - lastRequestTime
+                    if (timeSinceLastRequest < minRequestInterval) {
+                        delay(minRequestInterval - timeSinceLastRequest)
+                    }
+                    // Update the last request time
+                    lastRequestTime = System.currentTimeMillis()
+
+                    val client = OkHttpClient()
+                    val url = "https://api.groq.com/openai/v1/chat/completions"
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(finalPayload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                        .addHeader("Authorization", "Bearer $groqApiKey")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val jsonResponse = JSONObject(response.body.string())
+                        Log.d("Helper", "callGroqChatAPI Response: $jsonResponse")
+                        val content = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
+                        return content
+                    } else {
+                        val errorResponse = JSONObject(response.body.string())
+                        Log.e("Helper", "callGroqChatAPI Error Response: $errorResponse")
+                        if (errorResponse.has("error") && errorResponse.getJSONObject("error").getString("message").contains("must be <= 8193")) {
+                            val newModel = context.getString(R.string.mixtral_8x7b_32768)
+                            Log.d("Helper", "Updating to $newModel old finalPayload: $finalPayload")
+                            finalPayload.put("model", newModel)
+                            Log.d("Helper", "Updated NEW finalPayload: $finalPayload")
+                        } else {
+                            return ""
+                        }
+                    }
+                }
+                catch (e: IOException) {
+                    Log.e("Helper", "callGroqChatAPI IO Exception on attempt $attempt: ${e.message}")
+                    lastException = e
+                    delay(2000L * (attempt + 1))
+                }
+                catch (e: Exception) {
+                    Log.e("Helper", "callGroqChatAPI Unexpected Exception: $e")
+                    FirebaseCrashlytics.getInstance().recordException(e)
+                    return ""
+                }
+                attempt++
+            }
+            lastException?.let {
+                // throw it
+                return ""
+            }
+            return ""
+        }
+
         suspend fun callTogetherChatAPI(context: Context, payload: JSONObject): String {
             var lastException: IOException? = null
             val minRequestInterval = 1000L  // Minimum interval between requests in milliseconds

@@ -278,7 +278,7 @@ Real-Time System Data:
 $systemData
 """.trimIndent()
 
-        val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 15)
+        val messagesListUiCopy = Helpers.messageDataWindow(messagesListUI.toString(), 3)
         // Log.i("Main", "createMiaResponse og messagesListUiCopy: $messagesListUiCopy")
         messagesListUiCopy.remove(messagesListUiCopy.length() - 1)
         // Log.i("Main", "createMiaResponse new messagesListUiCopy: $messagesListUiCopy")
@@ -320,14 +320,14 @@ $withOrWithoutContextMemory
         val assistantMessage = withContext(Dispatchers.IO) {
             // Creating payload for assistant response
             val replyPayload = JSONObject().apply {
-                put("model", getString(R.string.openchat3_5))
+                put("model", getString(R.string.mixtral_8x7b_32768))
                 put("messages", messagesListData)
                 put("seed", 48)
                 put("max_tokens", 512)
                 put("temperature", 0)
             }
             Log.i("Main", "createMiaResponse replyPayload\n$replyPayload")
-            Helpers.callTogetherChatAPI(this@Main, replyPayload)
+            Helpers.callGroqChatAPI(this@Main, replyPayload)
         }
         Log.i("Main", "createMiaResponse assistantMessage\n$assistantMessage")
 
@@ -420,7 +420,7 @@ $withOrWithoutContextMemory
 
         // Final output vectors to be used as context memory
         val contextMemoryDumpString = withContext(Dispatchers.IO) {
-            Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 10) { _ , _ -> }
+            Helpers.callPineconeFetchAPI(queryVectorArrayJson, filterJsonObject, 3) { _ , _ -> }
         }.toString()
 
         val contextMemoryDumpJSONArray = JSONArray(JSONObject(contextMemoryDumpString).getString("matches"))
@@ -433,7 +433,7 @@ $withOrWithoutContextMemory
                 append("$date - $text\n")
             }
         }
-        // Log.i("Main", "ragStringDump contextMemoryDumpFormattedString\n$contextMemoryDumpFormattedString")
+        Log.i("Main", "ragStringDump contextMemoryDumpFormattedString\n$contextMemoryDumpFormattedString")
 
         return contextMemoryDumpFormattedString
     }
