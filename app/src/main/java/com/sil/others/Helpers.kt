@@ -43,14 +43,14 @@ import java.util.Locale
 class Helpers {
     companion object {
         // region API Keys
-        private const val bucketName = BuildConfig.BUCKET_NAME
-        private const val awsAccessKey = BuildConfig.AWS_ACCESS_KEY
-        private const val awsSecretKey = BuildConfig.AWS_SECRET_KEY
-        private const val awsApiEndpoint = BuildConfig.AWS_API_ENDPOINT
+        private const val BUCKET_NAME = BuildConfig.BUCKET_NAME
+        private const val AWS_ACCESS_KEY = BuildConfig.AWS_ACCESS_KEY
+        private const val AWS_SECRET_KEY = BuildConfig.AWS_SECRET_KEY
+        private const val AWS_API_ENDPOINT = BuildConfig.AWS_API_ENDPOINT
         // endregion
 
         // region Init Related
-        private val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
+        private val credentials = BasicAWSCredentials(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         private val s3Client = AmazonS3Client(credentials)
         // endregion
 
@@ -89,7 +89,7 @@ class Helpers {
 
                     // Start upload
                     FileInputStream(it).use { fileInputStream ->
-                        val audioRequest = PutObjectRequest(bucketName, audioKeyName, fileInputStream, audioMetadata)
+                        val audioRequest = PutObjectRequest(BUCKET_NAME, audioKeyName, fileInputStream, audioMetadata)
                         try {
                             s3Client.putObject(audioRequest)
                             Log.d("Helper", "Uploaded to S3!")
