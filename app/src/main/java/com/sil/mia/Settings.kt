@@ -1,7 +1,6 @@
 package com.sil.mia
 
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.Editable
@@ -13,7 +12,6 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.sil.others.Helpers
-
 
 class Settings : AppCompatActivity() {
     // region Vars
@@ -153,11 +151,6 @@ class Settings : AppCompatActivity() {
     private fun buttonSetup() {
         backButton.setOnClickListener {
             onBackPressed()
-        }
-
-        dataDumpButton.setOnClickListener {
-            val intent = Intent(this, DataDump::class.java)
-            this.startActivity(intent)
         }
     }
 
