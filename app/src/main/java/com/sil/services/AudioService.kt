@@ -1,7 +1,11 @@
 package com.sil.services
 
 import android.Manifest
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -11,23 +15,18 @@ import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.sil.listeners.SensorListener
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
-import com.sil.listeners.SensorListener
-import com.sil.receivers.ThoughtsAlarmReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 class AudioService : Service() {
     // region Vars
@@ -197,7 +196,7 @@ class AudioService : Service() {
             // )
         }
     }
-    private suspend fun createMetadataJson(audioFileName: String): JSONObject {
+    private fun createMetadataJson(audioFileName: String): JSONObject {
         val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
         val metadataJson = JSONObject()
 
