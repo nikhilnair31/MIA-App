@@ -26,7 +26,7 @@ class Setup : AppCompatActivity() {
     private val batteryUnrestrictedRequestCode = 103
 
     private lateinit var usernameEditText: EditText
-    
+
     private lateinit var permissionButton: Button
 
     private lateinit var updateAndNextButton: ImageButton
@@ -44,6 +44,7 @@ class Setup : AppCompatActivity() {
         updateAndNextButton = findViewById(R.id.buttonUpdateAndNext)
 
         buttonSetup()
+        updatePermissionButtonColor()
     }
 
     private fun buttonSetup() {
@@ -54,6 +55,19 @@ class Setup : AppCompatActivity() {
         }
         updateAndNextButton.setOnClickListener {
             goToMain()
+        }
+    }
+    private fun updatePermissionButtonColor() {
+        if (areAllPermissionsGranted()) {
+            // Change button color to green (use your specific green color resource)
+            permissionButton.setBackgroundColor(ContextCompat.getColor(this, R.color.accent_0))
+            permissionButton.setTextColor(ContextCompat.getColor(this, R.color.white))
+            permissionButton.text = getString(R.string.gavePermissionsText)
+        } else {
+            // Keep or reset to default color
+            permissionButton.setBackgroundColor(ContextCompat.getColor(this, R.color.white))
+            permissionButton.setTextColor(ContextCompat.getColor(this, R.color.gray_70))
+            permissionButton.text = getString(R.string.givePermissionsText)
         }
     }
     private fun goToMain() {
@@ -67,7 +81,7 @@ class Setup : AppCompatActivity() {
             launchMainActivity()
         }
         else {
-            Helpers.showToast(this, "Invalid entries")
+            Helpers.showToast(this, "Invalid username")
         }
     }
     private fun launchMainActivity() {
@@ -79,14 +93,9 @@ class Setup : AppCompatActivity() {
 
     // region Permissions Related
     private fun permissionRelated() {
-        // TODO: Update this to change permissions bar color when all granted
         Log.i("Main", "Requesting initial permissions")
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-            || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            || ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED
-            || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (!areAllPermissionsGranted()) {
             val permList = arrayOf(
                 Manifest.permission.RECORD_AUDIO,
                 Manifest.permission.POST_NOTIFICATIONS,
@@ -97,25 +106,39 @@ class Setup : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, permList, initRequestCode)
         }
     }
-    private fun getBackgroundLocationPermission() {
-        Log.i("Main", "Requesting getBackgroundLocationPermission")
+    private fun areAllPermissionsGranted(): Boolean {
+        // Check for all regular permissions
+        val hasAudioPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val hasNotificationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        val hasSensorPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED
+        val hasFineLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarseLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasBackgroundLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            val permList = arrayOf(
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            )
-            ActivityCompat.requestPermissions(this, permList, backgroundLocationRequestCode)
+        // Check for battery optimization exemption
+        val powerManager = this.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isBatteryOptimizationIgnored = powerManager.isIgnoringBatteryOptimizations(this.packageName)
+
+        val hasAllPermissions = hasAudioPermission && hasNotificationPermission && hasSensorPermission &&
+                hasFineLocationPermission && hasCoarseLocationPermission &&
+                hasBackgroundLocationPermission && isBatteryOptimizationIgnored
+        Log.i("Main", "hasAllPermissions: $hasAllPermissions")
+
+        return hasAllPermissions
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == batteryUnrestrictedRequestCode) {
+            // Check if permission was granted
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                Log.i("Permissions", "Battery optimization ignored")
+                // Update button color
+                updatePermissionButtonColor()
+            }
         }
     }
-    private fun getBatteryUnrestrictedPermission() {
-        Log.i("Main", "Requesting getBatteryUnrestrictedPermission")
-
-        if (!(this.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(this.packageName)) {
-            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-            startActivityForResult(intent, batteryUnrestrictedRequestCode)
-        }
-    }
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
@@ -136,10 +159,29 @@ class Setup : AppCompatActivity() {
             batteryUnrestrictedRequestCode -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     Log.i("Permissions", "batteryUnrestrictedRequestCode granted")
+                    updatePermissionButtonColor()
                     launchMainActivity()
                 }
                 return
             }
+        }
+    }
+    private fun getBackgroundLocationPermission() {
+        Log.i("Main", "Requesting getBackgroundLocationPermission")
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            val permList = arrayOf(
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            )
+            ActivityCompat.requestPermissions(this, permList, backgroundLocationRequestCode)
+        }
+    }
+    private fun getBatteryUnrestrictedPermission() {
+        Log.i("Main", "Requesting getBatteryUnrestrictedPermission")
+
+        if (!(this.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(this.packageName)) {
+            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            startActivityForResult(intent, batteryUnrestrictedRequestCode)
         }
     }
     // endregion

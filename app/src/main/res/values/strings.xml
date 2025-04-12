@@ -21,7 +21,8 @@
     <string name="setupDataText">DATA</string>
 
     <string name="permissionsText">PERMISSIONS</string>
-    <string name="givePermissionsText">GIVE PERMISSIONS</string>
+    <string name="gavePermissionsText">ALL PERMISSIONS GRANTED!</string>
+    <string name="givePermissionsText">GRANT ALL PERMISSIONS</string>
 
     <string name="settingsButtonDescription">settings button</string>
     <string name="sendButtonDescription">send</string>
@@ -32,31 +33,6 @@
     <string name="settingsUsernameText">USERNAME: abc</string>
     <string name="settingsPreprocessAudio">PREPROCES AUDIO</string>
 
-    <string name="deleteButtonDescription">delete button</string>
-    <string name="downloadButtonDescription">download button</string>
-
-    <string name="address">ADDRESS</string>
-    <string name="weather">WEATHER</string>
-    <string name="transcript">TRANSCRIPT</string>
-    <string name="source">SOURCE</string>
-    <string name="updated">Updated</string>
-
-    <string name="dataComplete">complete</string>
-    <string name="dataData">data</string>
-    <string name="dataUi">ui</string>
-
     <string name="gpt4turbo" tools:ignore="TypographyDashes">gpt-4-turbo-preview</string>
-    <string name="gpt3_5turbo" tools:ignore="TypographyDashes">gpt-3.5-turbo</string>
-    <string name="gpt3_5turbo_16k" tools:ignore="TypographyDashes">gpt-3.5-turbo-16k-0613</string>
-    <string name="gemma_7b_it" tools:ignore="TypographyDashes">gemma-7b-it</string>
-    <string name="llama2_70b_4096" tools:ignore="TypographyDashes">llama2-70b-4096</string>
-    <string name="mixtral_8x7b_32768" tools:ignore="TypographyDashes">mixtral-8x7b-32768</string>
-    <string name="mixtral_8x7b_instruct_v1" tools:ignore="TypographyDashes">mistralai/Mixtral-8x7B-Instruct-v0.1</string>
-    <string name="mistral_8x7b_instruct_v2" tools:ignore="TypographyDashes">mistralai/Mistral-7B-Instruct-v0.2</string>
-    <string name="openchat3_5" tools:ignore="TypographyDashes">openchat/openchat-3.5-1210</string>
-    <string name="openhermes_2_5_mistral_7b" tools:ignore="TypographyDashes">teknium/OpenHermes-2p5-Mistral-7B</string>
-
-    <string name="addressURL">https://geocode.maps.co/reverse</string>
-    <string name="weatherURL">https://api.openweathermap.org/data/2.5/weather</string>
 
 </resources>

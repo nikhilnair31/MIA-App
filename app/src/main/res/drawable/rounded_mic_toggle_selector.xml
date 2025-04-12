@@ -11,7 +11,7 @@
             </item>
 
             <item
-                android:drawable="@drawable/ic_baseline_mic_24"
+                android:drawable="@drawable/ic_baseline_mic_on_24"
                 android:gravity="center"/>
         </layer-list>
     </item>
@@ -20,7 +20,7 @@
         <layer-list>
             <item>
                 <shape>
-                    <solid android:color="@color/gray_8"/>
+                    <solid android:color="@color/gray_90"/>
                     <corners android:radius="@dimen/softCorners"/>
                 </shape>
             </item>

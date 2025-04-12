@@ -110,7 +110,7 @@
                 android:layout_marginTop="8dp"
                 android:padding="24dp"
 
-                android:backgroundTint="@color/gray_5"
+                android:backgroundTint="@color/white"
                 android:background="@drawable/message_background"
                 android:fontFamily="@font/venus_cormier"
 
@@ -150,7 +150,7 @@
 
                 android:layout_marginTop="8dp"
 
-                android:backgroundTint="@color/gray_5"
+                android:backgroundTint="@color/white"
                 android:background="@drawable/message_background"
 
                 app:layout_constraintEnd_toEndOf="parent"
@@ -253,7 +253,7 @@
 
                 android:layout_marginTop="8dp"
 
-                android:backgroundTint="@color/gray_5"
+                android:backgroundTint="@color/white"
                 android:background="@drawable/message_background"
 
                 app:layout_constraintEnd_toEndOf="parent"
@@ -319,7 +319,7 @@
 
                 android:layout_marginTop="8dp"
 
-                android:backgroundTint="@color/gray_5"
+                android:backgroundTint="@color/white"
                 android:background="@drawable/message_background"
 
                 app:layout_constraintEnd_toEndOf="parent"

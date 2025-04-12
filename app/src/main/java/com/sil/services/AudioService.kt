@@ -210,15 +210,9 @@ class AudioService : Service() {
 
         // Add audio downloading/cleaning related metadata
         val saveAudioFilesState = sharedPrefs.getString("saveAudioFiles", "false")
-        metadataJson.put("saveaudiofiles", saveAudioFilesState)
-        val cleanAudioFilesState = sharedPrefs.getString("cleanAudio", "false")
-        metadataJson.put("cleanaudio", cleanAudioFilesState)
-        val filterMusicState = sharedPrefs.getString("filterMusic", "false")
-        metadataJson.put("filtermusic", filterMusicState)
-        val normalizeLoudnessState = sharedPrefs.getString("normalizeLoudness", "false")
-        metadataJson.put("normalizeloudness", normalizeLoudnessState)
-        val removeSilenceState = sharedPrefs.getString("removeSilence", "false")
-        metadataJson.put("removesilence", removeSilenceState)
+        metadataJson.put("saveaudiofile", saveAudioFilesState)
+        val preprocessAudioFilesState = sharedPrefs.getString("preprocessAudio", "false")
+        metadataJson.put("preprocessaudiofile", preprocessAudioFilesState)
 
         // Pull individual keys and values from system data into metadata JSON
         val systemData = Helpers.pullDeviceData(this@AudioService, sensorListener)
