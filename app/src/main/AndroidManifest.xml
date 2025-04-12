@@ -29,18 +29,6 @@
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />
 
-        <receiver
-            android:name="com.sil.receivers.ThoughtsAlarmReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.sil.mia.THOUGHT_ALARM_RECEIVER_ACTION" />
-            </intent-filter>
-        </receiver>
-        <receiver
-            android:name="com.sil.receivers.RefreshAlarmReceiver"
-            android:exported="false">
-        </receiver>
-
         <service
             android:name="com.sil.services.AudioService"
             android:foregroundServiceType="microphone"
@@ -59,19 +47,10 @@
             android:name=".Setup"
             android:exported="false" />
         <activity
-            android:name=".Permissions"
-            android:exported="false" />
-        <activity
             android:name=".Main"
             android:exported="false" />
         <activity
             android:name=".Settings"
-            android:exported="false" />
-        <activity
-            android:name=".DataDump"
-            android:exported="false" />
-        <activity
-            android:name=".DataIndividual"
             android:exported="false" />
     </application>
 

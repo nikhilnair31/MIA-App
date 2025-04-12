@@ -5,15 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageButton
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.sil.others.Helpers
@@ -30,15 +29,6 @@ class Setup : AppCompatActivity() {
     
     private lateinit var permissionButton: Button
 
-    private lateinit var thoughtsStartTimeEditText: EditText
-    private lateinit var thoughtsEndTimeEditText: EditText
-    
-    private lateinit var audioSaveCheckbox: CheckBox
-    private lateinit var cleanAudioCheckbox: CheckBox
-    private lateinit var filterMusicCheckbox: CheckBox
-    private lateinit var normalizeLoudnessCheckbox: CheckBox
-    private lateinit var removeSilenceCheckbox: CheckBox
-
     private lateinit var updateAndNextButton: ImageButton
     // endregion
 
@@ -51,17 +41,9 @@ class Setup : AppCompatActivity() {
 
         usernameEditText = findViewById(R.id.usernameEditText)
         permissionButton = findViewById(R.id.buttonPermission)
-        thoughtsStartTimeEditText = findViewById(R.id.thoughtsStartTimeEditText)
-        thoughtsEndTimeEditText = findViewById(R.id.thoughtsEndTimeEditText)
-        audioSaveCheckbox = findViewById(R.id.audioSaveCheckbox)
-        cleanAudioCheckbox = findViewById(R.id.cleanAudioCheckbox)
-        filterMusicCheckbox = findViewById(R.id.filterMusicCheckbox)
-        normalizeLoudnessCheckbox = findViewById(R.id.normalizeLoudnessCheckbox)
-        removeSilenceCheckbox = findViewById(R.id.removeSilenceCheckbox)
         updateAndNextButton = findViewById(R.id.buttonUpdateAndNext)
 
         buttonSetup()
-        checkboxSetup()
     }
 
     private fun buttonSetup() {
@@ -76,28 +58,19 @@ class Setup : AppCompatActivity() {
     }
     private fun goToMain() {
         val userNameText = usernameEditText.text.toString()
-        val thoughtsStartTime = thoughtsStartTimeEditText.text.toString()
-        val thoughtsEndTime = thoughtsEndTimeEditText.text.toString()
 
-        if (userNameText.isNotEmpty() && thoughtsStartTime.isNotEmpty() && thoughtsEndTime.isNotEmpty()) {
-            Log.i("Setup", "goToMain\nuserName: $userNameText\nthoughtsStartTime: $thoughtsStartTime - thoughtsEndTime: $thoughtsEndTime")
+        if (userNameText.isNotEmpty()) {
+            Log.i("Setup", "goToMain\nuserName: $userNameText")
 
             generalSharedPreferences.edit().putString("userName", userNameText).apply()
-            generalSharedPreferences.edit().putInt("thoughtsStartTime", thoughtsStartTime.toInt()).apply()
-            generalSharedPreferences.edit().putInt("thoughtsEndTime", thoughtsEndTime.toInt()).apply()
-            generalSharedPreferences.edit().putString("saveAudioFiles", audioSaveCheckbox.isChecked.toString().lowercase()).apply()
-            generalSharedPreferences.edit().putString("cleanAudio", cleanAudioCheckbox.isChecked.toString().lowercase()).apply()
-            generalSharedPreferences.edit().putString("filterMusic", filterMusicCheckbox.isChecked.toString().lowercase()).apply()
-            generalSharedPreferences.edit().putString("normalizeLoudness", normalizeLoudnessCheckbox.isChecked.toString().lowercase()).apply()
-            generalSharedPreferences.edit().putString("removeSilence", removeSilenceCheckbox.isChecked.toString().lowercase()).apply()
 
-            launchChatActivity()
+            launchMainActivity()
         }
         else {
             Helpers.showToast(this, "Invalid entries")
         }
     }
-    private fun launchChatActivity() {
+    private fun launchMainActivity() {
         val intent = Intent(this, Main::class.java)
         startActivity(intent)
         finish()
@@ -163,54 +136,9 @@ class Setup : AppCompatActivity() {
             batteryUnrestrictedRequestCode -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     Log.i("Permissions", "batteryUnrestrictedRequestCode granted")
-                    launchChatActivity()
+                    launchMainActivity()
                 }
                 return
-            }
-        }
-    }
-    // endregion
-
-    // region Checkboxes
-    private fun checkboxSetup() {
-        audioSaveCheckbox.isChecked =  generalSharedPreferences.getString("saveAudioFiles", "false").toBoolean()
-        cleanAudioCheckbox.isChecked =  generalSharedPreferences.getString("cleanAudio", "false").toBoolean()
-        filterMusicCheckbox.isChecked =  generalSharedPreferences.getString("filterMusic", "false").toBoolean()
-        normalizeLoudnessCheckbox.isChecked =  generalSharedPreferences.getString("normalizeLoudness", "false").toBoolean()
-        removeSilenceCheckbox.isChecked =  generalSharedPreferences.getString("removeSilence", "false").toBoolean()
-
-        // Check clean audio if any of the other checkboxes is checked
-        if (audioSaveCheckbox.isChecked || filterMusicCheckbox.isChecked || normalizeLoudnessCheckbox.isChecked || removeSilenceCheckbox.isChecked) {
-            cleanAudioCheckbox.isChecked = true
-        }
-
-        audioSaveCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            generalSharedPreferences.edit().putString("saveAudioFiles", isChecked.toString()).apply()
-        }
-        cleanAudioCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            generalSharedPreferences.edit().putString("cleanAudio", isChecked.toString()).apply()
-            if (!isChecked) {
-                filterMusicCheckbox.isChecked = false
-                normalizeLoudnessCheckbox.isChecked = false
-                removeSilenceCheckbox.isChecked = false
-            }
-        }
-        filterMusicCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            generalSharedPreferences.edit().putString("filterMusic", isChecked.toString()).apply()
-            if (isChecked) {
-                cleanAudioCheckbox.isChecked = true
-            }
-        }
-        normalizeLoudnessCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            generalSharedPreferences.edit().putString("normalizeLoudness", isChecked.toString()).apply()
-            if (isChecked) {
-                cleanAudioCheckbox.isChecked = true
-            }
-        }
-        removeSilenceCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            generalSharedPreferences.edit().putString("removeSilence", isChecked.toString()).apply()
-            if (isChecked) {
-                cleanAudioCheckbox.isChecked = true
             }
         }
     }

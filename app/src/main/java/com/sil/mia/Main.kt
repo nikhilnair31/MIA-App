@@ -18,10 +18,6 @@ class Main : AppCompatActivity() {
 
     private lateinit var generalSharedPref: SharedPreferences
     private lateinit var dataSharedPref: SharedPreferences
-
-    private var alarmIntervalInMin: Double = 5.0
-    private var refreshIntervalInMin: Double = 5.0
-    private var maxDataMessages: Int = 20
     // endregion
 
     // region Common
@@ -40,12 +36,6 @@ class Main : AppCompatActivity() {
         generalSharedPref = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
         generalSharedPref.edit().putBoolean("isFirstRun", false).apply()
-        val userName = generalSharedPref.getString("userName", null)
-
-        // Set integer values
-        alarmIntervalInMin = resources.getInteger(R.integer.alarmIntervalInMin).toDouble()
-        refreshIntervalInMin = resources.getInteger(R.integer.refreshIntervalInMin).toDouble()
-        maxDataMessages = resources.getInteger(R.integer.maxDataMessages)
 
         settingsButton = findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener {

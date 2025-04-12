@@ -15,8 +15,9 @@
     <string name="setupThoughtsTimingText">SHOW TIME</string>
     <string name="setupThoughtsStartTimeText">6</string>
     <string name="setupThoughtsEndTimeText">23</string>
-    <string name="setupAudioSavingText">SAVING</string>
-    <string name="setupAudioCleaningText">AUDIO CLEANING</string>
+    <string name="setupAudioText">SAVING</string>
+    <string name="setupAudioSavingText">SAVE AUDIO</string>
+    <string name="setupAudioCleaningText">AUDIO</string>
     <string name="setupDataText">DATA</string>
 
     <string name="permissionsText">PERMISSIONS</string>
@@ -29,16 +30,7 @@
     <string name="settingsText">SETTINGS</string>
     <string name="settingsImageDescription">user image</string>
     <string name="settingsUsernameText">USERNAME: abc</string>
-    <string name="settingsDataDumpText">WEEKLY DUMP</string>
-    <string name="settingsAudioSaveText">SAVE AUDIO FILES</string>
-    <string name="settingsCleanAudioText">CLEAN AUDIO</string>
-    <string name="settingsFilterMusicText">FILTER MUSIC</string>
-    <string name="settingsNormalizeLoudnessText">NORMALIZE LOUDNESS</string>
-    <string name="settingsRemoveSilenceText">REMOVE SILENCE</string>
-
-    <string name="dataDumpText">MONTHLY DUMP</string>
-    <string name="noDataText">NO DATA</string>
-    <string name="loadingText">LOADING…</string>
+    <string name="settingsPreprocessAudio">PREPROCES AUDIO</string>
 
     <string name="deleteButtonDescription">delete button</string>
     <string name="downloadButtonDescription">download button</string>

@@ -125,47 +125,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/usernameTextView" />
 
-            <!-- Data Related -->
-            <TextView
-                android:id="@+id/weeklyDumpTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-
-                android:layout_marginTop="8dp"
-                android:padding="12dp"
-
-                android:gravity="center"
-
-                android:text="@string/setupDataText"
-                android:textColor="@color/accent_1"
-                android:textSize="14sp"
-                android:fontFamily="@font/venus_cormier"
-
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/removeSilenceLayout" />
-            <Button
-                android:id="@+id/dataDumpButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-
-                android:layout_marginTop="8dp"
-                android:padding="24dp"
-
-                android:backgroundTint="@color/gray_5"
-
-                android:fontFamily="@font/venus_cormier"
-                android:gravity="center"
-                android:radius="@dimen/softCorners"
-                android:text="@string/settingsDataDumpText"
-                android:textAllCaps="false"
-                android:textColor="@color/gray_70"
-
-                android:textSize="14sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/weeklyDumpTextView" />
-
             <!-- Thoughts Related-->
             <TextView
                 android:id="@+id/thoughtsTextView"
@@ -280,7 +239,7 @@
 
                 android:gravity="center"
                 android:padding="12dp"
-                android:text="@string/setupAudioSavingText"
+                android:text="@string/setupAudioText"
                 android:textColor="@color/accent_1"
                 android:textSize="14sp"
 
@@ -309,7 +268,7 @@
                     android:fontFamily="@font/venus_cormier"
                     android:gravity="start|center_vertical"
                     android:padding="12dp"
-                    android:text="@string/settingsAudioSaveText"
+                    android:text="@string/setupAudioSavingText"
 
                     android:textColor="@color/gray_70"
                     android:textSize="14sp"
@@ -375,7 +334,7 @@
                     android:fontFamily="@font/venus_cormier"
                     android:gravity="start|center_vertical"
                     android:padding="12dp"
-                    android:text="@string/settingsCleanAudioText"
+                    android:text="@string/settingsPreprocessAudio"
 
                     android:textColor="@color/gray_70"
                     android:textSize="14sp"
@@ -384,7 +343,7 @@
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <CheckBox
-                    android:id="@+id/cleanAudioCheckbox"
+                    android:id="@+id/preprocessAudioCheckbox"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="0dp"
@@ -400,148 +359,6 @@
                     app:layout_constraintTop_toTopOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/audioFilterMusicLayout"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-
-                android:layout_marginTop="8dp"
-
-                android:backgroundTint="@color/gray_5"
-                android:background="@drawable/message_background"
-
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/audioCleanLayout">
-
-                <TextView
-                    android:id="@+id/textView4"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-
-                    android:fontFamily="@font/venus_cormier"
-                    android:gravity="start|center_vertical"
-
-                    android:padding="12dp"
-                    android:text="@string/settingsFilterMusicText"
-                    android:textColor="@color/gray_70"
-                    android:textSize="14sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <CheckBox
-                    android:id="@+id/filterMusicCheckbox"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="0dp"
-
-                    android:checked="false"
-                    android:text=""
-                    android:textColor="@color/accent_0"
-
-                    android:textSize="18sp"
-
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/audioNormalizeLoudnessLayout"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-
-                android:layout_marginTop="8dp"
-
-                android:backgroundTint="@color/gray_5"
-                android:background="@drawable/message_background"
-
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/audioFilterMusicLayout">
-
-                <TextView
-                    android:id="@+id/textView5"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-
-                    android:fontFamily="@font/venus_cormier"
-                    android:gravity="start|center_vertical"
-
-                    android:padding="12dp"
-                    android:text="@string/settingsNormalizeLoudnessText"
-                    android:textColor="@color/gray_70"
-                    android:textSize="14sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <CheckBox
-                    android:id="@+id/normalizeLoudnessCheckbox"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="0dp"
-
-                    android:checked="false"
-                    android:text=""
-                    android:textColor="@color/accent_0"
-
-                    android:textSize="18sp"
-
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/removeSilenceLayout"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-
-                android:layout_marginTop="8dp"
-
-                android:backgroundTint="@color/gray_5"
-                android:background="@drawable/message_background"
-
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/audioNormalizeLoudnessLayout">
-
-                <TextView
-                    android:id="@+id/textView6"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-
-                    android:fontFamily="@font/venus_cormier"
-                    android:gravity="start|center_vertical"
-
-                    android:padding="12dp"
-                    android:text="@string/settingsRemoveSilenceText"
-                    android:textColor="@color/gray_70"
-                    android:textSize="14sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <CheckBox
-                    android:id="@+id/removeSilenceCheckbox"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="0dp"
-
-                    android:checked="false"
-                    android:text=""
-                    android:textColor="@color/accent_0"
-
-                    android:textSize="18sp"
-
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
         </LinearLayout>
 
     </ScrollView>

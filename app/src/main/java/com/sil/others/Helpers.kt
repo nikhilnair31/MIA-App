@@ -20,6 +20,8 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.regions.Region
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
@@ -51,7 +53,9 @@ class Helpers {
 
         // region Init Related
         private val credentials = BasicAWSCredentials(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        private val s3Client = AmazonS3Client(credentials)
+        private val s3Client = AmazonS3Client(credentials).apply {
+            setRegion(Region.getRegion(Regions.AP_SOUTH_1))
+        }
         // endregion
 
         // region S3 Related
@@ -88,6 +92,7 @@ class Helpers {
                     }
 
                     // Start upload
+                    Log.d("Helper", "Starting upload of $audioKeyName to $BUCKET_NAME")
                     FileInputStream(it).use { fileInputStream ->
                         val audioRequest = PutObjectRequest(BUCKET_NAME, audioKeyName, fileInputStream, audioMetadata)
                         try {
@@ -144,12 +149,12 @@ class Helpers {
 
             // region Time
             finalOutput.put("currenttimeformattedstring", pullTimeFormattedString())
-            Log.d("Helper", "pullDeviceData calendar finalOutput: $finalOutput")
+            // Log.d("Helper", "pullDeviceData calendar finalOutput: $finalOutput")
             // endregion
             // region Battery
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             finalOutput.put("batterylevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
-            Log.d("Helper", "pullDeviceData Battery finalOutput: $finalOutput")
+            // Log.d("Helper", "pullDeviceData Battery finalOutput: $finalOutput")
             // endregion
             // region Location
             if (hasLocationPermission(context)) {
@@ -170,7 +175,7 @@ class Helpers {
                     else -> "unknown"
                 })
             }
-            Log.d("Helper", "pullDeviceData Motion finalOutput: $finalOutput")
+            // Log.d("Helper", "pullDeviceData Motion finalOutput: $finalOutput")
             // endregion
 
             Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
