@@ -73,7 +73,7 @@ class Helpers {
                     // Upload audio file
                     val generalSharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
                     val userName = generalSharedPrefs.getString("userName", null)
-                    val audioKeyName = "$userName/recordings/${it.name}"
+                    val audioKeyName = "data/$userName/recordings/${it.name}"
 
                     // Metadata
                     val audioMetadata = ObjectMetadata()

@@ -34,6 +34,9 @@ class AudioService : Service() {
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
     private var maxRecordingTimeInMin = 5
+    private var recordingEncodingBitrate = 32000
+    private var recordingSamplingRate = 16000
+    private var recordingChannels = 1
 
     private val listeningChannelId = "AudioRecordingServiceChannel"
     private val listeningChannelName = "MIA Listening Channel"
@@ -70,6 +73,9 @@ class AudioService : Service() {
 
         // Set integer values
         maxRecordingTimeInMin = resources.getInteger(R.integer.maxRecordingTimeInMin)
+        recordingEncodingBitrate = resources.getInteger(R.integer.recordingEncodingBitrate)
+        recordingSamplingRate = resources.getInteger(R.integer.recordingSamplingRate)
+        recordingChannels = resources.getInteger(R.integer.recordingChannels)
     }
     // endregion
 
@@ -124,9 +130,9 @@ class AudioService : Service() {
             setAudioSource(MediaRecorder.AudioSource.DEFAULT)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setAudioSamplingRate(44100) // Set CD quality sampling rate
-            setAudioEncodingBitRate(128000) // Set a higher bit rate for better quality
-            setAudioChannels(2) // Set for stereo recording
+            setAudioSamplingRate(recordingSamplingRate)
+            setAudioEncodingBitRate(recordingEncodingBitrate)
+            setAudioChannels(recordingChannels)
             setMaxDuration(maxRecordingTimeInMin * 60 * 1000)
             setOutputFile(audioFile.absolutePath)
             prepare()

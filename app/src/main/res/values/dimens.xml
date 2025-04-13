@@ -6,11 +6,8 @@
     <dimen name="lineThickness">2dp</dimen>
 
     <!-- Vars -->
-    <integer name="alarmIntervalInMin">60</integer>
-    <integer name="refreshIntervalInMin">5</integer>
-    <integer name="maxDataMessages">5</integer>
-    <integer name="maxRecordingTimeInMin">5</integer>
-    <integer name="maxFetchCount">50</integer>
-    <integer name="maxConversationHistoryMessages">5</integer>
-    <integer name="maxRecordingsContextItems">5</integer>
+    <integer name="maxRecordingTimeInMin">15</integer>
+    <integer name="recordingEncodingBitrate">32000</integer>
+    <integer name="recordingSamplingRate">16000</integer>
+    <integer name="recordingChannels">1</integer>
 </resources>
