@@ -15,6 +15,8 @@ import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.sil.listeners.SensorListener
 import com.sil.mia.Main
 import com.sil.mia.R
@@ -22,11 +24,13 @@ import com.sil.others.Helpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class AudioService : Service() {
     // region Vars
@@ -46,6 +50,10 @@ class AudioService : Service() {
     private val listeningNotificationText = "MIA is active"
     private val listeningNotificationIcon = R.drawable.mia_stat_name
     private val listeningNotificationId = 1
+
+    private val thoughtsChannelId = "MiaThoughtsChannel"
+    private val thoughtsChannelName = "MIA Thoughts Channel"
+    private val thoughtsChannelImportance = NotificationManager.IMPORTANCE_DEFAULT
     // endregion
 
     // region Common
@@ -71,6 +79,9 @@ class AudioService : Service() {
         startForeground(listeningNotificationId, createNotification())
         startListening()
 
+        // Create the thoughts notification channel
+        createThoughtsNotificationChannel()
+
         // Set integer values
         maxRecordingTimeInMin = resources.getInteger(R.integer.maxRecordingTimeInMin)
         recordingEncodingBitrate = resources.getInteger(R.integer.recordingEncodingBitrate)
@@ -80,6 +91,51 @@ class AudioService : Service() {
     // endregion
 
     // region Notification Related
+    private fun createThoughtsNotificationChannel() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            thoughtsChannelId,
+            thoughtsChannelName,
+            thoughtsChannelImportance
+        ).apply {
+            description = "Channel for MIA thoughts and insights"
+        }
+        notificationManager.createNotificationChannel(channel)
+    }
+    private suspend fun checkIfShouldNotify(jsonResponse: JSONObject) {
+        val showNotification = jsonResponse.optBoolean("notification_to_show", false)
+        if (showNotification && jsonResponse.has("notification_content")) {
+            val content = jsonResponse.optString("notification_content", "")
+            if (content.isNotEmpty()) {
+                withContext(Dispatchers.Main) {
+                    showThoughtsNotification(content)
+                }
+            }
+        }
+    }
+    private fun showThoughtsNotification(content: String) {
+        val intent = Intent(this, Main::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+
+        val notificationId = UUID.randomUUID().hashCode()
+        val notification = NotificationCompat.Builder(this, thoughtsChannelId)
+            .setSmallIcon(R.drawable.mia_stat_name)
+            .setContentTitle("MIA Thought")
+            .setContentText(content)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        val notificationManager = NotificationManagerCompat.from(this)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            notificationManager.notify(notificationId, notification)
+        } else {
+            Log.e("AudioRecord", "Notification permission not granted")
+        }
+    }
     private fun createNotification(): Notification {
         Log.i("AudioRecord", "Creating notification channel")
 
@@ -140,6 +196,7 @@ class AudioService : Service() {
             setOnInfoListener { _, what, _ ->
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
                     Log.i("AudioRecord", "Max Recording Duration!")
+
                     stopRecordingAndUpload(audioFile)
                 }
             }
@@ -192,14 +249,14 @@ class AudioService : Service() {
                 createMetadataJson(audioFile.name)
             )
 
-            // FIXME: Improve Thoughts logic per audio recording
-            // Using an instance of ThoughtsAlarmReceiver for Thoughts system to comment on recent uploads
-            // ThoughtsAlarmReceiver().miaThought(
-            //     this@AudioService,
-            //     this@AudioService.getString(R.string.openhermes_2_5_mistral_7b),
-            //     10,
-            //     1
-            // )
+            // After uploading, call Lambda to check if we should send a notification
+            val metadataJson = createMetadataJson(audioFile.name)
+            try {
+                val jsonResponse = Helpers.callNotifLambda(this@AudioService, metadataJson)
+                checkIfShouldNotify(jsonResponse)
+            } catch (e: Exception) {
+                Log.e("AudioRecord", "Error calling notification lambda", e)
+            }
         }
     }
     private fun createMetadataJson(audioFileName: String): JSONObject {

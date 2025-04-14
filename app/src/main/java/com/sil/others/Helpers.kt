@@ -28,19 +28,24 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.sil.listeners.SensorListener
 import com.sil.mia.BuildConfig
 import com.sil.workers.UploadWorker
+import kotlinx.coroutines.delay
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.net.HttpURLConnection
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Collections
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class Helpers {
     companion object {
@@ -55,6 +60,69 @@ class Helpers {
         private val credentials = BasicAWSCredentials(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         private val s3Client = AmazonS3Client(credentials).apply {
             setRegion(Region.getRegion(Regions.AP_SOUTH_1))
+        }
+        // endregion
+
+        // region S3 Related
+        suspend fun callNotifLambda(context: Context, payload: JSONObject): JSONObject {
+            var lastException: IOException? = null
+            val minRequestInterval = 1000L  // Minimum interval between requests in milliseconds
+            var lastRequestTime = 0L
+            var attempt = 0
+
+            while (attempt < 3) {
+                try {
+                    // Check if enough time has passed since the last request
+                    val currentTime = System.currentTimeMillis()
+                    val timeSinceLastRequest = currentTime - lastRequestTime
+                    if (timeSinceLastRequest < minRequestInterval) {
+                        delay(minRequestInterval - timeSinceLastRequest)
+                    }
+
+                    // Update the last request time
+                    lastRequestTime = System.currentTimeMillis()
+
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .build()
+
+                    val mediaType = "application/json".toMediaTypeOrNull()
+                    val requestBody = payload.toString().toRequestBody(mediaType)
+
+                    val request = Request.Builder()
+                        .url(AWS_API_ENDPOINT)
+                        .post(requestBody)
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseCode = response.code
+
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val jsonResponse = JSONObject(response.body?.string() ?: "{}")
+                        Log.d("Helper", "callNotifLambda Response: $jsonResponse")
+
+                        return jsonResponse
+                    } else {
+                        val errorResponse = JSONObject(response.body?.string() ?: "{}")
+                        Log.e("Helper", "callNotifLambda Error Response: $errorResponse")
+                        return JSONObject()
+                    }
+                }
+                catch (e: IOException) {
+                    Log.e("Helper", "callNotifLambda IO Exception on attempt $attempt: ${e.message}")
+                    lastException = e
+                    delay(2000L * (attempt + 1))  // Exponential backoff
+                }
+
+                attempt++
+            }
+
+            lastException?.let {
+                Log.e("Helper", "callNotifLambda failed after all attempts", it)
+            }
+
+            return JSONObject()
         }
         // endregion
 
