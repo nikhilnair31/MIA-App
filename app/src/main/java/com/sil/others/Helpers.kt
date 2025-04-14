@@ -53,7 +53,7 @@ class Helpers {
         private const val BUCKET_NAME = BuildConfig.BUCKET_NAME
         private const val AWS_ACCESS_KEY = BuildConfig.AWS_ACCESS_KEY
         private const val AWS_SECRET_KEY = BuildConfig.AWS_SECRET_KEY
-        private const val AWS_API_ENDPOINT = BuildConfig.AWS_API_ENDPOINT
+        private const val NOTIFICATION_LAMBDA_ENDPOINT = BuildConfig.NOTIFICATION_LAMBDA_ENDPOINT
         // endregion
 
         // region Init Related
@@ -63,8 +63,8 @@ class Helpers {
         }
         // endregion
 
-        // region S3 Related
-        suspend fun callNotifLambda(context: Context, payload: JSONObject): JSONObject {
+        // region API Related
+        suspend fun callNotificationCheckLambda(context: Context, payload: JSONObject): JSONObject {
             var lastException: IOException? = null
             val minRequestInterval = 1000L  // Minimum interval between requests in milliseconds
             var lastRequestTime = 0L
@@ -89,22 +89,23 @@ class Helpers {
 
                     val mediaType = "application/json".toMediaTypeOrNull()
                     val requestBody = payload.toString().toRequestBody(mediaType)
+                    Log.d("Helper", "check requestBody: $requestBody")
 
                     val request = Request.Builder()
-                        .url(AWS_API_ENDPOINT)
+                        .url(NOTIFICATION_LAMBDA_ENDPOINT)
                         .post(requestBody)
                         .build()
 
                     val response = client.newCall(request).execute()
                     val responseCode = response.code
+                    val responseBodyString = response.body?.string()
 
                     if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val jsonResponse = JSONObject(response.body?.string() ?: "{}")
+                        val jsonResponse = JSONObject(responseBodyString ?: "{}")
                         Log.d("Helper", "callNotifLambda Response: $jsonResponse")
-
                         return jsonResponse
                     } else {
-                        val errorResponse = JSONObject(response.body?.string() ?: "{}")
+                        val errorResponse = JSONObject(responseBodyString ?: "{}")
                         Log.e("Helper", "callNotifLambda Error Response: $errorResponse")
                         return JSONObject()
                     }
@@ -123,6 +124,36 @@ class Helpers {
             }
 
             return JSONObject()
+        }
+        suspend fun callNotificationFeedbackLambda(context: Context, payload: JSONObject) {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .build()
+
+                val mediaType = "application/json".toMediaTypeOrNull()
+                val requestBody = payload.toString().toRequestBody(mediaType)
+                Log.d("Helper", "feedback requestBody: $requestBody")
+
+                val request = Request.Builder()
+                    .url(NOTIFICATION_LAMBDA_ENDPOINT)
+                    .post(requestBody)
+                    .build()
+
+                val response = client.newCall(request).execute()
+                val responseContent = JSONObject(response.body?.string() ?: "{}")
+                val responseCode = response.code
+                Log.d("Helper", "callNotificationFeedbackLambda | responseCode: $responseCode | responseContent: $responseContent")
+
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    Log.d("Helper", "Feedback sent successfully")
+                } else {
+                    Log.e("Helper", "Failed to send feedback")
+                }
+            } catch (e: Exception) {
+                Log.e("NotificationHelper", "Error sending feedback: ${e.message}", e)
+            }
         }
         // endregion
 

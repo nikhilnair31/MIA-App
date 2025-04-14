@@ -25,7 +25,7 @@ android {
         buildConfigField "String", "BUCKET_NAME", "\"${properties.getProperty('BUCKET_NAME')}\""
         buildConfigField "String", "AWS_ACCESS_KEY", "\"${properties.getProperty('AWS_ACCESS_KEY')}\""
         buildConfigField "String", "AWS_SECRET_KEY", "\"${properties.getProperty('AWS_SECRET_KEY')}\""
-        buildConfigField "String", "AWS_API_ENDPOINT", "\"${properties.getProperty('AWS_API_ENDPOINT')}\""
+        buildConfigField "String", "NOTIFICATION_LAMBDA_ENDPOINT", "\"${properties.getProperty('NOTIFICATION_LAMBDA_ENDPOINT')}\""
     }
 
     buildTypes {

@@ -1,7 +1,6 @@
 package com.sil.services
 
 import android.Manifest
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -37,18 +36,7 @@ class AudioService : Service() {
     private var recordingSamplingRate = 16000
     private var recordingChannels = 1
 
-    private val listeningChannelId = "AudioRecordingServiceChannel"
-    private val listeningChannelName = "MIA Listening Channel"
-    private val listeningChannelGroup = "MIA Listening Group"
-    private val listeningChannelImportance = NotificationManager.IMPORTANCE_LOW
-    private val listeningNotificationTitle = "MIA Listening..."
-    private val listeningNotificationText = "MIA is active"
-    private val listeningNotificationIcon = R.drawable.mia_stat_name
     private val listeningNotificationId = 1
-
-    private val thoughtsChannelId = "MiaThoughtsChannel"
-    private val thoughtsChannelName = "MIA Thoughts Channel"
-    private val thoughtsChannelImportance = NotificationManager.IMPORTANCE_DEFAULT
     // endregion
 
     // region Common
@@ -109,8 +97,10 @@ class AudioService : Service() {
         }
     }
     private fun setupMediaRecorder(audioFile: File) {
+        val audioSource = MediaRecorder.AudioSource.DEFAULT
+
         mediaRecorder = MediaRecorder().apply {
-            setAudioSource(MediaRecorder.AudioSource.DEFAULT)
+            setAudioSource(audioSource)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             setAudioSamplingRate(recordingSamplingRate)
@@ -177,9 +167,11 @@ class AudioService : Service() {
             )
 
             // After uploading, call Lambda to check if we should send a notification
-            val metadataJson = createMetadataJson(audioFile.name)
             try {
-                val jsonResponse = Helpers.callNotifLambda(this@AudioService, metadataJson)
+                val actionCheck = JSONObject().apply {
+                    put("action", "get_notification")
+                }
+                val jsonResponse = Helpers.callNotificationCheckLambda(this@AudioService, actionCheck)
                 notificationHelper.checkIfShouldNotify(jsonResponse)
             } catch (e: Exception) {
                 Log.e("AudioRecord", "Error calling notification lambda", e)

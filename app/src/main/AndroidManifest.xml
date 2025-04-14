@@ -52,6 +52,15 @@
         <activity
             android:name=".Settings"
             android:exported="false" />
+
+        <receiver android:name="com.sil.receiver.FeedbackReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.sil.mia.GOOD_FEEDBACK" />
+                <action android:name="com.sil.mia.BAD_FEEDBACK" />
+                <action android:name="com.sil.mia.DISMISSED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
