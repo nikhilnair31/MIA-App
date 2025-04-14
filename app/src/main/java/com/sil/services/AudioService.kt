@@ -1,10 +1,7 @@
 package com.sil.services
 
 import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -15,26 +12,24 @@ import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import com.sil.listeners.SensorListener
-import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.others.Helpers
+import com.sil.others.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 class AudioService : Service() {
     // region Vars
     private lateinit var sensorListener: SensorListener
+    private lateinit var notificationHelper: NotificationHelper
+
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
     private var maxRecordingTimeInMin = 5
@@ -74,88 +69,20 @@ class AudioService : Service() {
     }
 
     private fun initRelated() {
+        // Create the thoughts notification channel
+        notificationHelper = NotificationHelper(this)
+        notificationHelper.createThoughtsNotificationChannel()
+
         // Service related
         sensorListener = SensorListener(this@AudioService)
-        startForeground(listeningNotificationId, createNotification())
+        startForeground(listeningNotificationId, notificationHelper.createListeningNotification())
         startListening()
-
-        // Create the thoughts notification channel
-        createThoughtsNotificationChannel()
 
         // Set integer values
         maxRecordingTimeInMin = resources.getInteger(R.integer.maxRecordingTimeInMin)
         recordingEncodingBitrate = resources.getInteger(R.integer.recordingEncodingBitrate)
         recordingSamplingRate = resources.getInteger(R.integer.recordingSamplingRate)
         recordingChannels = resources.getInteger(R.integer.recordingChannels)
-    }
-    // endregion
-
-    // region Notification Related
-    private fun createThoughtsNotificationChannel() {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(
-            thoughtsChannelId,
-            thoughtsChannelName,
-            thoughtsChannelImportance
-        ).apply {
-            description = "Channel for MIA thoughts and insights"
-        }
-        notificationManager.createNotificationChannel(channel)
-    }
-    private suspend fun checkIfShouldNotify(jsonResponse: JSONObject) {
-        val showNotification = jsonResponse.optBoolean("notification_to_show", false)
-        if (showNotification && jsonResponse.has("notification_content")) {
-            val content = jsonResponse.optString("notification_content", "")
-            if (content.isNotEmpty()) {
-                withContext(Dispatchers.Main) {
-                    showThoughtsNotification(content)
-                }
-            }
-        }
-    }
-    private fun showThoughtsNotification(content: String) {
-        val intent = Intent(this, Main::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-
-        val notificationId = UUID.randomUUID().hashCode()
-        val notification = NotificationCompat.Builder(this, thoughtsChannelId)
-            .setSmallIcon(R.drawable.mia_stat_name)
-            .setContentTitle("MIA Thought")
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        val notificationManager = NotificationManagerCompat.from(this)
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            notificationManager.notify(notificationId, notification)
-        } else {
-            Log.e("AudioRecord", "Notification permission not granted")
-        }
-    }
-    private fun createNotification(): Notification {
-        Log.i("AudioRecord", "Creating notification channel")
-
-        val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(listeningChannelId, listeningChannelName, listeningChannelImportance)
-        notificationManager.createNotificationChannel(channel)
-
-        // Intent to open the main activity
-        val intent = Intent(this@AudioService, Main::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        val pendingIntent = PendingIntent.getActivity(this@AudioService, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-
-        return Notification.Builder(this, listeningChannelId)
-            .setContentTitle(listeningNotificationTitle)
-            .setContentText(listeningNotificationText)
-            .setSmallIcon(listeningNotificationIcon)
-            .setGroup(listeningChannelGroup)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .build()
     }
     // endregion
 
@@ -253,7 +180,7 @@ class AudioService : Service() {
             val metadataJson = createMetadataJson(audioFile.name)
             try {
                 val jsonResponse = Helpers.callNotifLambda(this@AudioService, metadataJson)
-                checkIfShouldNotify(jsonResponse)
+                notificationHelper.checkIfShouldNotify(jsonResponse)
             } catch (e: Exception) {
                 Log.e("AudioRecord", "Error calling notification lambda", e)
             }
