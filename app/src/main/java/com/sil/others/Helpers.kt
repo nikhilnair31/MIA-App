@@ -89,7 +89,6 @@ class Helpers {
 
                     val mediaType = "application/json".toMediaTypeOrNull()
                     val requestBody = payload.toString().toRequestBody(mediaType)
-                    Log.d("Helper", "check requestBody: $requestBody")
 
                     val request = Request.Builder()
                         .url(NOTIFICATION_LAMBDA_ENDPOINT)
@@ -97,16 +96,15 @@ class Helpers {
                         .build()
 
                     val response = client.newCall(request).execute()
-                    val responseCode = response.code
-                    val responseBodyString = response.body?.string()
 
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        val jsonResponse = JSONObject(responseBodyString ?: "{}")
-                        Log.d("Helper", "callNotifLambda Response: $jsonResponse")
-                        return jsonResponse
+                    if (response.isSuccessful && response.body != null) {
+                        val responseBody = response.body!!.string()
+                        return if (responseBody.isNotEmpty() && responseBody != "null") {
+                            JSONObject(responseBody)
+                        } else {
+                            JSONObject()
+                        }
                     } else {
-                        val errorResponse = JSONObject(responseBodyString ?: "{}")
-                        Log.e("Helper", "callNotifLambda Error Response: $errorResponse")
                         return JSONObject()
                     }
                 }

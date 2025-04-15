@@ -159,19 +159,25 @@ class AudioService : Service() {
     }
     private fun uploadAudioFileWithMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
+            // Create metadata
+            val metadata = createMetadataJson(audioFile.name)
+
             // Start upload process
             Helpers.scheduleUploadWork(
                 this@AudioService,
                 audioFile,
-                createMetadataJson(audioFile.name)
+                metadata
             )
 
             // After uploading, call Lambda to check if we should send a notification
             try {
-                val actionCheck = JSONObject().apply {
+                val notifPaylodJson = JSONObject().apply {
                     put("action", "get_notification")
+                    put("username", metadata.get("username"))
                 }
-                val jsonResponse = Helpers.callNotificationCheckLambda(this@AudioService, actionCheck)
+                Log.i("AudioRecord", "notifPaylodJson: $notifPaylodJson")
+                val jsonResponse = Helpers.callNotificationCheckLambda(this@AudioService, notifPaylodJson)
+                Log.i("AudioRecord", "jsonResponse: $jsonResponse")
                 notificationHelper.checkIfShouldNotify(jsonResponse)
             } catch (e: Exception) {
                 Log.e("AudioRecord", "Error calling notification lambda", e)
