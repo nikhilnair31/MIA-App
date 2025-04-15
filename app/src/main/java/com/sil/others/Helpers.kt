@@ -39,7 +39,6 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.net.HttpURLConnection
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Collections
@@ -140,12 +139,14 @@ class Helpers {
                     .build()
 
                 val response = client.newCall(request).execute()
-                val responseContent = JSONObject(response.body?.string() ?: "{}")
-                val responseCode = response.code
-                Log.d("Helper", "callNotificationFeedbackLambda | responseCode: $responseCode | responseContent: $responseContent")
 
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    Log.d("Helper", "Feedback sent successfully")
+                if (response.isSuccessful && response.body != null) {
+                    val responseBody = response.body!!.string()
+                    if (responseBody.isNotEmpty() && responseBody != "null") {
+                        Log.d("Helper", "Feedback sent successfully")
+                    } else {
+                        Log.e("Helper", "Failed to send feedback")
+                    }
                 } else {
                     Log.e("Helper", "Failed to send feedback")
                 }
