@@ -92,7 +92,7 @@ class NotificationHelper(private val context: Context) {
     private fun showThoughtsNotification(content: String, notificationId: Int) {
         val intent = Intent(context, Main::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         Log.d("Helper", "notificationId: $notificationId")
 
