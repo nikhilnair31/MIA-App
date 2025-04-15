@@ -1,14 +1,11 @@
 package com.sil.others
 
 import android.app.Activity
-import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.util.Log
 import android.widget.Toast
@@ -33,15 +30,12 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Collections
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -323,17 +317,6 @@ class Helpers {
 
         // region Other
         private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
-        fun sortJsonDescending(dataJsonArray: JSONArray): MutableList<JSONObject> {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            val comparator = Comparator<JSONObject> { json1, json2 ->
-                val millis1 = dateFormat.parse(json1.optString("currenttimeformattedstring"))
-                val millis2 = dateFormat.parse(json2.optString("currenttimeformattedstring"))
-                millis2?.compareTo(millis1) ?: 0
-            }
-            val dataList = (0 until dataJsonArray.length()).mapTo(mutableListOf()) { dataJsonArray.getJSONObject(it) }
-            Collections.sort(dataList, comparator)
-            return dataList
-        }
 
         private fun calculateMetadataSize(metadataMap: Map<String, Any>): Int {
             // Calculate the UTF-8 encoded size of each key and value
@@ -341,77 +324,6 @@ class Helpers {
                 entry.key.toByteArray(Charsets.UTF_8).size + entry.value.toString().toByteArray(Charsets.UTF_8).size
             }
             return size
-        }
-
-        fun isApiEndpointReachableWithNetworkCheck(context: Context): Boolean {
-            return isNetworkConnected(context) && isApiEndpointReachable() != null
-        }
-        private fun isNetworkConnected(context: Context): Boolean {
-            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val network = connectivityManager.activeNetwork ?: return false
-            val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-
-            val response = when {
-                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
-                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
-                networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
-                else -> false
-            }
-            // Log.i("Helpers", "isNetworkConnected: $response")
-
-            return response
-        }
-        private fun isApiEndpointReachable(): Boolean {
-            val client = OkHttpClient()
-            val lambdaUrl = "https://j6um3mewfl3zhy4hflh6asj2ka0ahxhh.lambda-url.ap-south-1.on.aws/"
-            val request = Request.Builder()
-                .url(lambdaUrl)
-                .get()
-                .build()
-
-            return try {
-                val response = client.newCall(request).execute()
-                // Log.i("Helpers", "isLambdaEndpointReachable response: $response")
-
-                response.use {
-                    response.isSuccessful
-                }
-            } catch (e: IOException) {
-                Log.e("Helper", "isLambdaEndpointReachable: IOException: ${e.message}")
-                false
-            }
-        }
-
-        fun checkIfCanRun(context: Context, generalSharedPref: SharedPreferences, sourceString: String): Boolean {
-            return if (isAppInForeground(context)) {
-                Log.i(sourceString, "App is in foreground. Can't run.")
-                false
-            } else {
-                // Check if it's within the allowed notification time
-                if (isNotificationAllowed(generalSharedPref)) {
-                    Log.i(sourceString, "App is NOT in foreground. Can run!")
-                    true
-                } else {
-                    Log.i(sourceString, "Do Not Disturb time. Can't run.")
-                    false
-                }
-            }
-        }
-        private fun isAppInForeground(context: Context): Boolean {
-            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val appProcesses = activityManager.runningAppProcesses ?: return false
-
-            val packageName = context.packageName
-            return appProcesses.any { processInfo ->
-                (processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND || processInfo.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) && processInfo.processName == packageName
-            }
-        }
-        private fun isNotificationAllowed(generalSharedPref: SharedPreferences): Boolean {
-            val thoughtsStartTime = generalSharedPref.getInt("thoughtsStartTime", 6)
-            val thoughtsEndTime = generalSharedPref.getInt("thoughtsEndTime", 0)
-
-            val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-            return currentHour in thoughtsStartTime..thoughtsEndTime
         }
         // endregion
     }

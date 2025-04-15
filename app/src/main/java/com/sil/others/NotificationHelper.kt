@@ -78,7 +78,8 @@ class NotificationHelper(private val context: Context) {
     // region Thoughts Related
     suspend fun checkIfShouldNotify(jsonResponse: JSONObject) {
         val showNotification = jsonResponse.optBoolean("notification_to_show", false)
-        if (showNotification && jsonResponse.has("notification_content")) {
+        val contentNotification = jsonResponse.optString("notification_content", "")
+        if (showNotification && contentNotification.isNullOrEmpty()) {
             val content = jsonResponse.optString("notification_content", "")
             val notificationId = jsonResponse.optInt("notification_id", 1)
 
@@ -93,7 +94,6 @@ class NotificationHelper(private val context: Context) {
         val intent = Intent(context, Main::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
         Log.d("Helper", "notificationId: $notificationId")
 
         // Create good feedback intent

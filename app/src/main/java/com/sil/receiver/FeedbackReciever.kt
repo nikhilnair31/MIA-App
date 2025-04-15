@@ -38,16 +38,16 @@ class FeedbackReceiver : android.content.BroadcastReceiver() {
 
     private fun dismissNotification(context: Context, feedbackType: String, notificationId: Int) {
         // Build feedback Json
-        val jsonObject = JSONObject().apply {
+        val feedbackJsonObject = JSONObject().apply {
             put("action", "feedback")
             put("feedback", feedbackType)
             put("notification_id", notificationId)
         }
-        Log.d("FeedbackReceiver", "dismissNotification jsonObject $jsonObject")
+        Log.d("FeedbackReceiver", "dismissNotification feedbackJsonObject $feedbackJsonObject")
 
         // Call notification lambda to send feedback
         CoroutineScope(Dispatchers.IO).launch {
-            Helpers.callNotificationFeedbackLambda(context, jsonObject)
+            Helpers.callNotificationFeedbackLambda(context, feedbackJsonObject)
         }
 
         // Cancel the notification to ensure it's gone
