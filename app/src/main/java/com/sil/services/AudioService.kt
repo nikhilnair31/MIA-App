@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.media.MediaMetadataRetriever
 import android.media.MediaRecorder
 import android.os.Environment
 import android.os.IBinder
@@ -161,7 +162,7 @@ class AudioService : Service() {
     private fun uploadAudioFileWithMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
             // Create metadata
-            val metadata = createMetadataJson(audioFile.name)
+            val metadata = createMetadataJson(audioFile)
 
             // Start upload process
             Helpers.scheduleUploadWork(
@@ -185,13 +186,28 @@ class AudioService : Service() {
             }
         }
     }
-    private fun createMetadataJson(audioFileName: String): JSONObject {
+    private fun createMetadataJson(audioFile: File): JSONObject {
         val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
         val metadataJson = JSONObject()
+
+        val audioFileName = audioFile.name
 
         // Add some extra keys to metadata JSON
         metadataJson.put("filename", audioFileName)
         metadataJson.put("source", "audio")
+
+        // Get duration in seconds
+        try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(audioFile.absolutePath)
+            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0
+            val durationSeconds = durationMs / 1000 // Convert milliseconds to seconds
+            metadataJson.put("duration", durationSeconds)
+            retriever.release()
+        } catch (e: Exception) {
+            Log.e("AudioService", "Error getting audio duration: ${e.message}")
+            metadataJson.put("duration", 0) // Default value if we can't get the duration
+        }
 
         // Add username and audio downloading/cleaning related metadata
         val userName = sharedPrefs.getString("userName", null)
