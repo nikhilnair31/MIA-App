@@ -31,6 +31,7 @@ class AudioService : Service() {
 
     private var mediaRecorder: MediaRecorder? = null
     private var latestAudioFile: File? = null
+
     private var maxRecordingTimeInMin = 5
     private var recordingEncodingBitrate = 32000
     private var recordingSamplingRate = 16000
@@ -103,10 +104,10 @@ class AudioService : Service() {
             setAudioSource(audioSource)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setAudioSamplingRate(recordingSamplingRate)
             setAudioEncodingBitRate(recordingEncodingBitrate)
-            setAudioChannels(recordingChannels)
             setMaxDuration(maxRecordingTimeInMin * 60 * 1000)
+            setAudioSamplingRate(recordingSamplingRate)
+            setAudioChannels(recordingChannels)
             setOutputFile(audioFile.absolutePath)
             prepare()
 
@@ -175,10 +176,10 @@ class AudioService : Service() {
                     put("action", "get_notification")
                     put("username", metadata.get("username"))
                 }
-                Log.i("AudioRecord", "notifPaylodJson: $notifPaylodJson")
-                val jsonResponse = Helpers.callNotificationCheckLambda(this@AudioService, notifPaylodJson)
-                Log.i("AudioRecord", "jsonResponse: $jsonResponse")
-                notificationHelper.checkIfShouldNotify(jsonResponse)
+                 Log.i("AudioRecord", "notifPaylodJson: $notifPaylodJson")
+                val notifLambdaResponseJson = Helpers.callNotificationCheckLambda(this@AudioService, notifPaylodJson)
+                 Log.i("AudioRecord", "notifLambdaResponseJson: $notifLambdaResponseJson")
+                notificationHelper.checkIfShouldNotify(notifLambdaResponseJson)
             } catch (e: Exception) {
                 Log.e("AudioRecord", "Error calling notification lambda", e)
             }

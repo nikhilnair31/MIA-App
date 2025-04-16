@@ -79,7 +79,10 @@ class NotificationHelper(private val context: Context) {
     suspend fun checkIfShouldNotify(jsonResponse: JSONObject) {
         val showNotification = jsonResponse.optBoolean("notification_to_show", false)
         val contentNotification = jsonResponse.optString("notification_content", "")
-        if (showNotification && contentNotification.isNullOrEmpty()) {
+        Log.d("Helper", "showNotification: $showNotification | contentNotification: $contentNotification")
+
+        if (showNotification && !contentNotification.isNullOrEmpty()) {
+            Log.d("Helper", "Notification to show")
             val content = jsonResponse.optString("notification_content", "")
             val notificationId = jsonResponse.optInt("notification_id", 1)
 
@@ -88,6 +91,9 @@ class NotificationHelper(private val context: Context) {
                     showThoughtsNotification(content, notificationId)
                 }
             }
+        }
+        else {
+            Log.d("Helper", "No notification to show")
         }
     }
     private fun showThoughtsNotification(content: String, notificationId: Int) {
