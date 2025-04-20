@@ -63,16 +63,19 @@ class AudioService : Service() {
         notificationHelper = NotificationHelper(this)
         notificationHelper.createThoughtsNotificationChannel()
 
-        // Service related
+        // Listener related
         sensorListener = SensorListener(this@AudioService)
+
+        // Service related
         startForeground(listeningNotificationId, notificationHelper.createListeningNotification())
-        startListening()
 
         // Set integer values
         maxRecordingTimeInMin = resources.getInteger(R.integer.maxRecordingTimeInMin)
         recordingEncodingBitrate = resources.getInteger(R.integer.recordingEncodingBitrate)
         recordingSamplingRate = resources.getInteger(R.integer.recordingSamplingRate)
         recordingChannels = resources.getInteger(R.integer.recordingChannels)
+
+        startListening()
     }
     // endregion
 

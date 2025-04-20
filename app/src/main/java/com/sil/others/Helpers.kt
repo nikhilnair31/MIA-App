@@ -10,8 +10,10 @@ import android.os.BatteryManager
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -218,6 +220,7 @@ class Helpers {
         fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresDeviceIdle(true)
                 .build()
 
             val inputData = workDataOf(
@@ -226,6 +229,11 @@ class Helpers {
             )
 
             val uploadWorkRequest = OneTimeWorkRequestBuilder<UploadWorker>()
+                .setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL,
+                    OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+                    TimeUnit.MILLISECONDS
+                )
                 .setConstraints(constraints)
                 .setInputData(inputData)
                 .build()
