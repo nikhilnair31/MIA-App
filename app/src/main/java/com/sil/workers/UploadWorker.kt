@@ -16,7 +16,7 @@ class UploadWorker(context: Context, workerParams: WorkerParameters) : Worker(co
             val audioFile = File(audioFilePath)
             val metadataJson = JSONObject(metadataJsonString)
 
-            Helpers.uploadToS3AndDelete(applicationContext, audioFile, metadataJson)
+            Helpers.uploadAudioToS3AndDelete(applicationContext, audioFile, metadataJson)
 
             return Result.success()
         }

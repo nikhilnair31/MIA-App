@@ -153,7 +153,7 @@ class Helpers {
         // endregion
 
         // region S3 Related
-        fun uploadToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
+        fun uploadAudioToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
             Log.i("Helpers", "Uploading to S3...")
 
             try {

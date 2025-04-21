@@ -140,7 +140,7 @@ class NotificationHelper(private val context: Context) {
 
         val notification = NotificationCompat.Builder(context, thoughtsChannelId)
             .setSmallIcon(R.drawable.mia_stat_name)
-            .setContentTitle("MIA Thought")
+            .setContentTitle("MIA")
             .setContentText(content)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
