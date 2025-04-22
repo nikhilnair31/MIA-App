@@ -9,14 +9,20 @@ import java.io.File
 
 class UploadWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
     override fun doWork(): Result {
-        val audioFilePath = inputData.getString("audioFile")
+        val filePath = inputData.getString("file")
+        val fileSource = inputData.getString("source")
         val metadataJsonString = inputData.getString("metadataJson")
 
-        if (!audioFilePath.isNullOrEmpty() && !metadataJsonString.isNullOrEmpty()) {
-            val audioFile = File(audioFilePath)
-            val metadataJson = JSONObject(metadataJsonString)
+        if (!filePath.isNullOrEmpty() && !fileSource.isNullOrEmpty() && !metadataJsonString.isNullOrEmpty()) {
+            val file = File(filePath)
+            val metadataJsonObj = JSONObject(metadataJsonString)
 
-            Helpers.uploadAudioToS3AndDelete(applicationContext, audioFile, metadataJson)
+            if (fileSource == "audio") {
+                Helpers.uploadAudioFileToS3(applicationContext, file, metadataJsonObj)
+            }
+            else if (fileSource == "image") {
+                Helpers.uploadImageFileToS3(applicationContext, file, metadataJsonObj)
+            }
 
             return Result.success()
         }

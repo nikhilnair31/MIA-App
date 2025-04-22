@@ -102,6 +102,7 @@ class Setup : AppCompatActivity() {
                 Manifest.permission.BODY_SENSORS,
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.READ_MEDIA_IMAGES,
             )
             ActivityCompat.requestPermissions(this, permList, initRequestCode)
         }
@@ -114,6 +115,7 @@ class Setup : AppCompatActivity() {
         val hasFineLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasCoarseLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasBackgroundLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasMediaImagesPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
 
         // Check for battery optimization exemption
         val powerManager = this.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -122,6 +124,7 @@ class Setup : AppCompatActivity() {
         val hasAllPermissions = hasAudioPermission && hasNotificationPermission && hasSensorPermission &&
                 hasFineLocationPermission && hasCoarseLocationPermission &&
                 hasBackgroundLocationPermission && isBatteryOptimizationIgnored
+                && hasMediaImagesPermission
         Log.i("Main", "hasAllPermissions: $hasAllPermissions")
 
         return hasAllPermissions

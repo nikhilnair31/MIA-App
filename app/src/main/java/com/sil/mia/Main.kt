@@ -10,9 +10,15 @@ import android.widget.ImageButton
 import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
 import com.sil.services.AudioService
+import com.sil.services.ScreenshotService
 
 class Main : AppCompatActivity() {
     // region Vars
+    private val TAG = "Main"
+
+    private var audioServiceIntent: Intent? = null
+    private var screenshotServiceIntent: Intent? = null
+
     private lateinit var toggleButton: ToggleButton
     private lateinit var settingsButton: ImageButton
 
@@ -26,41 +32,44 @@ class Main : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         initRelated()
-        audioRelated()
+        toggleRelated()
     }
-    // endregion
 
-    // region Initial
     private fun initRelated() {
         dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         generalSharedPref = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
         generalSharedPref.edit().putBoolean("isFirstRun", false).apply()
 
+        toggleButton = findViewById(R.id.toggleButton)
         settingsButton = findViewById(R.id.settingsButton)
+
         settingsButton.setOnClickListener {
             val intent = Intent(this, Settings::class.java)
             this.startActivity(intent)
         }
     }
-    // endregion
 
-    // region Audio Related Functions
-    private fun audioRelated() {
-        Log.i("Main", "audioRelated")
-        
-        toggleButton = findViewById(R.id.toggleButton)
-        if (isServiceRunning(AudioService::class.java)) {
-            Log.i("Main", "Service IS Running")
+    private fun toggleRelated() {
+        Log.i(TAG, "toggleRelated")
+
+        if (isServiceRunning(AudioService::class.java) && isServiceRunning(ScreenshotService::class.java)) {
+            Log.i(TAG, "Audio and Screenshots services ARE Running")
             toggleButton.isChecked = true
         }
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                Log.i("Main", "startService")
-                startForegroundService(Intent(this, AudioService::class.java))
+                Log.i(TAG, "Audio and Screenshots services created")
+
+                audioServiceIntent = Intent(this, AudioService::class.java)
+                startForegroundService(audioServiceIntent)
+
+                screenshotServiceIntent = Intent(this, ScreenshotService::class.java)
+                startService(screenshotServiceIntent)
             } else {
-                Log.i("Main", "stopService")
-                stopService(Intent(this, AudioService::class.java))
+                Log.i(TAG, "Audio and Screenshots services stopped")
+                stopService(audioServiceIntent)
+                stopService(screenshotServiceIntent)
             }
         }
     }

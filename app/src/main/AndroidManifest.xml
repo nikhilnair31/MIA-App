@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:tools="http://schemas.android.com/tools"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    tools:ignore="SelectedPhotoAccess">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -12,8 +13,6 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"
-        tools:ignore="SelectedPhotoAccess" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <uses-feature
@@ -37,13 +36,16 @@
             android:name="com.sil.services.AudioService"
             android:foregroundServiceType="microphone"
             android:label="Audio listening..." />
+        <service
+            android:name="com.sil.services.ScreenshotService"
+            android:enabled="true"
+            android:exported="false" />
 
         <activity
             android:name=".Welcome"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

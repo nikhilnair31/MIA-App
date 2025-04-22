@@ -4,8 +4,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.location.Location
 import android.location.LocationManager
+import android.media.MediaMetadataRetriever
 import android.os.BatteryManager
 import android.util.Log
 import android.widget.Toast
@@ -153,78 +155,14 @@ class Helpers {
         // endregion
 
         // region S3 Related
-        fun uploadAudioToS3AndDelete(context: Context, audioFile: File?, metadataJson: JSONObject) {
-            Log.i("Helpers", "Uploading to S3...")
-
-            try {
-                audioFile?.let {
-                    // Verify the file's readability and size
-                    if (!it.exists() || !it.canRead() || it.length() <= 0) {
-                        Log.e("Helper", "File does not exist, is unreadable or empty")
-                        return
-                    }
-
-                    // Upload audio file
-                    val generalSharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-                    val userName = generalSharedPrefs.getString("userName", null)
-                    val audioKeyName = "data/$userName/recordings/${it.name}"
-
-                    // Metadata
-                    val audioMetadata = ObjectMetadata()
-                    audioMetadata.contentType = "media/m4a"
-                    audioMetadata.contentLength = it.length()
-
-                    // Convert JSONObject to Map and add to metadata
-                    val metadataMap = metadataJson.toMap()
-
-                    val metadataSize = calculateMetadataSize(metadataMap)
-                    Log.d("Helper", "Settings-defined metadata size: $metadataSize")
-
-                    metadataMap.forEach { (key, value) ->
-                        // Log.d("Helper", "Metadata - Key: $key, Value: $value")
-                        audioMetadata.addUserMetadata(key, value)
-                    }
-
-                    // Start upload
-                    Log.d("Helper", "Starting upload of $audioKeyName to $BUCKET_NAME")
-                    FileInputStream(it).use { fileInputStream ->
-                        val audioRequest = PutObjectRequest(BUCKET_NAME, audioKeyName, fileInputStream, audioMetadata)
-                        try {
-                            s3Client.putObject(audioRequest)
-                            Log.d("Helper", "Uploaded to S3!")
-                        }
-                        catch (e: Exception) {
-                            Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
-                        }
-                    }
-
-                    // Delete local file after upload
-                    if (it.delete()) {
-                        Log.d("Helper", "Deleted local audio file after upload: ${it.name}")
-                    }
-                    else {
-                        Log.e("Helper", "Failed to delete local audio file after upload: ${it.name}")
-                    }
-                }
-            }
-            catch (e: Exception) {
-                when (e) {
-                    is AmazonServiceException -> Log.e("Helper", "Error uploading to S3: ${e.message}")
-                    is FileNotFoundException -> Log.e("Helper", "File not found: ${e.message}")
-                    else -> Log.e("Helper", "Error in S3 upload: ${e.localizedMessage}")
-                }
-                e.printStackTrace()
-            }
-        }
-
-        fun scheduleUploadWork(context: Context, audioFile: File?, metadataJson: JSONObject) {
+        fun scheduleUploadWork(context: Context, source: String, file: File?, metadataJson: JSONObject) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
-                .setRequiresDeviceIdle(true)
                 .build()
 
             val inputData = workDataOf(
-                "audioFile" to audioFile?.absolutePath,
+                "file" to file?.absolutePath,
+                "source" to source,
                 "metadataJson" to metadataJson.toString()
             )
 
@@ -240,6 +178,167 @@ class Helpers {
 
             val appContext = context.applicationContext
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
+        }
+
+        fun uploadAudioFileToS3(context: Context, audioFile: File?, metadataJson: JSONObject) {
+            Log.i("Helpers", "Uploading Audio to S3...")
+
+            try {
+                audioFile?.let {
+                    // Verify the file's readability and size
+                    if (!it.exists() || !it.canRead() || it.length() <= 0) {
+                        Log.e("Helper", "Audio file does not exist, is unreadable or empty")
+                        return
+                    }
+
+                    // Upload audio file
+                    val generalSharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = generalSharedPrefs.getString("userName", null)
+                    val audioKeyName = "data/$userName/recordings/${it.name}"
+
+                    // Metadata
+                    val audioMetadata = ObjectMetadata()
+                    audioMetadata.contentType = "media/m4a"
+                    audioMetadata.contentLength = it.length()
+
+                    // Convert JSONObject to Map and add to metadata
+                    val metadataMap = metadataJson.toMap()
+                    val metadataSize = calculateMetadataSize(metadataMap)
+                    Log.d("Helper", "Settings-defined audio metadata size: $metadataSize")
+                    metadataMap.forEach { (key, value) ->
+                        // Log.d("Helper", "Metadata - Key: $key, Value: $value")
+                        audioMetadata.addUserMetadata(key, value)
+                    }
+
+                    // Start local file upload
+                    Log.d("Helper", "Starting upload of $audioKeyName to $BUCKET_NAME")
+                    FileInputStream(it).use { fileInputStream ->
+                        val audioRequest = PutObjectRequest(BUCKET_NAME, audioKeyName, fileInputStream, audioMetadata)
+                        try {
+                            s3Client.putObject(audioRequest)
+                            Log.d("Helper", "Uploaded audio to S3!")
+                        }
+                        catch (e: Exception) {
+                            Log.e("Helper", "Error in audio S3 upload: ${e.localizedMessage}")
+                        }
+                    }
+
+                    // Delete local file after upload
+                    if (it.delete()) {
+                        Log.d("Helper", "Deleted local audio file after upload: ${it.name}")
+                    }
+                    else {
+                        Log.e("Helper", "Failed to delete local audio file after upload: ${it.name}")
+                    }
+                }
+            }
+            catch (e: Exception) {
+                when (e) {
+                    is AmazonServiceException -> Log.e("Helper", "Error uploading audio to S3: ${e.message}")
+                    is FileNotFoundException -> Log.e("Helper", "Audio file not found: ${e.message}")
+                    else -> Log.e("Helper", "Error in audio S3 upload: ${e.localizedMessage}")
+                }
+                e.printStackTrace()
+            }
+        }
+        fun uploadImageFileToS3(context: Context, imageFile: File?, metadataJson: JSONObject) {
+            Log.i("Helpers", "Uploading Image to S3...")
+
+            try {
+                imageFile?.let {
+                    // Verify the file's readability and size
+                    if (!it.exists() || !it.canRead() || it.length() <= 0) {
+                        Log.e("Helper", "Image file does not exist, is unreadable or empty")
+                        return
+                    }
+
+                    // Upload file
+                    val generalSharedPrefs: SharedPreferences = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                    val userName = generalSharedPrefs.getString("userName", null)
+                    val imageKeyName = "data/$userName/screenshots/${it.name}"
+
+                    // Metadata
+                    val imageMetadata = ObjectMetadata()
+                    imageMetadata.contentType = "media/png"
+
+                    // Convert JSONObject to Map and add to metadata
+                    val metadataMap = metadataJson.toMap()
+                    val metadataSize = calculateMetadataSize(metadataMap)
+                    Log.d("Helper", "Settings-defined image metadata size: $metadataSize")
+                    metadataMap.forEach { (key, value) ->
+                        // Log.d("Helper", "Metadata - Key: $key, Value: $value")
+                        imageMetadata.addUserMetadata(key, value)
+                    }
+
+                    // Start local file upload
+                    Log.d("Helper", "Starting upload of $imageKeyName to $BUCKET_NAME")
+                    FileInputStream(it).use { fileInputStream ->
+                        val imageRequest = PutObjectRequest(BUCKET_NAME, imageKeyName, fileInputStream, imageMetadata)
+                        try {
+                            s3Client.putObject(imageRequest)
+                            Log.d("Helper", "Uploaded image to S3!")
+                        }
+                        catch (e: Exception) {
+                            Log.e("Helper", "Error in image S3 upload: ${e.localizedMessage}")
+                        }
+                    }
+                }
+            }
+            catch (e: Exception) {
+                when (e) {
+                    is AmazonServiceException -> Log.e("Helper", "Error uploading image to S3: ${e.message}")
+                    is FileNotFoundException -> Log.e("Helper", "Image file not found: ${e.message}")
+                    else -> Log.e("Helper", "Error in image S3 upload: ${e.localizedMessage}")
+                }
+                e.printStackTrace()
+            }
+        }
+        // endregion
+
+        // region Image Related
+        fun isImageFile(fileName: String): Boolean {
+            Log.i("Helper", "isImageFile | fileName: $fileName")
+
+            val lowerCaseName = fileName.lowercase()
+            return lowerCaseName.endsWith(".jpg") ||
+                    lowerCaseName.endsWith(".jpeg") ||
+                    lowerCaseName.endsWith(".png") ||
+                    lowerCaseName.endsWith(".webp")
+        }
+        fun resolutionOfImage(filePath: String): String {
+            Log.i("Helper", "resolutionOfImage | filePath: $filePath")
+
+            // Decode the file into a BitmapFactory.Options object to fetch the dimensions
+            val options = BitmapFactory.Options().apply {
+                // Set inJustDecodeBounds to true to only fetch the dimensions, not load the whole image
+                inJustDecodeBounds = true
+            }
+
+            // Decode the file to fetch its dimensions
+            BitmapFactory.decodeFile(filePath, options)
+
+            // Extract the width and height from BitmapFactory.Options
+            val width = options.outWidth
+            val height = options.outHeight
+
+            // Return the resolution as a formatted string
+            return "$width x $height"
+        }
+        // endregion
+
+        // region Audio Related
+        fun lengthOfAudio(filePath: String): Long {
+            try {
+                val retriever = MediaMetadataRetriever()
+                retriever.setDataSource(filePath)
+                val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0
+                val durationSeconds = durationMs / 1000 // Convert milliseconds to seconds
+                retriever.release()
+                return durationSeconds
+            } catch (e: Exception) {
+                Log.e("AudioService", "Error getting audio duration: ${e.message}")
+                return 0 // Default value if we can't get the duration
+            }
         }
         // endregion
 

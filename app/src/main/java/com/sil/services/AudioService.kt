@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.media.MediaMetadataRetriever
 import android.media.MediaRecorder
 import android.os.Environment
 import android.os.IBinder
@@ -27,6 +26,8 @@ import java.util.Locale
 
 class AudioService : Service() {
     // region Vars
+    private val TAG = "Audio Service"
+    
     private lateinit var sensorListener: SensorListener
     private lateinit var notificationHelper: NotificationHelper
 
@@ -43,12 +44,13 @@ class AudioService : Service() {
 
     // region Common
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        Log.i("AudioRecord", "onStartCommand")
+        Log.i(TAG, "onStartCommand")
+
         initRelated()
         return START_STICKY
     }
     override fun onDestroy() {
-        Log.i("AudioRecord", "onDestroy")
+        Log.i(TAG, "onDestroy")
 
         sensorListener.unregister()
         stopListening()
@@ -81,11 +83,11 @@ class AudioService : Service() {
 
     // region Listening and Recording Related
     private fun startListening() {
-        Log.i("AudioRecord", "Started Listening!")
+        Log.i(TAG, "Started Listening!")
 
         // Check if audio permission given else log and return
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Log.e("AudioRecord", "Recording permission not granted")
+            Log.e(TAG, "Recording permission not granted")
             return
         }
 
@@ -97,7 +99,7 @@ class AudioService : Service() {
                 mediaRecorder?.start()
             }
             catch (e: IllegalStateException) {
-                Log.e("AudioRecord", "Exception starting media recorder", e)
+                Log.e(TAG, "Exception starting media recorder", e)
             }
         }
     }
@@ -117,7 +119,7 @@ class AudioService : Service() {
 
             setOnInfoListener { _, what, _ ->
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-                    Log.i("AudioRecord", "Max Recording Duration!")
+                    Log.i(TAG, "Max Recording Duration!")
 
                     stopRecordingAndUpload(audioFile)
                 }
@@ -126,7 +128,7 @@ class AudioService : Service() {
     }
 
     private fun stopListening() {
-        Log.i("AudioRecord", "Stopped Listening")
+        Log.i(TAG, "Stopped Listening")
 
         try {
             val serviceIntent = Intent(this, AudioService::class.java)
@@ -138,7 +140,7 @@ class AudioService : Service() {
             }
         }
         catch (e: Exception) {
-            Log.e("AudioRecord", "Error stopping media recorder", e)
+            Log.e(TAG, "Error stopping media recorder", e)
         }
         finally {
             mediaRecorder = null
@@ -159,7 +161,7 @@ class AudioService : Service() {
         // val timeStamp = System.currentTimeMillis()
         val timeStamp = SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault()).format(Date())
         val audioFileName = "recording_$timeStamp.m4a"
-        Log.i("AudioRecord", "Created New Audio File: $audioFileName")
+        Log.i(TAG, "Created New Audio File: $audioFileName")
         return File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
     }
     private fun uploadAudioFileWithMetadata(audioFile: File) {
@@ -170,6 +172,7 @@ class AudioService : Service() {
             // Start upload process
             Helpers.scheduleUploadWork(
                 this@AudioService,
+                "audio",
                 audioFile,
                 metadata
             )
@@ -180,12 +183,12 @@ class AudioService : Service() {
                     put("action", "get_notification")
                     put("username", metadata.get("username"))
                 }
-                 Log.i("AudioRecord", "notifPaylodJson: $notifPaylodJson")
+                 Log.i(TAG, "notifPaylodJson: $notifPaylodJson")
                 val notifLambdaResponseJson = Helpers.callNotificationCheckLambda(this@AudioService, notifPaylodJson)
-                 Log.i("AudioRecord", "notifLambdaResponseJson: $notifLambdaResponseJson")
+                 Log.i(TAG, "notifLambdaResponseJson: $notifLambdaResponseJson")
                 notificationHelper.checkIfShouldNotify(notifLambdaResponseJson)
             } catch (e: Exception) {
-                Log.e("AudioRecord", "Error calling notification lambda", e)
+                Log.e(TAG, "Error calling notification lambda", e)
             }
         }
     }
@@ -193,24 +196,13 @@ class AudioService : Service() {
         val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
         val metadataJson = JSONObject()
 
-        val audioFileName = audioFile.name
-
         // Add some extra keys to metadata JSON
-        metadataJson.put("filename", audioFileName)
+        metadataJson.put("filename", audioFile.name)
         metadataJson.put("source", "audio")
 
         // Get duration in seconds
-        try {
-            val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(audioFile.absolutePath)
-            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0
-            val durationSeconds = durationMs / 1000 // Convert milliseconds to seconds
-            metadataJson.put("duration", durationSeconds)
-            retriever.release()
-        } catch (e: Exception) {
-            Log.e("AudioService", "Error getting audio duration: ${e.message}")
-            metadataJson.put("duration", 0) // Default value if we can't get the duration
-        }
+        val durationSeconds = Helpers.lengthOfAudio(audioFile.absolutePath)
+        metadataJson.put("duration", durationSeconds)
 
         // Add username and audio downloading/cleaning related metadata
         val userName = sharedPrefs.getString("userName", null)
