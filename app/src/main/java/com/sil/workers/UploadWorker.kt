@@ -10,6 +10,7 @@ import java.io.File
 class UploadWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
     override fun doWork(): Result {
         val filePath = inputData.getString("file")
+        // TODO: Instead of getting source like this just use the metadata JSON object
         val fileSource = inputData.getString("source")
         val metadataJsonString = inputData.getString("metadataJson")
 

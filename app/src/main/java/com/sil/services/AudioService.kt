@@ -81,7 +81,7 @@ class AudioService : Service() {
     }
     // endregion
 
-    // region Listening and Recording Related
+    // region Listening Related
     private fun startListening() {
         Log.i(TAG, "Started Listening!")
 

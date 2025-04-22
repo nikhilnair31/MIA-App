@@ -103,24 +103,6 @@ class ScreenshotService : Service() {
 
         return defaultPath.absolutePath
     }
-    // endregion
-
-    private inner class ScreenshotFileObserver(path: String) : FileObserver(path, MOVED_TO) {
-        private val observedPath = path
-
-        override fun onEvent(event: Int, path: String?) {
-            Log.i(TAG, "onEvent | event: $event | path: $path")
-
-            if (event == MOVED_TO && path != null) {
-                val file = File(observedPath, path)
-                if (Helpers.isImageFile(file.name)) {
-                    Log.i(TAG, "New screenshot detected at ${file.absolutePath} with name: ${file.name}")
-
-                    uploadImageFileWithMetadata(file)
-                }
-            }
-        }
-    }
 
     private fun uploadImageFileWithMetadata(imageFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -167,8 +149,21 @@ class ScreenshotService : Service() {
         return metadataJson
     }
 
-    companion object {
-        // FileObserver event types
-        private const val CREATE = 0x100
+    private inner class ScreenshotFileObserver(path: String) : FileObserver(path, MOVED_TO) {
+        private val observedPath = path
+
+        override fun onEvent(event: Int, path: String?) {
+            Log.i(TAG, "onEvent | event: $event | path: $path")
+
+            if (event == MOVED_TO && path != null) {
+                val file = File(observedPath, path)
+                if (Helpers.isImageFile(file.name)) {
+                    Log.i(TAG, "New screenshot detected at ${file.absolutePath} with name: ${file.name}")
+
+                    uploadImageFileWithMetadata(file)
+                }
+            }
+        }
     }
+    // endregion
 }

@@ -47,6 +47,8 @@ import java.util.concurrent.TimeUnit
 class Helpers {
     companion object {
         // region API Keys
+        private val TAG = "Helper"
+
         private const val BUCKET_NAME = BuildConfig.BUCKET_NAME
         private const val AWS_ACCESS_KEY = BuildConfig.AWS_ACCESS_KEY
         private const val AWS_SECRET_KEY = BuildConfig.AWS_SECRET_KEY
@@ -106,7 +108,7 @@ class Helpers {
                     }
                 }
                 catch (e: IOException) {
-                    Log.e("Helper", "callNotifLambda IO Exception on attempt $attempt: ${e.message}")
+                    Log.e(TAG, "callNotifLambda IO Exception on attempt $attempt: ${e.message}")
                     lastException = e
                     delay(2000L * (attempt + 1))  // Exponential backoff
                 }
@@ -115,7 +117,7 @@ class Helpers {
             }
 
             lastException?.let {
-                Log.e("Helper", "callNotifLambda failed after all attempts", it)
+                Log.e(TAG, "callNotifLambda failed after all attempts", it)
             }
 
             return JSONObject()
@@ -129,7 +131,7 @@ class Helpers {
 
                 val mediaType = "application/json".toMediaTypeOrNull()
                 val requestBody = payload.toString().toRequestBody(mediaType)
-                Log.d("Helper", "feedback requestBody: $requestBody")
+                Log.d(TAG, "feedback requestBody: $requestBody")
 
                 val request = Request.Builder()
                     .url(NOTIFICATION_LAMBDA_ENDPOINT)
@@ -141,12 +143,12 @@ class Helpers {
                 if (response.isSuccessful && response.body != null) {
                     val responseBody = response.body!!.string()
                     if (responseBody.isNotEmpty() && responseBody != "null") {
-                        Log.d("Helper", "Feedback sent successfully")
+                        Log.d(TAG, "Feedback sent successfully")
                     } else {
-                        Log.e("Helper", "Failed to send feedback")
+                        Log.e(TAG, "Failed to send feedback")
                     }
                 } else {
-                    Log.e("Helper", "Failed to send feedback")
+                    Log.e(TAG, "Failed to send feedback")
                 }
             } catch (e: Exception) {
                 Log.e("NotificationHelper", "Error sending feedback: ${e.message}", e)
@@ -187,7 +189,7 @@ class Helpers {
                 audioFile?.let {
                     // Verify the file's readability and size
                     if (!it.exists() || !it.canRead() || it.length() <= 0) {
-                        Log.e("Helper", "Audio file does not exist, is unreadable or empty")
+                        Log.e(TAG, "Audio file does not exist, is unreadable or empty")
                         return
                     }
 
@@ -204,39 +206,39 @@ class Helpers {
                     // Convert JSONObject to Map and add to metadata
                     val metadataMap = metadataJson.toMap()
                     val metadataSize = calculateMetadataSize(metadataMap)
-                    Log.d("Helper", "Settings-defined audio metadata size: $metadataSize")
+                    Log.d(TAG, "Settings-defined audio metadata size: $metadataSize")
                     metadataMap.forEach { (key, value) ->
-                        // Log.d("Helper", "Metadata - Key: $key, Value: $value")
+                        // Log.d(TAG, "Metadata - Key: $key, Value: $value")
                         audioMetadata.addUserMetadata(key, value)
                     }
 
                     // Start local file upload
-                    Log.d("Helper", "Starting upload of $audioKeyName to $BUCKET_NAME")
+                    Log.d(TAG, "Starting upload of $audioKeyName to $BUCKET_NAME")
                     FileInputStream(it).use { fileInputStream ->
                         val audioRequest = PutObjectRequest(BUCKET_NAME, audioKeyName, fileInputStream, audioMetadata)
                         try {
                             s3Client.putObject(audioRequest)
-                            Log.d("Helper", "Uploaded audio to S3!")
+                            Log.d(TAG, "Uploaded audio to S3!")
                         }
                         catch (e: Exception) {
-                            Log.e("Helper", "Error in audio S3 upload: ${e.localizedMessage}")
+                            Log.e(TAG, "Error in audio S3 upload: ${e.localizedMessage}")
                         }
                     }
 
                     // Delete local file after upload
                     if (it.delete()) {
-                        Log.d("Helper", "Deleted local audio file after upload: ${it.name}")
+                        Log.d(TAG, "Deleted local audio file after upload: ${it.name}")
                     }
                     else {
-                        Log.e("Helper", "Failed to delete local audio file after upload: ${it.name}")
+                        Log.e(TAG, "Failed to delete local audio file after upload: ${it.name}")
                     }
                 }
             }
             catch (e: Exception) {
                 when (e) {
-                    is AmazonServiceException -> Log.e("Helper", "Error uploading audio to S3: ${e.message}")
-                    is FileNotFoundException -> Log.e("Helper", "Audio file not found: ${e.message}")
-                    else -> Log.e("Helper", "Error in audio S3 upload: ${e.localizedMessage}")
+                    is AmazonServiceException -> Log.e(TAG, "Error uploading audio to S3: ${e.message}")
+                    is FileNotFoundException -> Log.e(TAG, "Audio file not found: ${e.message}")
+                    else -> Log.e(TAG, "Error in audio S3 upload: ${e.localizedMessage}")
                 }
                 e.printStackTrace()
             }
@@ -248,7 +250,7 @@ class Helpers {
                 imageFile?.let {
                     // Verify the file's readability and size
                     if (!it.exists() || !it.canRead() || it.length() <= 0) {
-                        Log.e("Helper", "Image file does not exist, is unreadable or empty")
+                        Log.e(TAG, "Image file does not exist, is unreadable or empty")
                         return
                     }
 
@@ -260,35 +262,36 @@ class Helpers {
                     // Metadata
                     val imageMetadata = ObjectMetadata()
                     imageMetadata.contentType = "media/png"
+                    imageMetadata.contentLength = it.length()
 
                     // Convert JSONObject to Map and add to metadata
                     val metadataMap = metadataJson.toMap()
                     val metadataSize = calculateMetadataSize(metadataMap)
-                    Log.d("Helper", "Settings-defined image metadata size: $metadataSize")
+                    Log.d(TAG, "Settings-defined image metadata size: $metadataSize")
                     metadataMap.forEach { (key, value) ->
-                        // Log.d("Helper", "Metadata - Key: $key, Value: $value")
+                        // Log.d(TAG, "Metadata - Key: $key, Value: $value")
                         imageMetadata.addUserMetadata(key, value)
                     }
 
                     // Start local file upload
-                    Log.d("Helper", "Starting upload of $imageKeyName to $BUCKET_NAME")
+                    Log.d(TAG, "Starting upload of $imageKeyName to $BUCKET_NAME")
                     FileInputStream(it).use { fileInputStream ->
                         val imageRequest = PutObjectRequest(BUCKET_NAME, imageKeyName, fileInputStream, imageMetadata)
                         try {
                             s3Client.putObject(imageRequest)
-                            Log.d("Helper", "Uploaded image to S3!")
+                            Log.d(TAG, "Uploaded image to S3!")
                         }
                         catch (e: Exception) {
-                            Log.e("Helper", "Error in image S3 upload: ${e.localizedMessage}")
+                            Log.e(TAG, "Error in image S3 upload: ${e.localizedMessage}")
                         }
                     }
                 }
             }
             catch (e: Exception) {
                 when (e) {
-                    is AmazonServiceException -> Log.e("Helper", "Error uploading image to S3: ${e.message}")
-                    is FileNotFoundException -> Log.e("Helper", "Image file not found: ${e.message}")
-                    else -> Log.e("Helper", "Error in image S3 upload: ${e.localizedMessage}")
+                    is AmazonServiceException -> Log.e(TAG, "Error uploading image to S3: ${e.message}")
+                    is FileNotFoundException -> Log.e(TAG, "Image file not found: ${e.message}")
+                    else -> Log.e(TAG, "Error in image S3 upload: ${e.localizedMessage}")
                 }
                 e.printStackTrace()
             }
@@ -297,7 +300,7 @@ class Helpers {
 
         // region Image Related
         fun isImageFile(fileName: String): Boolean {
-            Log.i("Helper", "isImageFile | fileName: $fileName")
+            Log.i(TAG, "isImageFile | fileName: $fileName")
 
             val lowerCaseName = fileName.lowercase()
             return lowerCaseName.endsWith(".jpg") ||
@@ -306,23 +309,29 @@ class Helpers {
                     lowerCaseName.endsWith(".webp")
         }
         fun resolutionOfImage(filePath: String): String {
-            Log.i("Helper", "resolutionOfImage | filePath: $filePath")
+            Log.i(TAG, "resolutionOfImage | filePath: $filePath")
+            
+            try {
+                // Decode the file into a BitmapFactory.Options object to fetch the dimensions
+                val options = BitmapFactory.Options().apply {
+                    // Set inJustDecodeBounds to true to only fetch the dimensions, not load the whole image
+                    inJustDecodeBounds = true
+                }
 
-            // Decode the file into a BitmapFactory.Options object to fetch the dimensions
-            val options = BitmapFactory.Options().apply {
-                // Set inJustDecodeBounds to true to only fetch the dimensions, not load the whole image
-                inJustDecodeBounds = true
+                // Decode the file to fetch its dimensions
+                BitmapFactory.decodeFile(filePath, options)
+
+                // Extract the width and height from BitmapFactory.Options
+                val width = options.outWidth
+                val height = options.outHeight
+
+                // Return the resolution as a formatted string
+                return "$width x $height"
             }
-
-            // Decode the file to fetch its dimensions
-            BitmapFactory.decodeFile(filePath, options)
-
-            // Extract the width and height from BitmapFactory.Options
-            val width = options.outWidth
-            val height = options.outHeight
-
-            // Return the resolution as a formatted string
-            return "$width x $height"
+            catch (e: Exception) {
+                Log.e(TAG, "Error getting image resolution: ${e.message}")
+                return "-"
+            }
         }
         // endregion
 
@@ -348,12 +357,12 @@ class Helpers {
 
             // region Time
             finalOutput.put("currenttimeformattedstring", pullTimeFormattedString())
-            // Log.d("Helper", "pullDeviceData calendar finalOutput: $finalOutput")
+            // Log.d(TAG, "pullDeviceData calendar finalOutput: $finalOutput")
             // endregion
             // region Battery
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             finalOutput.put("batterylevel", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
-            // Log.d("Helper", "pullDeviceData Battery finalOutput: $finalOutput")
+            // Log.d(TAG, "pullDeviceData Battery finalOutput: $finalOutput")
             // endregion
             // region Location
             if (hasLocationPermission(context)) {
@@ -374,10 +383,10 @@ class Helpers {
                     else -> "unknown"
                 })
             }
-            // Log.d("Helper", "pullDeviceData Motion finalOutput: $finalOutput")
+            // Log.d(TAG, "pullDeviceData Motion finalOutput: $finalOutput")
             // endregion
 
-            Log.d("Helper", "pullDeviceData finalOutput: $finalOutput")
+            Log.d(TAG, "pullDeviceData finalOutput: $finalOutput")
             return finalOutput
         }
         private fun hasLocationPermission(context: Context): Boolean {
@@ -399,7 +408,7 @@ class Helpers {
                 } else null
             } catch (securityException: SecurityException) {
                 // Handle SecurityException (e.g., show a message to the user)
-                Log.e("Helper", "SecurityException: ${securityException.message}")
+                Log.e(TAG, "SecurityException: ${securityException.message}")
                 null
             }
         }

@@ -19,6 +19,8 @@ import com.sil.others.Helpers
 
 class Setup : AppCompatActivity() {
     // region Vars
+    private val TAG = "Setup"
+
     private lateinit var generalSharedPreferences: SharedPreferences
 
     private val initRequestCode = 100
@@ -37,44 +39,36 @@ class Setup : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_setup)
 
+        initRelated()
+    }
+
+    private fun initRelated() {
+        Log.i(TAG, "initRelated")
+
         generalSharedPreferences = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
 
+        // Setup UI related
         usernameEditText = findViewById(R.id.usernameEditText)
         permissionButton = findViewById(R.id.buttonPermission)
         updateAndNextButton = findViewById(R.id.buttonUpdateAndNext)
 
-        buttonSetup()
-        updatePermissionButtonColor()
-    }
-
-    private fun buttonSetup() {
-        Log.i("Main", "buttonSetup")
-
+        // Setup button related
         permissionButton.setOnClickListener {
             permissionRelated()
         }
         updateAndNextButton.setOnClickListener {
             goToMain()
         }
+
+        // Check if permissions are granted
+        updatePermissionButtonColor()
     }
-    private fun updatePermissionButtonColor() {
-        if (areAllPermissionsGranted()) {
-            // Change button color to green (use your specific green color resource)
-            permissionButton.setBackgroundColor(ContextCompat.getColor(this, R.color.accent_0))
-            permissionButton.setTextColor(ContextCompat.getColor(this, R.color.white))
-            permissionButton.text = getString(R.string.gavePermissionsText)
-        } else {
-            // Keep or reset to default color
-            permissionButton.setBackgroundColor(ContextCompat.getColor(this, R.color.white))
-            permissionButton.setTextColor(ContextCompat.getColor(this, R.color.gray_70))
-            permissionButton.text = getString(R.string.givePermissionsText)
-        }
-    }
+
     private fun goToMain() {
         val userNameText = usernameEditText.text.toString()
 
         if (userNameText.isNotEmpty()) {
-            Log.i("Setup", "goToMain\nuserName: $userNameText")
+            Log.i(TAG, "goToMain\nuserName: $userNameText")
 
             generalSharedPreferences.edit().putString("userName", userNameText).apply()
 
@@ -89,11 +83,24 @@ class Setup : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
+    private fun updatePermissionButtonColor() {
+        if (areAllPermissionsGranted()) {
+            // Change button color to green (use your specific green color resource)
+            permissionButton.setBackgroundColor(ContextCompat.getColor(this, R.color.accent_0))
+            permissionButton.setTextColor(ContextCompat.getColor(this, R.color.white))
+            permissionButton.text = getString(R.string.gavePermissionsText)
+        } else {
+            // Keep or reset to default color
+            permissionButton.setBackgroundColor(ContextCompat.getColor(this, R.color.white))
+            permissionButton.setTextColor(ContextCompat.getColor(this, R.color.gray_70))
+            permissionButton.text = getString(R.string.givePermissionsText)
+        }
+    }
     // endregion
 
     // region Permissions Related
     private fun permissionRelated() {
-        Log.i("Main", "Requesting initial permissions")
+        Log.i(TAG, "Requesting initial permissions")
 
         if (!areAllPermissionsGranted()) {
             val permList = arrayOf(
@@ -107,6 +114,7 @@ class Setup : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, permList, initRequestCode)
         }
     }
+
     private fun areAllPermissionsGranted(): Boolean {
         // Check for all regular permissions
         val hasAudioPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -125,10 +133,11 @@ class Setup : AppCompatActivity() {
                 hasFineLocationPermission && hasCoarseLocationPermission &&
                 hasBackgroundLocationPermission && isBatteryOptimizationIgnored
                 && hasMediaImagesPermission
-        Log.i("Main", "hasAllPermissions: $hasAllPermissions")
+        Log.i(TAG, "hasAllPermissions: $hasAllPermissions")
 
         return hasAllPermissions
     }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -170,7 +179,7 @@ class Setup : AppCompatActivity() {
         }
     }
     private fun getBackgroundLocationPermission() {
-        Log.i("Main", "Requesting getBackgroundLocationPermission")
+        Log.i(TAG, "Requesting getBackgroundLocationPermission")
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             val permList = arrayOf(
@@ -180,7 +189,7 @@ class Setup : AppCompatActivity() {
         }
     }
     private fun getBatteryUnrestrictedPermission() {
-        Log.i("Main", "Requesting getBatteryUnrestrictedPermission")
+        Log.i(TAG, "Requesting getBatteryUnrestrictedPermission")
 
         if (!(this.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(this.packageName)) {
             val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
