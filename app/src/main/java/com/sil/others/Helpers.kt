@@ -157,14 +157,16 @@ class Helpers {
         // endregion
 
         // region S3 Related
-        fun scheduleUploadWork(context: Context, source: String, file: File?) {
+        fun scheduleUploadWork(context: Context, source: String, file: File?, saveFile: String?, preprocessFile: String?) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
             val inputData = workDataOf(
-                "file" to file?.absolutePath,
-                "source" to source
+                "filePath" to file?.absolutePath,
+                "fileSource" to source,
+                "fileSave" to saveFile,
+                "filePreprocess" to preprocessFile
             )
 
             val uploadWorkRequest = OneTimeWorkRequestBuilder<UploadWorker>()
@@ -181,7 +183,7 @@ class Helpers {
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
 
-        fun uploadAudioFileToS3(context: Context, audioFile: File?) {
+        fun uploadAudioFileToS3(context: Context, audioFile: File?, saveFile: String?, preprocessFile: String?) {
             Log.i("Helpers", "Uploading Audio to S3...")
 
             try {
@@ -198,14 +200,21 @@ class Helpers {
                     val audioKeyName = "data/$userName/recordings/${it.name}"
 
                     // Metadata
-                    val audioMetadata = ObjectMetadata()
-                    audioMetadata.contentType = "media/m4a"
-                    audioMetadata.contentLength = it.length()
+                    val metadata = ObjectMetadata()
+                    metadata.contentType = "media/m4a"
+                    metadata.contentLength = it.length()
+
+                    // Add user metadata
+                    metadata.addUserMetadata("savefile", saveFile)
+                    metadata.addUserMetadata("preprocessfile", preprocessFile)
+                    metadata.addUserMetadata("source", "audio")
+                    metadata.addUserMetadata("filename", it.name)
+                    metadata.addUserMetadata("filepath", it.absolutePath)
 
                     // Start local file upload
                     Log.d(TAG, "Starting upload of $audioKeyName to $BUCKET_NAME")
                     FileInputStream(it).use { fileInputStream ->
-                        val audioRequest = PutObjectRequest(BUCKET_NAME, audioKeyName, fileInputStream, audioMetadata)
+                        val audioRequest = PutObjectRequest(BUCKET_NAME, audioKeyName, fileInputStream, metadata)
                         try {
                             s3Client.putObject(audioRequest)
                             Log.d(TAG, "Uploaded audio to S3!")
@@ -233,7 +242,7 @@ class Helpers {
                 e.printStackTrace()
             }
         }
-        fun uploadImageFileToS3(context: Context, imageFile: File?) {
+        fun uploadImageFileToS3(context: Context, imageFile: File?, saveFile: String?, preprocessFile: String?) {
             Log.i("Helpers", "Uploading Image to S3...")
 
             try {
@@ -250,14 +259,21 @@ class Helpers {
                     val imageKeyName = "data/$userName/screenshots/${it.name}"
 
                     // Metadata
-                    val imageMetadata = ObjectMetadata()
-                    imageMetadata.contentType = "media/png"
-                    imageMetadata.contentLength = it.length()
+                    val metadata = ObjectMetadata()
+                    metadata.contentType = "media/png"
+                    metadata.contentLength = it.length()
+
+                    // Add user metadata
+                    metadata.addUserMetadata("savefile", saveFile)
+                    metadata.addUserMetadata("preprocessfile", preprocessFile)
+                    metadata.addUserMetadata("source", "sccreenshot")
+                    metadata.addUserMetadata("filename", it.name)
+                    metadata.addUserMetadata("filepath", it.absolutePath)
 
                     // Start local file upload
                     Log.d(TAG, "Starting upload of $imageKeyName to $BUCKET_NAME")
                     FileInputStream(it).use { fileInputStream ->
-                        val imageRequest = PutObjectRequest(BUCKET_NAME, imageKeyName, fileInputStream, imageMetadata)
+                        val imageRequest = PutObjectRequest(BUCKET_NAME, imageKeyName, fileInputStream, metadata)
                         try {
                             s3Client.putObject(imageRequest)
                             Log.d(TAG, "Uploaded image to S3!")

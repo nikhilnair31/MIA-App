@@ -167,19 +167,23 @@ class AudioService : Service() {
     }
     private fun uploadAudioFileWithMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
+            // Get the shared preferences for metadata values
+            val sharedPrefs = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val userName = sharedPrefs.getString("userName", null)
+            val saveAudio = sharedPrefs.getString("saveAudioFiles", "false")
+            val preprocessAudio = sharedPrefs.getString("preprocessAudio", "false")
+
             // Start upload process
             Helpers.scheduleUploadWork(
                 this@AudioService,
                 "audio",
-                audioFile
+                audioFile,
+                saveAudio,
+                preprocessAudio
             )
 
             // After uploading, call Lambda to check if we should send a notification
             try {
-                // Get username
-                val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-                val userName = sharedPrefs.getString("userName", null)
-
                 val notificationPayloadJson = JSONObject().apply {
                     put("action", "get_notification")
                     put("username", userName)

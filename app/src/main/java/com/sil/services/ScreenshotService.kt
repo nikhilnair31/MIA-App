@@ -105,12 +105,19 @@ class ScreenshotService : Service() {
     }
 
     private fun uploadImageFileWithMetadata(imageFile: File) {
+        // Get the shared preferences for metadata values
+        val sharedPrefs = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+        val saveImage = sharedPrefs.getString("saveImageFiles", "false")
+        val preprocessImage = sharedPrefs.getString("preprocessImage", "false")
+
         CoroutineScope(Dispatchers.IO).launch {
             // Start upload process
             Helpers.scheduleUploadWork(
                 this@ScreenshotService,
                 "image",
-                imageFile
+                imageFile,
+                saveImage,
+                preprocessImage
             )
         }
     }
