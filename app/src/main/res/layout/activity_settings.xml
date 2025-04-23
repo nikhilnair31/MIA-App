@@ -71,19 +71,19 @@
 
         <LinearLayout
             android:id="@+id/constraintLayout2"
-            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
 
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/data_background"
+            android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
+
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
 
-            android:layout_marginEnd= "16dp"
-            android:layout_marginBottom="16dp"
-
-            android:background="@drawable/data_background">
+            app:layout_constraintTop_toTopOf="parent">
 
             <!-- Username Related -->
             <TextView
@@ -102,21 +102,23 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
             <TextView
                 android:id="@+id/usernameText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
-                android:padding="24dp"
+                android:background="@drawable/message_background"
 
                 android:backgroundTint="@color/white"
-                android:background="@drawable/message_background"
+                android:editable="false"
                 android:fontFamily="@font/venus_cormier"
 
                 android:gravity="center"
 
                 android:hint="@string/settingsUsernameText"
+                android:padding="24dp"
                 android:textAllCaps="false"
                 android:textColor="@color/gray_70"
                 android:textColorHint="@color/gray_70"
@@ -132,17 +134,18 @@
                 android:layout_height="wrap_content"
 
                 android:layout_marginTop="8dp"
-                android:padding="12dp"
-
                 android:fontFamily="@font/venus_cormier"
 
                 android:gravity="center"
+
+                android:padding="12dp"
                 android:text="@string/setupThoughtsText"
                 android:textColor="@color/accent_1"
                 android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/miaThoughtsTimingsLayout"
                 android:layout_width="match_parent"
@@ -150,30 +153,30 @@
 
                 android:layout_marginTop="8dp"
 
-                android:backgroundTint="@color/white"
                 android:background="@drawable/message_background"
+                android:backgroundTint="@color/white"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/audioSettingsTextView">
+                app:layout_constraintTop_toBottomOf="@+id/processingSettingsTextView">
 
                 <TextView
                     android:id="@+id/thoughtsTimingTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
 
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-
+                    android:fontFamily="@font/venus_cormier"
                     android:gravity="center"
-
                     android:padding="12dp"
 
-                    android:fontFamily="@font/venus_cormier"
                     android:text="@string/setupThoughtsTimingText"
+
                     android:textColor="@color/gray_70"
-                    android:textSize="14sp" />
+
+                    android:textSize="14sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <EditText
                     android:id="@+id/thoughtsStartTimeEditText"
@@ -239,22 +242,23 @@
 
                 android:gravity="center"
                 android:padding="12dp"
-                android:text="@string/setupAudioText"
+                android:text="@string/setupSavingText"
                 android:textColor="@color/accent_1"
                 android:textSize="14sp"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/usernameText" />
+
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/audioSaveLayout"
                 android:layout_width="match_parent"
-                android:layout_height="72dp"
+                android:layout_height="match_parent"
 
                 android:layout_marginTop="8dp"
 
-                android:backgroundTint="@color/white"
                 android:background="@drawable/message_background"
+                android:backgroundTint="@color/white"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -272,15 +276,13 @@
 
                     android:textColor="@color/gray_70"
                     android:textSize="14sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <CheckBox
                     android:id="@+id/audioSaveCheckbox"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="0dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
 
                     android:checked="false"
 
@@ -288,15 +290,43 @@
                     android:textColor="@color/accent_0"
                     android:textSize="18sp"
 
-                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/textView3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="@font/venus_cormier"
+                    android:gravity="start|center_vertical"
+                    android:padding="12dp"
+
+                    android:text="@string/setupImageSavingText"
+                    android:textColor="@color/gray_70"
+                    android:textSize="14sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/textView2" />
+
+                <CheckBox
+                    android:id="@+id/imageSaveCheckbox"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+
+                    android:checked="false"
+                    android:text=""
+
+                    android:textColor="@color/accent_0"
+                    android:textSize="18sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <!-- Audio Cleaning Related -->
             <TextView
-                android:id="@+id/audioSettingsTextView"
+                android:id="@+id/processingSettingsTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
 
@@ -305,29 +335,30 @@
 
                 android:gravity="center"
                 android:padding="12dp"
-                android:text="@string/setupAudioCleaningText"
+                android:text="@string/setupFileProcessingText"
                 android:textColor="@color/accent_1"
                 android:textSize="14sp"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/audioSaveLayout" />
+
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/audioCleanLayout"
                 android:layout_width="match_parent"
-                android:layout_height="72dp"
+                android:layout_height="match_parent"
 
                 android:layout_marginTop="8dp"
 
-                android:backgroundTint="@color/white"
                 android:background="@drawable/message_background"
+                android:backgroundTint="@color/white"
 
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/audioSettingsTextView">
+                app:layout_constraintTop_toBottomOf="@+id/processingSettingsTextView">
 
                 <TextView
-                    android:id="@+id/textView3"
+                    android:id="@+id/textView4"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
 
@@ -338,15 +369,43 @@
 
                     android:textColor="@color/gray_70"
                     android:textSize="14sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <CheckBox
-                    android:id="@+id/preprocessAudioCheckbox"
+                    android:id="@+id/audioPreprocessCheckbox"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+
+                    android:checked="false"
+                    android:text=""
+                    android:textColor="@color/accent_0"
+
+                    android:textSize="18sp"
+
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/textView5"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="0dp"
+
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="@font/venus_cormier"
+                    android:gravity="start|center_vertical"
+                    android:padding="12dp"
+
+                    android:text="@string/settingsPreprocessImage"
+                    android:textColor="@color/gray_70"
+                    android:textSize="14sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/textView4" />
+
+                <CheckBox
+                    android:id="@+id/imagePreprocessCheckbox"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
 
                     android:checked="false"
                     android:text=""
@@ -355,8 +414,7 @@
                     android:textSize="18sp"
 
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintEnd_toEndOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>

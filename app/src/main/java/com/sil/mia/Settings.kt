@@ -10,6 +10,7 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import com.sil.others.Helpers
 
 class Settings : AppCompatActivity() {
@@ -24,7 +25,9 @@ class Settings : AppCompatActivity() {
     private lateinit var thoughtsEndTimeEditText: EditText
 
     private lateinit var audioSaveCheckbox: CheckBox
+    private lateinit var imageSaveCheckbox: CheckBox
     private lateinit var audioPreprocessCheckbox: CheckBox
+    private lateinit var imagePreprocessCheckbox: CheckBox
     // endregion
 
     // region Common
@@ -38,7 +41,9 @@ class Settings : AppCompatActivity() {
         thoughtsStartTimeEditText = findViewById(R.id.thoughtsStartTimeEditText)
         thoughtsEndTimeEditText = findViewById(R.id.thoughtsEndTimeEditText)
         audioSaveCheckbox = findViewById(R.id.audioSaveCheckbox)
-        audioPreprocessCheckbox = findViewById(R.id.preprocessAudioCheckbox)
+        imageSaveCheckbox = findViewById(R.id.imageSaveCheckbox)
+        audioPreprocessCheckbox = findViewById(R.id.audioPreprocessCheckbox)
+        imagePreprocessCheckbox = findViewById(R.id.imagePreprocessCheckbox)
         backButton = findViewById(R.id.buttonBack)
 
         textSetup()
@@ -52,7 +57,6 @@ class Settings : AppCompatActivity() {
     private fun textSetup() {
         usernameText.text = generalSharedPreferences.getString("userName", "")
     }
-
     private fun editTextSetup() {
         thoughtsStartTimeEditText.text = Editable.Factory.getInstance().newEditable(generalSharedPreferences.getInt("thoughtsStartTime", 6).toString())
         thoughtsEndTimeEditText.text = Editable.Factory.getInstance().newEditable(generalSharedPreferences.getInt("thoughtsEndTime", 0).toString())
@@ -97,13 +101,21 @@ class Settings : AppCompatActivity() {
 
     private fun checkboxSetup() {
         audioSaveCheckbox.isChecked =  generalSharedPreferences.getString("saveAudioFiles", "false").toBoolean()
-        audioPreprocessCheckbox.isChecked =  generalSharedPreferences.getString("preprocessAudio", "false").toBoolean()
-
         audioSaveCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            generalSharedPreferences.edit().putString("saveAudioFiles", isChecked.toString()).apply()
+            generalSharedPreferences.edit { putString("saveAudioFiles", isChecked.toString()) }
         }
+        imageSaveCheckbox.isChecked =  generalSharedPreferences.getString("saveImageFiles", "false").toBoolean()
+        imageSaveCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            generalSharedPreferences.edit { putString("saveImageFiles", isChecked.toString()) }
+        }
+
+        audioPreprocessCheckbox.isChecked =  generalSharedPreferences.getString("preprocessAudio", "false").toBoolean()
         audioPreprocessCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            generalSharedPreferences.edit().putString("preprocessAudio", isChecked.toString()).apply()
+            generalSharedPreferences.edit { putString("preprocessAudio", isChecked.toString()) }
+        }
+        imagePreprocessCheckbox.isChecked =  generalSharedPreferences.getString("preprocessImage", "false").toBoolean()
+        imagePreprocessCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            generalSharedPreferences.edit { putString("preprocessImage", isChecked.toString()) }
         }
     }
 

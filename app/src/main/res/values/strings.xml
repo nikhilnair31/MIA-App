@@ -15,9 +15,10 @@
     <string name="setupThoughtsTimingText">SHOW TIME</string>
     <string name="setupThoughtsStartTimeText">6</string>
     <string name="setupThoughtsEndTimeText">23</string>
-    <string name="setupAudioText">SAVING</string>
-    <string name="setupAudioSavingText">SAVE AUDIO</string>
-    <string name="setupAudioCleaningText">AUDIO</string>
+    <string name="setupSavingText">SAVING</string>
+    <string name="setupAudioSavingText">AUDIO</string>
+    <string name="setupImageSavingText">IMAGE</string>
+    <string name="setupFileProcessingText">PREPROCESSING</string>
     <string name="setupDataText">DATA</string>
 
     <string name="permissionsText">PERMISSIONS</string>
@@ -31,7 +32,8 @@
     <string name="settingsText">SETTINGS</string>
     <string name="settingsImageDescription">user image</string>
     <string name="settingsUsernameText">USERNAME: abc</string>
-    <string name="settingsPreprocessAudio">PREPROCES AUDIO</string>
+    <string name="settingsPreprocessAudio">AUDIO</string>
+    <string name="settingsPreprocessImage">IMAGE</string>
 
     <string name="gpt4turbo" tools:ignore="TypographyDashes">gpt-4-turbo-preview</string>
 

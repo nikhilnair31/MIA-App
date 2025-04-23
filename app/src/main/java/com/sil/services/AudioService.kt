@@ -103,6 +103,27 @@ class AudioService : Service() {
             }
         }
     }
+    private fun stopListening() {
+        Log.i(TAG, "Stopped Listening")
+
+        try {
+            val serviceIntent = Intent(this, AudioService::class.java)
+            stopService(serviceIntent)
+
+            mediaRecorder?.apply {
+                stop()
+                release()
+            }
+        }
+        catch (e: Exception) {
+            Log.e(TAG, "Error stopping media recorder", e)
+        }
+        finally {
+            mediaRecorder = null
+            latestAudioFile?.let { uploadAudioFileWithMetadata(it) }
+        }
+    }
+
     private fun setupMediaRecorder(audioFile: File) {
         val audioSource = MediaRecorder.AudioSource.DEFAULT
 
@@ -127,26 +148,6 @@ class AudioService : Service() {
         }
     }
 
-    private fun stopListening() {
-        Log.i(TAG, "Stopped Listening")
-
-        try {
-            val serviceIntent = Intent(this, AudioService::class.java)
-            stopService(serviceIntent)
-
-            mediaRecorder?.apply {
-                stop()
-                release()
-            }
-        }
-        catch (e: Exception) {
-            Log.e(TAG, "Error stopping media recorder", e)
-        }
-        finally {
-            mediaRecorder = null
-            latestAudioFile?.let { uploadAudioFileWithMetadata(it) }
-        }
-    }
     private fun stopRecordingAndUpload(audioFile: File) {
         mediaRecorder?.apply {
             stop()
