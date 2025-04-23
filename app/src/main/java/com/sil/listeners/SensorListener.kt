@@ -34,7 +34,7 @@ class SensorListener(context: Context) : SensorEventListener {
         if (sensor.type == Sensor.TYPE_ACCELEROMETER) {
 
             val currentTime = System.currentTimeMillis()
-            if ((currentTime - lastUpdate) > 10) {
+            if ((currentTime - lastUpdate) > 1) {
                 val diffTime = (currentTime - lastUpdate)
                 lastUpdate = currentTime
 

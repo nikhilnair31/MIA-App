@@ -19,7 +19,8 @@ class Main : AppCompatActivity() {
     private var audioServiceIntent: Intent? = null
     private var screenshotServiceIntent: Intent? = null
 
-    private lateinit var toggleButton: ToggleButton
+    private lateinit var audioToggleButton: ToggleButton
+    private lateinit var screenshotToggleButton: ToggleButton
     private lateinit var settingsButton: ImageButton
 
     private lateinit var generalSharedPref: SharedPreferences
@@ -32,7 +33,8 @@ class Main : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         initRelated()
-        toggleRelated()
+        audioToggleRelated()
+        screenshotToggleRelated()
     }
 
     private fun initRelated() {
@@ -41,7 +43,8 @@ class Main : AppCompatActivity() {
 
         generalSharedPref.edit().putBoolean("isFirstRun", false).apply()
 
-        toggleButton = findViewById(R.id.toggleButton)
+        audioToggleButton = findViewById(R.id.audioToggleButton)
+        screenshotToggleButton = findViewById(R.id.screenshotToggleButton)
         settingsButton = findViewById(R.id.settingsButton)
 
         settingsButton.setOnClickListener {
@@ -50,29 +53,45 @@ class Main : AppCompatActivity() {
         }
     }
 
-    private fun toggleRelated() {
-        Log.i(TAG, "toggleRelated")
+    private fun audioToggleRelated() {
+        Log.i(TAG, "audioToggleRelated")
 
-        if (isServiceRunning(AudioService::class.java) && isServiceRunning(ScreenshotService::class.java)) {
-            Log.i(TAG, "Audio and Screenshots services ARE Running")
-            toggleButton.isChecked = true
+        if (isServiceRunning(AudioService::class.java)) {
+            Log.i(TAG, "Audio service IS Running")
+            audioToggleButton.isChecked = true
         }
-        toggleButton.setOnCheckedChangeListener { _, isChecked ->
+        audioToggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                Log.i(TAG, "Audio and Screenshots services created")
+                Log.i(TAG, "Audio service created")
 
                 audioServiceIntent = Intent(this, AudioService::class.java)
                 startForegroundService(audioServiceIntent)
+            } else {
+                Log.i(TAG, "Audio service stopped")
+                stopService(audioServiceIntent)
+            }
+        }
+    }
+    private fun screenshotToggleRelated() {
+        Log.i(TAG, "screenshotToggleRelated")
+
+        if (isServiceRunning(ScreenshotService::class.java)) {
+            Log.i(TAG, "Screenshot service ARE Running")
+            screenshotToggleButton.isChecked = true
+        }
+        screenshotToggleButton.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                Log.i(TAG, "Screenshot service created")
 
                 screenshotServiceIntent = Intent(this, ScreenshotService::class.java)
                 startService(screenshotServiceIntent)
             } else {
-                Log.i(TAG, "Audio and Screenshots services stopped")
-                stopService(audioServiceIntent)
+                Log.i(TAG, "Screenshot service stopped")
                 stopService(screenshotServiceIntent)
             }
         }
     }
+
     private fun isServiceRunning(serviceClass: Class<*>): Boolean {
         val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
