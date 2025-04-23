@@ -167,28 +167,31 @@ class AudioService : Service() {
     }
     private fun uploadAudioFileWithMetadata(audioFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
-            // Create metadata
-            val metadata = createMetadataJson(audioFile)
-
             // Start upload process
             Helpers.scheduleUploadWork(
                 this@AudioService,
                 "audio",
-                audioFile,
-                metadata
+                audioFile
             )
 
             // After uploading, call Lambda to check if we should send a notification
             try {
-                val notifPaylodJson = JSONObject().apply {
+                // Get username
+                val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                val userName = sharedPrefs.getString("userName", null)
+
+                val notificationPayloadJson = JSONObject().apply {
                     put("action", "get_notification")
-                    put("username", metadata.get("username"))
+                    put("username", userName)
                 }
-                 Log.i(TAG, "notifPaylodJson: $notifPaylodJson")
-                val notifLambdaResponseJson = Helpers.callNotificationCheckLambda(this@AudioService, notifPaylodJson)
-                 Log.i(TAG, "notifLambdaResponseJson: $notifLambdaResponseJson")
-                notificationHelper.checkIfShouldNotify(notifLambdaResponseJson)
-            } catch (e: Exception) {
+                Log.i(TAG, "notificationPayloadJson: $notificationPayloadJson")
+
+                val notificationLambdaResponseJson = Helpers.callNotificationCheckLambda(this@AudioService, notificationPayloadJson)
+                Log.i(TAG, "notificationLambdaResponseJson: $notificationLambdaResponseJson")
+
+                notificationHelper.checkIfShouldNotify(notificationLambdaResponseJson)
+            }
+            catch (e: Exception) {
                 Log.e(TAG, "Error calling notification lambda", e)
             }
         }

@@ -106,15 +106,11 @@ class ScreenshotService : Service() {
 
     private fun uploadImageFileWithMetadata(imageFile: File) {
         CoroutineScope(Dispatchers.IO).launch {
-            // Create metadata
-            val metadata = createMetadataJson(imageFile)
-
             // Start upload process
             Helpers.scheduleUploadWork(
                 this@ScreenshotService,
                 "image",
-                imageFile,
-                metadata
+                imageFile
             )
         }
     }

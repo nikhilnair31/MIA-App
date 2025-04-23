@@ -157,15 +157,14 @@ class Helpers {
         // endregion
 
         // region S3 Related
-        fun scheduleUploadWork(context: Context, source: String, file: File?, metadataJson: JSONObject) {
+        fun scheduleUploadWork(context: Context, source: String, file: File?) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
             val inputData = workDataOf(
                 "file" to file?.absolutePath,
-                "source" to source,
-                "metadataJson" to metadataJson.toString()
+                "source" to source
             )
 
             val uploadWorkRequest = OneTimeWorkRequestBuilder<UploadWorker>()
@@ -182,7 +181,7 @@ class Helpers {
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
 
-        fun uploadAudioFileToS3(context: Context, audioFile: File?, metadataJson: JSONObject) {
+        fun uploadAudioFileToS3(context: Context, audioFile: File?) {
             Log.i("Helpers", "Uploading Audio to S3...")
 
             try {
@@ -202,15 +201,6 @@ class Helpers {
                     val audioMetadata = ObjectMetadata()
                     audioMetadata.contentType = "media/m4a"
                     audioMetadata.contentLength = it.length()
-
-                    // Convert JSONObject to Map and add to metadata
-                    val metadataMap = metadataJson.toMap()
-                    val metadataSize = calculateMetadataSize(metadataMap)
-                    Log.d(TAG, "Settings-defined audio metadata size: $metadataSize")
-                    metadataMap.forEach { (key, value) ->
-                        // Log.d(TAG, "Metadata - Key: $key, Value: $value")
-                        audioMetadata.addUserMetadata(key, value)
-                    }
 
                     // Start local file upload
                     Log.d(TAG, "Starting upload of $audioKeyName to $BUCKET_NAME")
@@ -243,7 +233,7 @@ class Helpers {
                 e.printStackTrace()
             }
         }
-        fun uploadImageFileToS3(context: Context, imageFile: File?, metadataJson: JSONObject) {
+        fun uploadImageFileToS3(context: Context, imageFile: File?) {
             Log.i("Helpers", "Uploading Image to S3...")
 
             try {
@@ -263,15 +253,6 @@ class Helpers {
                     val imageMetadata = ObjectMetadata()
                     imageMetadata.contentType = "media/png"
                     imageMetadata.contentLength = it.length()
-
-                    // Convert JSONObject to Map and add to metadata
-                    val metadataMap = metadataJson.toMap()
-                    val metadataSize = calculateMetadataSize(metadataMap)
-                    Log.d(TAG, "Settings-defined image metadata size: $metadataSize")
-                    metadataMap.forEach { (key, value) ->
-                        // Log.d(TAG, "Metadata - Key: $key, Value: $value")
-                        imageMetadata.addUserMetadata(key, value)
-                    }
 
                     // Start local file upload
                     Log.d(TAG, "Starting upload of $imageKeyName to $BUCKET_NAME")

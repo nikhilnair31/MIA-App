@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.sil.others.Helpers
-import org.json.JSONObject
 import java.io.File
 
 class UploadWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
@@ -12,17 +11,15 @@ class UploadWorker(context: Context, workerParams: WorkerParameters) : Worker(co
         val filePath = inputData.getString("file")
         // TODO: Instead of getting source like this just use the metadata JSON object
         val fileSource = inputData.getString("source")
-        val metadataJsonString = inputData.getString("metadataJson")
 
-        if (!filePath.isNullOrEmpty() && !fileSource.isNullOrEmpty() && !metadataJsonString.isNullOrEmpty()) {
+        if (!filePath.isNullOrEmpty() && !fileSource.isNullOrEmpty()) {
             val file = File(filePath)
-            val metadataJsonObj = JSONObject(metadataJsonString)
 
             if (fileSource == "audio") {
-                Helpers.uploadAudioFileToS3(applicationContext, file, metadataJsonObj)
+                Helpers.uploadAudioFileToS3(applicationContext, file)
             }
             else if (fileSource == "image") {
-                Helpers.uploadImageFileToS3(applicationContext, file, metadataJsonObj)
+                Helpers.uploadImageFileToS3(applicationContext, file)
             }
 
             return Result.success()
