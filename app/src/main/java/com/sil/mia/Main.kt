@@ -9,6 +9,7 @@ import android.util.Log
 import android.widget.ImageButton
 import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
+import com.sil.others.Helpers
 import com.sil.services.AudioService
 import com.sil.services.ScreenshotService
 
@@ -70,6 +71,7 @@ class Main : AppCompatActivity() {
                 Log.i(TAG, "Audio service stopped")
                 stopService(audioServiceIntent)
             }
+            sensorDataUploadRelated()
         }
     }
     private fun screenshotToggleRelated() {
@@ -89,6 +91,18 @@ class Main : AppCompatActivity() {
                 Log.i(TAG, "Screenshot service stopped")
                 stopService(screenshotServiceIntent)
             }
+            sensorDataUploadRelated()
+        }
+    }
+
+    private fun sensorDataUploadRelated() {
+        Log.i(TAG, "sensorDataUploadRelated")
+
+        if (audioToggleButton.isChecked || screenshotToggleButton.isChecked) {
+            Helpers.schedulePeriodicUploadWork(this, 1)
+        }
+        else {
+            Helpers.cancelPeriodicUploadWork(this)
         }
     }
 

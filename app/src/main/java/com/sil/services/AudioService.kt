@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Environment
@@ -174,7 +173,7 @@ class AudioService : Service() {
             val preprocessAudio = sharedPrefs.getString("preprocessAudio", "false")
 
             // Start upload process
-            Helpers.scheduleUploadWork(
+            Helpers.scheduleContentUploadWork(
                 this@AudioService,
                 "audio",
                 audioFile,
@@ -199,37 +198,6 @@ class AudioService : Service() {
                 Log.e(TAG, "Error calling notification lambda", e)
             }
         }
-    }
-    private fun createMetadataJson(audioFile: File): JSONObject {
-        val sharedPrefs: SharedPreferences = this@AudioService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-        val metadataJson = JSONObject()
-
-        // Add some extra keys to metadata JSON
-        metadataJson.put("filename", audioFile.name)
-        metadataJson.put("source", "audio")
-
-        // Get duration in seconds
-        val durationSeconds = Helpers.lengthOfAudio(audioFile.absolutePath)
-        metadataJson.put("duration", durationSeconds)
-
-        // Add username and audio downloading/cleaning related metadata
-        val userName = sharedPrefs.getString("userName", null)
-        metadataJson.put("username", userName)
-
-        // Add audio downloading/cleaning related metadata
-        val saveAudioFilesState = sharedPrefs.getString("saveAudioFiles", "false")
-        metadataJson.put("saveaudiofile", saveAudioFilesState)
-        val preprocessAudioFilesState = sharedPrefs.getString("preprocessAudio", "false")
-        metadataJson.put("preprocessaudiofile", preprocessAudioFilesState)
-
-        // Pull individual keys and values from system data into metadata JSON
-        val systemData = Helpers.pullDeviceData(this@AudioService, sensorListener)
-        for (key in systemData.keys()) {
-            metadataJson.put(key, systemData[key])
-        }
-        // Log.d("Helper", "createMetadataJson systemData: $systemData")
-
-        return metadataJson
     }
     // endregion
 }

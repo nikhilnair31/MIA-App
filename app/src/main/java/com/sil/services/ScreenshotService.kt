@@ -3,7 +3,6 @@ package com.sil.services
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Environment
 import android.os.FileObserver
 import android.os.IBinder
@@ -13,7 +12,6 @@ import com.sil.others.Helpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import java.io.File
 
 class ScreenshotService : Service() {
@@ -112,7 +110,7 @@ class ScreenshotService : Service() {
 
         CoroutineScope(Dispatchers.IO).launch {
             // Start upload process
-            Helpers.scheduleUploadWork(
+            Helpers.scheduleContentUploadWork(
                 this@ScreenshotService,
                 "image",
                 imageFile,
@@ -120,36 +118,6 @@ class ScreenshotService : Service() {
                 preprocessImage
             )
         }
-    }
-    private fun createMetadataJson(imageFile: File): JSONObject {
-        val sharedPrefs: SharedPreferences = this@ScreenshotService.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-        val metadataJson = JSONObject()
-
-        // Add some extra keys to metadata JSON
-        metadataJson.put("filename", imageFile.name)
-        metadataJson.put("source", "image")
-
-        // Get resolution
-        val imageResolution = Helpers.resolutionOfImage(imageFile.absolutePath)
-        metadataJson.put("resolution", imageResolution)
-
-        // Add username and audio downloading/cleaning related metadata
-        val userName = sharedPrefs.getString("userName", null)
-        metadataJson.put("username", userName)
-
-        // Add audio downloading/cleaning related metadata
-        val saveFilesState = sharedPrefs.getString("saveAudioFiles", "false")
-        metadataJson.put("saveimagefile", saveFilesState)
-        val preprocessAudioFilesState = sharedPrefs.getString("preprocessAudio", "false")
-        metadataJson.put("preprocessimagefile", preprocessAudioFilesState)
-
-        // Pull individual keys and values from system data into metadata JSON
-        val systemData = Helpers.pullDeviceData(this, sensorListener)
-        for (key in systemData.keys()) {
-            metadataJson.put(key, systemData[key])
-        }
-
-        return metadataJson
     }
 
     private inner class ScreenshotFileObserver(path: String) : FileObserver(path, MOVED_TO) {
