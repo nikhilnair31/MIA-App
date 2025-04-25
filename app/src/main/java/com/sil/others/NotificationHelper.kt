@@ -29,7 +29,6 @@ class NotificationHelper(private val context: Context) {
     private val listeningNotificationTitle = "MIA listening..."
     private val listeningNotificationText = "Active"
     private val listeningNotificationIcon = R.drawable.mia_stat_name
-    private val listeningNotificationId = 1
 
     // Constants for thoughts notification
     private val thoughtsChannelId = "MiaThoughtsChannel"
@@ -37,7 +36,7 @@ class NotificationHelper(private val context: Context) {
     private val thoughtsChannelImportance = NotificationManager.IMPORTANCE_DEFAULT
     // endregion
 
-    // region Init Related
+    // region Notification Related
     fun createListeningNotification(): Notification {
         Log.i("NotificationHelper", "Creating listening notification channel")
 

@@ -6,7 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.sil.others.Helpers
 
-class PeriodicDataWorker(context: Context, workerParams: WorkerParameters) :
+class PeriodicSensorDataWorker(context: Context, workerParams: WorkerParameters) :
     CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {

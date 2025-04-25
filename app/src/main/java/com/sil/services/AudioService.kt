@@ -17,7 +17,6 @@ import com.sil.others.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -168,7 +167,6 @@ class AudioService : Service() {
         CoroutineScope(Dispatchers.IO).launch {
             // Get the shared preferences for metadata values
             val sharedPrefs = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-            val userName = sharedPrefs.getString("userName", null)
             val saveAudio = sharedPrefs.getString("saveAudioFiles", "false")
             val preprocessAudio = sharedPrefs.getString("preprocessAudio", "false")
 
@@ -180,23 +178,6 @@ class AudioService : Service() {
                 saveAudio,
                 preprocessAudio
             )
-
-            // After uploading, call Lambda to check if we should send a notification
-            try {
-                val notificationPayloadJson = JSONObject().apply {
-                    put("action", "get_notification")
-                    put("username", userName)
-                }
-                Log.i(TAG, "notificationPayloadJson: $notificationPayloadJson")
-
-                val notificationLambdaResponseJson = Helpers.callNotificationCheckLambda(this@AudioService, notificationPayloadJson)
-                Log.i(TAG, "notificationLambdaResponseJson: $notificationLambdaResponseJson")
-
-                notificationHelper.checkIfShouldNotify(notificationLambdaResponseJson)
-            }
-            catch (e: Exception) {
-                Log.e(TAG, "Error calling notification lambda", e)
-            }
         }
     }
     // endregion

@@ -1,6 +1,5 @@
 package com.sil.mia
 
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -9,6 +8,7 @@ import android.util.Log
 import android.widget.ImageButton
 import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import com.sil.others.Helpers
 import com.sil.services.AudioService
 import com.sil.services.ScreenshotService
@@ -20,12 +20,11 @@ class Main : AppCompatActivity() {
     private var audioServiceIntent: Intent? = null
     private var screenshotServiceIntent: Intent? = null
 
+    private lateinit var generalSharedPref: SharedPreferences
+
     private lateinit var audioToggleButton: ToggleButton
     private lateinit var screenshotToggleButton: ToggleButton
     private lateinit var settingsButton: ImageButton
-
-    private lateinit var generalSharedPref: SharedPreferences
-    private lateinit var dataSharedPref: SharedPreferences
     // endregion
 
     // region Common
@@ -39,10 +38,8 @@ class Main : AppCompatActivity() {
     }
 
     private fun initRelated() {
-        dataSharedPref = getSharedPreferences("com.sil.mia.data", Context.MODE_PRIVATE)
         generalSharedPref = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-
-        generalSharedPref.edit().putBoolean("isFirstRun", false).apply()
+        generalSharedPref.edit { putBoolean("isFirstRun", false) }
 
         audioToggleButton = findViewById(R.id.audioToggleButton)
         screenshotToggleButton = findViewById(R.id.screenshotToggleButton)
@@ -57,7 +54,7 @@ class Main : AppCompatActivity() {
     private fun audioToggleRelated() {
         Log.i(TAG, "audioToggleRelated")
 
-        if (isServiceRunning(AudioService::class.java)) {
+        if (Helpers.isServiceRunning(this, AudioService::class.java)) {
             Log.i(TAG, "Audio service IS Running")
             audioToggleButton.isChecked = true
         }
@@ -71,13 +68,13 @@ class Main : AppCompatActivity() {
                 Log.i(TAG, "Audio service stopped")
                 stopService(audioServiceIntent)
             }
-            sensorDataUploadRelated()
+            handlePeriodicTasks()
         }
     }
     private fun screenshotToggleRelated() {
         Log.i(TAG, "screenshotToggleRelated")
 
-        if (isServiceRunning(ScreenshotService::class.java)) {
+        if (Helpers.isServiceRunning(this, ScreenshotService::class.java)) {
             Log.i(TAG, "Screenshot service ARE Running")
             screenshotToggleButton.isChecked = true
         }
@@ -91,29 +88,23 @@ class Main : AppCompatActivity() {
                 Log.i(TAG, "Screenshot service stopped")
                 stopService(screenshotServiceIntent)
             }
-            sensorDataUploadRelated()
+            handlePeriodicTasks()
         }
     }
 
-    private fun sensorDataUploadRelated() {
-        Log.i(TAG, "sensorDataUploadRelated")
+    private fun handlePeriodicTasks() {
+        Log.i(TAG, "handlePeriodicTasks")
 
-        if (audioToggleButton.isChecked || screenshotToggleButton.isChecked) {
-            Helpers.schedulePeriodicUploadWork(this, 1)
+        val isAnyFeatureActive = audioToggleButton.isChecked || screenshotToggleButton.isChecked
+
+        if (isAnyFeatureActive) {
+            Helpers.schedulePeriodicUploadWork(this)
+            Helpers.schedulePeriodicNotificationCheckWork(this)
         }
         else {
             Helpers.cancelPeriodicUploadWork(this)
+            Helpers.cancelPeriodicNotificationCheckWork(this)
         }
-    }
-
-    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                return true
-            }
-        }
-        return false
     }
     // endregion
 }

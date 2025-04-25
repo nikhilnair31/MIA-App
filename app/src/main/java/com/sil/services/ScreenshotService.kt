@@ -78,6 +78,45 @@ class ScreenshotService : Service() {
         screenshotObserver = null
     }
 
+    private fun uploadImageFileWithMetadata(imageFile: File) {
+        // Get the shared preferences for metadata values
+        val sharedPrefs = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+        val saveImage = sharedPrefs.getString("saveImageFiles", "false")
+        val preprocessImage = sharedPrefs.getString("preprocessImage", "false")
+
+        CoroutineScope(Dispatchers.IO).launch {
+            // Start upload process
+            Helpers.scheduleContentUploadWork(
+                this@ScreenshotService,
+                "image",
+                imageFile,
+                saveImage,
+                preprocessImage
+            )
+        }
+    }
+    // endregion
+
+    // region Observer Related
+    private inner class ScreenshotFileObserver(path: String) : FileObserver(path, MOVED_TO) {
+        private val observedPath = path
+
+        override fun onEvent(event: Int, path: String?) {
+            Log.i(TAG, "onEvent | event: $event | path: $path")
+
+            if (event == MOVED_TO && path != null) {
+                val file = File(observedPath, path)
+                if (isImageFile(file.name)) {
+                    Log.i(TAG, "New screenshot detected at ${file.absolutePath} with name: ${file.name}")
+
+                    uploadImageFileWithMetadata(file)
+                }
+            }
+        }
+    }
+    // endregion
+
+    // region Helpers
     private fun getScreenshotsPath(): String? {
         // For most devices, screenshots are in DCIM/Screenshots or Pictures/Screenshots
         val dcimPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
@@ -101,40 +140,14 @@ class ScreenshotService : Service() {
 
         return defaultPath.absolutePath
     }
+    fun isImageFile(fileName: String): Boolean {
+        Log.i(TAG, "isImageFile | fileName: $fileName")
 
-    private fun uploadImageFileWithMetadata(imageFile: File) {
-        // Get the shared preferences for metadata values
-        val sharedPrefs = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-        val saveImage = sharedPrefs.getString("saveImageFiles", "false")
-        val preprocessImage = sharedPrefs.getString("preprocessImage", "false")
-
-        CoroutineScope(Dispatchers.IO).launch {
-            // Start upload process
-            Helpers.scheduleContentUploadWork(
-                this@ScreenshotService,
-                "image",
-                imageFile,
-                saveImage,
-                preprocessImage
-            )
-        }
-    }
-
-    private inner class ScreenshotFileObserver(path: String) : FileObserver(path, MOVED_TO) {
-        private val observedPath = path
-
-        override fun onEvent(event: Int, path: String?) {
-            Log.i(TAG, "onEvent | event: $event | path: $path")
-
-            if (event == MOVED_TO && path != null) {
-                val file = File(observedPath, path)
-                if (Helpers.isImageFile(file.name)) {
-                    Log.i(TAG, "New screenshot detected at ${file.absolutePath} with name: ${file.name}")
-
-                    uploadImageFileWithMetadata(file)
-                }
-            }
-        }
+        val lowerCaseName = fileName.lowercase()
+        return lowerCaseName.endsWith(".jpg") ||
+                lowerCaseName.endsWith(".jpeg") ||
+                lowerCaseName.endsWith(".png") ||
+                lowerCaseName.endsWith(".webp")
     }
     // endregion
 }

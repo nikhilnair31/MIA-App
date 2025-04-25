@@ -47,7 +47,7 @@ class FeedbackReceiver : android.content.BroadcastReceiver() {
 
         // Call notification lambda to send feedback
         CoroutineScope(Dispatchers.IO).launch {
-            Helpers.callNotificationFeedbackLambda(context, feedbackJsonObject)
+            Helpers.callNotificationFeedbackLambda(feedbackJsonObject)
         }
 
         // Cancel the notification to ensure it's gone

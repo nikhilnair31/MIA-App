@@ -1,13 +1,12 @@
 package com.sil.others
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
 import android.location.Location
 import android.location.LocationManager
-import android.media.MediaMetadataRetriever
 import android.os.BatteryManager
 import android.util.Log
 import android.widget.Toast
@@ -18,6 +17,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -30,7 +30,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.sil.listeners.SensorListener
 import com.sil.mia.BuildConfig
-import com.sil.workers.PeriodicDataWorker
+import com.sil.workers.PeriodicNotificationCallWorker
+import com.sil.workers.PeriodicSensorDataWorker
 import com.sil.workers.UploadWorker
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -51,7 +52,7 @@ class Helpers {
     companion object {
         // region API Keys
         private const val TAG = "Helper"
-
+        private const val PERIODIC_NOTIFICATION_CHECK_WORK = "periodic_notification_check_work"
         private const val PERIODIC_UPLOAD_WORK = "periodic_data_upload_work"
 
         private const val BUCKET_NAME = BuildConfig.BUCKET_NAME
@@ -68,7 +69,7 @@ class Helpers {
         // endregion
 
         // region API Related
-        suspend fun callNotificationCheckLambda(context: Context, payload: JSONObject): JSONObject {
+        suspend fun callNotificationCheckLambda(payload: JSONObject): JSONObject {
             var lastException: IOException? = null
             val minRequestInterval = 1000L  // Minimum interval between requests in milliseconds
             var lastRequestTime = 0L
@@ -127,7 +128,7 @@ class Helpers {
 
             return JSONObject()
         }
-        suspend fun callNotificationFeedbackLambda(context: Context, payload: JSONObject) {
+        fun callNotificationFeedbackLambda(payload: JSONObject) {
             try {
                 val client = OkHttpClient.Builder()
                     .connectTimeout(30, TimeUnit.SECONDS)
@@ -161,7 +162,7 @@ class Helpers {
         }
         // endregion
 
-        // region S3 Related
+        // region Worker Related
         fun scheduleContentUploadWork(context: Context, source: String, file: File?, saveFile: String?, preprocessFile: String?) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -187,13 +188,14 @@ class Helpers {
             val appContext = context.applicationContext
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
-        fun schedulePeriodicUploadWork(context: Context, intervalMinutes: Long) {
+
+        fun schedulePeriodicUploadWork(context: Context, intervalMinutes: Long = MIN_PERIODIC_INTERVAL_MILLIS) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
             // Create the periodic work request
-            val uploadWorkRequest = PeriodicWorkRequestBuilder<PeriodicDataWorker>(
+            val uploadWorkRequest = PeriodicWorkRequestBuilder<PeriodicSensorDataWorker>(
                 intervalMinutes, TimeUnit.MINUTES
             )
                 .setBackoffCriteria(
@@ -215,6 +217,36 @@ class Helpers {
             WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_UPLOAD_WORK)
         }
 
+        fun schedulePeriodicNotificationCheckWork(context: Context, intervalMinutes: Long = MIN_PERIODIC_INTERVAL_MILLIS) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            // Create the periodic work request
+            val uploadWorkRequest = PeriodicWorkRequestBuilder<PeriodicNotificationCallWorker>(
+                intervalMinutes, TimeUnit.MINUTES
+            )
+                .setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL,
+                    OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+                    TimeUnit.MILLISECONDS
+                )
+                .setConstraints(constraints)
+                .build()
+
+            // Schedule the work, replacing any existing one
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                PERIODIC_NOTIFICATION_CHECK_WORK,
+                ExistingPeriodicWorkPolicy.REPLACE,
+                uploadWorkRequest
+            )
+        }
+        fun cancelPeriodicNotificationCheckWork(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_NOTIFICATION_CHECK_WORK)
+        }
+        // endregion
+
+        // region S3 Related
         fun uploadAudioFileToS3(context: Context, audioFile: File?, saveFile: String?, preprocessFile: String?) {
             Log.i("Helpers", "Uploading Audio to S3...")
 
@@ -371,56 +403,15 @@ class Helpers {
         }
         // endregion
 
-        // region Image Related
-        fun isImageFile(fileName: String): Boolean {
-            Log.i(TAG, "isImageFile | fileName: $fileName")
-
-            val lowerCaseName = fileName.lowercase()
-            return lowerCaseName.endsWith(".jpg") ||
-                    lowerCaseName.endsWith(".jpeg") ||
-                    lowerCaseName.endsWith(".png") ||
-                    lowerCaseName.endsWith(".webp")
-        }
-        fun resolutionOfImage(filePath: String): String {
-            Log.i(TAG, "resolutionOfImage | filePath: $filePath")
-            
-            try {
-                // Decode the file into a BitmapFactory.Options object to fetch the dimensions
-                val options = BitmapFactory.Options().apply {
-                    // Set inJustDecodeBounds to true to only fetch the dimensions, not load the whole image
-                    inJustDecodeBounds = true
+        // region Service Related
+        fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+            val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+                if (serviceClass.name == service.service.className) {
+                    return true
                 }
-
-                // Decode the file to fetch its dimensions
-                BitmapFactory.decodeFile(filePath, options)
-
-                // Extract the width and height from BitmapFactory.Options
-                val width = options.outWidth
-                val height = options.outHeight
-
-                // Return the resolution as a formatted string
-                return "$width x $height"
             }
-            catch (e: Exception) {
-                Log.e(TAG, "Error getting image resolution: ${e.message}")
-                return "-"
-            }
-        }
-        // endregion
-
-        // region Audio Related
-        fun lengthOfAudio(filePath: String): Long {
-            try {
-                val retriever = MediaMetadataRetriever()
-                retriever.setDataSource(filePath)
-                val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0
-                val durationSeconds = durationMs / 1000 // Convert milliseconds to seconds
-                retriever.release()
-                return durationSeconds
-            } catch (e: Exception) {
-                Log.e("AudioService", "Error getting audio duration: ${e.message}")
-                return 0 // Default value if we can't get the duration
-            }
+            return false
         }
         // endregion
 
@@ -501,18 +492,6 @@ class Helpers {
             else {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
-        }
-        // endregion
-
-        // region Other
-        private fun JSONObject.toMap(): Map<String, String> = keys().asSequence().associateWith { getString(it) }
-
-        private fun calculateMetadataSize(metadataMap: Map<String, Any>): Int {
-            // Calculate the UTF-8 encoded size of each key and value
-            val size = metadataMap.entries.sumOf { entry ->
-                entry.key.toByteArray(Charsets.UTF_8).size + entry.value.toString().toByteArray(Charsets.UTF_8).size
-            }
-            return size
         }
         // endregion
     }
