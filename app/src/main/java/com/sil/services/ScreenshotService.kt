@@ -100,6 +100,9 @@ class ScreenshotService : Service() {
                 saveImage,
                 preprocessImage
             )
+
+            // Show notification
+            notificationHelper.showImageProcessingNotification(this@ScreenshotService)
         }
     }
     // endregion
@@ -147,7 +150,7 @@ class ScreenshotService : Service() {
 
         return defaultPath.absolutePath
     }
-    fun isImageFile(fileName: String): Boolean {
+    private fun isImageFile(fileName: String): Boolean {
         Log.i(TAG, "isImageFile | fileName: $fileName")
 
         val lowerCaseName = fileName.lowercase()

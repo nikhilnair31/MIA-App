@@ -17,7 +17,6 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -189,7 +188,7 @@ class Helpers {
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
 
-        fun schedulePeriodicUploadWork(context: Context, intervalMinutes: Long = MIN_PERIODIC_INTERVAL_MILLIS) {
+        fun schedulePeriodicUploadWork(context: Context, intervalMinutes: Long = 15) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -217,7 +216,7 @@ class Helpers {
             WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_UPLOAD_WORK)
         }
 
-        fun schedulePeriodicNotificationCheckWork(context: Context, intervalMinutes: Long = MIN_PERIODIC_INTERVAL_MILLIS) {
+        fun schedulePeriodicNotificationCheckWork(context: Context, intervalMinutes: Long = 15) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -231,6 +230,7 @@ class Helpers {
                     OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
                     TimeUnit.MILLISECONDS
                 )
+                .setInitialDelay(1, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .build()
 

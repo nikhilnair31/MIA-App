@@ -11,9 +11,11 @@ import android.content.pm.PackageManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.sil.mia.Main
 import com.sil.mia.R
 import com.sil.receiver.FeedbackReceiver
+import java.util.concurrent.TimeUnit
 
 class NotificationHelper(private val context: Context) {
     // region Vars
@@ -39,6 +41,9 @@ class NotificationHelper(private val context: Context) {
     private val thoughtsNotificationTitle = "MIA thoughts..."
     private val goodNotificationIcon = R.drawable.ic_good
     private val badNotificationIcon = R.drawable.ic_bad
+    // Constants for thoughts notification
+    private val imageProcessingNotificationTitle = "Adding to S3..."
+    private val imageProcessingChannelImportance = NotificationManager.IMPORTANCE_HIGH
     // endregion
 
     // region Notification Related
@@ -146,6 +151,29 @@ class NotificationHelper(private val context: Context) {
             notificationManager.notify(notificationId, notification)
         } else {
             Log.e(TAG, "Notification permission not granted")
+        }
+    }
+
+    fun showImageProcessingNotification(context: Context) {
+        Log.i(TAG, "Creating image processing notification channel")
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(thoughtsChannelId, thoughtsChannelGroup, imageProcessingChannelImportance)
+        notificationManager.createNotificationChannel(channel)
+
+        val notification = NotificationCompat.Builder(context, thoughtsChannelId)
+            .setContentTitle(imageProcessingNotificationTitle)
+            .setPriority(imageProcessingChannelImportance)
+            .setSmallIcon(miaNotificationIcon)
+            .setGroup(thoughtsChannelGroup)
+            .setAutoCancel(true)
+            .setContentText(null)
+            .setStyle(null)
+            .setTimeoutAfter(TimeUnit.SECONDS.toMillis(3))
+            .build()
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(33, notification)
         }
     }
     // endregion
