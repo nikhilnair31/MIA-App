@@ -9,6 +9,7 @@ import android.os.IBinder
 import android.util.Log
 import com.sil.listeners.SensorListener
 import com.sil.others.Helpers
+import com.sil.others.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,8 +20,11 @@ class ScreenshotService : Service() {
     private val TAG = "Screenshot Service"
 
     private lateinit var sensorListener: SensorListener
+    private lateinit var notificationHelper: NotificationHelper
 
     private var screenshotObserver: ScreenshotFileObserver? = null
+
+    private val monitoringNotificationId = 2
     // endregion
 
     // region Common
@@ -38,7 +42,6 @@ class ScreenshotService : Service() {
         super.onDestroy()
     }
     override fun onBind(intent: Intent?): IBinder? {
-        Log.i(TAG, "onBind")
         return null
     }
 
@@ -48,7 +51,11 @@ class ScreenshotService : Service() {
         // Listener related
         sensorListener = SensorListener(this)
 
-        // Screenshot Observer related
+        // Service related
+        notificationHelper = NotificationHelper(this)
+        startForeground(monitoringNotificationId, notificationHelper.createMonitoringNotification())
+
+        // Observer related
         if (screenshotObserver == null) {
             startMonitoring()
         }

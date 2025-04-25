@@ -13,7 +13,9 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:ignore="SelectedPhotoAccess" />
 
     <uses-feature
         android:name="android.hardware.sensor.accelerometer"
@@ -59,12 +61,21 @@
             android:name=".Settings"
             android:exported="false" />
 
-        <receiver android:name="com.sil.receiver.FeedbackReceiver"
+        <receiver
+            android:name="com.sil.receiver.FeedbackReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.sil.mia.GOOD_FEEDBACK" />
                 <action android:name="com.sil.mia.BAD_FEEDBACK" />
                 <action android:name="com.sil.mia.DISMISSED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name="com.sil.receiver.BootCompletedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
     </application>

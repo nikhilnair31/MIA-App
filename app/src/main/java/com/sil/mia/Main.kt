@@ -17,9 +17,6 @@ class Main : AppCompatActivity() {
     // region Vars
     private val TAG = "Main"
 
-    private var audioServiceIntent: Intent? = null
-    private var screenshotServiceIntent: Intent? = null
-
     private lateinit var generalSharedPref: SharedPreferences
 
     private lateinit var audioToggleButton: ToggleButton
@@ -62,11 +59,15 @@ class Main : AppCompatActivity() {
             if (isChecked) {
                 Log.i(TAG, "Audio service created")
 
-                audioServiceIntent = Intent(this, AudioService::class.java)
+                val audioServiceIntent = Intent(this, AudioService::class.java)
                 startForegroundService(audioServiceIntent)
+                generalSharedPref.edit { putBoolean("isAudioRecordingEnabled", true) }
             } else {
                 Log.i(TAG, "Audio service stopped")
-                stopService(audioServiceIntent)
+
+                val stopIntent = Intent(this, AudioService::class.java)
+                stopService(stopIntent)
+                generalSharedPref.edit { putBoolean("isAudioRecordingEnabled", false) }
             }
             handlePeriodicTasks()
         }
@@ -82,11 +83,15 @@ class Main : AppCompatActivity() {
             if (isChecked) {
                 Log.i(TAG, "Screenshot service created")
 
-                screenshotServiceIntent = Intent(this, ScreenshotService::class.java)
-                startService(screenshotServiceIntent)
+                val startIntent = Intent(this, ScreenshotService::class.java)
+                startForegroundService(startIntent)
+                generalSharedPref.edit { putBoolean("isScreenshotMonitoringEnabled", true) }
             } else {
                 Log.i(TAG, "Screenshot service stopped")
-                stopService(screenshotServiceIntent)
+
+                val stopIntent = Intent(this, ScreenshotService::class.java)
+                stopService(stopIntent)
+                generalSharedPref.edit { putBoolean("isScreenshotMonitoringEnabled", false) }
             }
             handlePeriodicTasks()
         }

@@ -12,15 +12,13 @@ import org.json.JSONObject
 
 class FeedbackReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val action = intent.action
         val notificationId = intent.getIntExtra("notification_id", -1)
-
         if (notificationId == -1) {
             Log.w("FeedbackReceiver", "Notification ID not found in intent")
             return
         }
 
-        when (action) {
+        when (intent.action) {
             "com.sil.mia.GOOD_FEEDBACK" -> {
                 Log.d("FeedbackReceiver", "Good feedback received for notification $notificationId")
                 dismissNotification(context, "good", notificationId)

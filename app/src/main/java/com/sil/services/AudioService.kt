@@ -41,14 +41,14 @@ class AudioService : Service() {
     // endregion
 
     // region Common
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i(TAG, "onStartCommand")
 
         initRelated()
         return START_STICKY
     }
     override fun onDestroy() {
-        Log.i(TAG, "onDestroy")
+        Log.i(TAG, "onDestroy | Audio recording service destroyed")
 
         sensorListener.unregister()
         stopListening()
@@ -59,14 +59,13 @@ class AudioService : Service() {
     }
 
     private fun initRelated() {
-        // Create the thoughts notification channel
-        notificationHelper = NotificationHelper(this)
-        notificationHelper.createThoughtsNotificationChannel()
+        Log.i(TAG, "initRelated")
 
         // Listener related
-        sensorListener = SensorListener(this@AudioService)
+        sensorListener = SensorListener(this)
 
         // Service related
+        notificationHelper = NotificationHelper(this)
         startForeground(listeningNotificationId, notificationHelper.createListeningNotification())
 
         // Set integer values
@@ -105,9 +104,6 @@ class AudioService : Service() {
         Log.i(TAG, "Stopped Listening")
 
         try {
-            val serviceIntent = Intent(this, AudioService::class.java)
-            stopService(serviceIntent)
-
             mediaRecorder?.apply {
                 stop()
                 release()
