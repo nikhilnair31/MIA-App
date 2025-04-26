@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- When checked/selected -->
+    <item android:state_checked="true">
+        <layer-list>
+            <item>
+                <shape>
+                    <solid android:color="@color/accent_0"/>
+                    <corners android:radius="@dimen/softCorners"/>
+                </shape>
+            </item>
+
+            <item
+                android:drawable="@drawable/ic_baseline_notifications_bell_on"
+                android:gravity="center"/>
+        </layer-list>
+    </item>
+    <!-- When unchecked/not selected -->
+    <item android:state_checked="false">
+        <layer-list>
+            <item>
+                <shape>
+                    <solid android:color="@color/gray_90"/>
+                    <corners android:radius="@dimen/softCorners"/>
+                </shape>
+            </item>
+
+            <item
+                android:drawable="@drawable/ic_baseline_notifications_bell_off"
+                android:gravity="center"/>
+        </layer-list>
+    </item>
+</selector>

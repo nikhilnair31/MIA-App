@@ -29,7 +29,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.sil.listeners.SensorListener
 import com.sil.mia.BuildConfig
-import com.sil.workers.PeriodicNotificationCallWorker
 import com.sil.workers.PeriodicSensorDataWorker
 import com.sil.workers.UploadWorker
 import kotlinx.coroutines.delay
@@ -188,7 +187,7 @@ class Helpers {
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
         }
 
-        fun schedulePeriodicUploadWork(context: Context, intervalMinutes: Long = 15) {
+        fun schedulePeriodicSensorDataUploadWork(context: Context, intervalMinutes: Long = 15) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -212,37 +211,8 @@ class Helpers {
                 uploadWorkRequest
             )
         }
-        fun cancelPeriodicUploadWork(context: Context) {
+        fun cancelPeriodicSensorDataUploadWork(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_UPLOAD_WORK)
-        }
-
-        fun schedulePeriodicNotificationCheckWork(context: Context, intervalMinutes: Long = 15) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            // Create the periodic work request
-            val uploadWorkRequest = PeriodicWorkRequestBuilder<PeriodicNotificationCallWorker>(
-                intervalMinutes, TimeUnit.MINUTES
-            )
-                .setBackoffCriteria(
-                    BackoffPolicy.EXPONENTIAL,
-                    OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
-                    TimeUnit.MILLISECONDS
-                )
-                .setInitialDelay(1, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .build()
-
-            // Schedule the work, replacing any existing one
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                PERIODIC_NOTIFICATION_CHECK_WORK,
-                ExistingPeriodicWorkPolicy.REPLACE,
-                uploadWorkRequest
-            )
-        }
-        fun cancelPeriodicNotificationCheckWork(context: Context) {
-            WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_NOTIFICATION_CHECK_WORK)
         }
         // endregion
 
@@ -403,8 +373,25 @@ class Helpers {
         }
         // endregion
 
+        // region Worker Related
+        fun isWorkerRunning(context: Context, workName: String): Boolean {
+            Log.i(TAG, "isWorkerRunning | Checking if $workName is running...")
+
+            val workManager = WorkManager.getInstance(context)
+            val workInfos = workManager.getWorkInfosByTag(workName).get()
+            for (workInfo in workInfos) {
+                if (workInfo.state == androidx.work.WorkInfo.State.RUNNING) {
+                    return true
+                }
+            }
+            return false
+        }
+        // endregion
+
         // region Service Related
         fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+            Log.i(TAG, "isServiceRunning | Checking if ${serviceClass.simpleName} is running...")
+
             val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
                 if (serviceClass.name == service.service.className) {

@@ -52,7 +52,7 @@
         android:id="@+id/constraintLayout2"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="64dp"
+        android:layout_marginTop="72dp"
         android:layout_marginBottom="72dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -60,8 +60,8 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="0dp"
-            android:layout_height="196dp"
+            android:layout_width="134dp"
+            android:layout_height="224dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -69,9 +69,11 @@
 
             <ToggleButton
                 android:id="@+id/audioToggleButton"
-                android:layout_width="64dp"
+                android:layout_width="128dp"
                 android:layout_height="64dp"
+                android:layout_marginStart="8dp"
                 android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
                 android:background="@drawable/rounded_mic_toggle_selector"
                 android:checked="false"
                 android:textOff=""
@@ -83,17 +85,35 @@
 
             <ToggleButton
                 android:id="@+id/screenshotToggleButton"
-                android:layout_width="64dp"
+                android:layout_width="128dp"
                 android:layout_height="64dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
                 android:background="@drawable/rounded_screenshot_toggle_selector"
                 android:checked="false"
                 android:textOff=""
                 android:textOn=""
                 app:elevation="0dp"
-                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/audioToggleButton" />
+
+            <ToggleButton
+                android:id="@+id/notificationsToggleButton"
+                android:layout_width="128dp"
+                android:layout_height="64dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/rounded_notifications_toggle_selector"
+                android:checked="false"
+                android:textOff=""
+                android:textOn=""
+                app:elevation="0dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/screenshotToggleButton" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
