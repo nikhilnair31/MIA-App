@@ -121,10 +121,6 @@ class ScreenshotService : Service() {
                     saveImage,
                     preprocessImage
                 )
-
-                // Show notification
-                val notificationHelper = NotificationHelper(context)
-                notificationHelper.showImageProcessingNotification(context)
             }
         }
         fun getScreenshotsPath(): String? {

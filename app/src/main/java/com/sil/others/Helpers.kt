@@ -3,6 +3,9 @@ package com.sil.others
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.work.BackoffPolicy
@@ -30,7 +33,9 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import java.io.IOException
+import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 
 class Helpers {
@@ -327,6 +332,76 @@ class Helpers {
                 }
                 e.printStackTrace()
             }
+        }
+        // endregion
+
+        // region Content Related
+        private fun queryContentResolver(context: Context, uri: Uri, selection: String?, selectionArgs: Array<String>?): String? {
+            val projection = arrayOf(MediaStore.Images.Media.DATA)
+            try {
+                context.contentResolver.query(uri, projection, selection, selectionArgs, null)
+                    .use { cursor ->
+                        if (cursor != null && cursor.moveToFirst()) {
+                            val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+                            return cursor.getString(columnIndex)
+                        }
+                    }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            return null
+        }
+        fun getRealPathFromUri(context: Context, uri: Uri): String? {
+            var realPath: String? = null
+
+            if (DocumentsContract.isDocumentUri(context, uri)) {
+                // If it's a document, like Google Photos
+                val docId = DocumentsContract.getDocumentId(uri)
+                val split = docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                if (split.size >= 2) {
+                    val type = split[0]
+                    val id = split[1]
+
+                    if ("image" == type) {
+                        // Try querying MediaStore
+                        val contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                        val selection = "_id=?"
+                        val selectionArgs = arrayOf(id)
+
+                        realPath = queryContentResolver(context, contentUri, selection, selectionArgs)
+                    }
+                }
+            } else if ("content".equals(uri.scheme, ignoreCase = true)) {
+                // General content:// URI
+                realPath = queryContentResolver(context, uri, null, null)
+            } else if ("file".equals(uri.scheme, ignoreCase = true)) {
+                // Direct file path
+                realPath = uri.path
+            }
+
+            return realPath
+        }
+        fun copyUriToTempFile(context: Context, uri: Uri): File? {
+            var tempFile: File? = null
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                if (inputStream != null) {
+                    tempFile = File.createTempFile("shared_image_", ".jpg", context.cacheDir)
+                    val outputStream: OutputStream = FileOutputStream(tempFile)
+
+                    val buffer = ByteArray(4096)
+                    var bytesRead: Int
+                    while ((inputStream.read(buffer).also { bytesRead = it }) != -1) {
+                        outputStream.write(buffer, 0, bytesRead)
+                    }
+
+                    outputStream.close()
+                    inputStream.close()
+                }
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
+            }
+            return tempFile
         }
         // endregion
 
