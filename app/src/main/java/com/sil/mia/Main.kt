@@ -1,5 +1,6 @@
 package com.sil.mia
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -16,7 +17,6 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.sil.others.Helpers
 import com.sil.services.AudioService
 import com.sil.services.ScreenshotService
 import com.sil.workers.PeriodicNotificationCallWorker
@@ -123,8 +123,8 @@ class Main : AppCompatActivity() {
         }
     }
     private fun updateToggleStates() {
-        audioToggleButton.isChecked = Helpers.isServiceRunning(this, AudioService::class.java)
-        screenshotToggleButton.isChecked = Helpers.isServiceRunning(this, ScreenshotService::class.java)
+        audioToggleButton.isChecked = isServiceRunning(this, AudioService::class.java)
+        screenshotToggleButton.isChecked = isServiceRunning(this, ScreenshotService::class.java)
 
         val sensorWorkInfoList =  WorkManager.getInstance(this).getWorkInfosForUniqueWork(PERIODIC_SENSOR_DATA_UPLOAD_WORK).get()
         val isSensorWorkerRunningOrEnqueued = sensorWorkInfoList.any {
@@ -135,6 +135,18 @@ class Main : AppCompatActivity() {
     // endregion
 
     // region State Related
+    private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+        Log.i(TAG, "isServiceRunning | Checking if ${serviceClass.simpleName} is running...")
+
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun updateServiceState(serviceClass: Class<*>, isEnabled: Boolean, preferenceKey: String) {
         val serviceIntent = Intent(this, serviceClass)
         if (isEnabled) {

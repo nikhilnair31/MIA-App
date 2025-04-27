@@ -1,16 +1,10 @@
 package com.sil.others
 
 import android.app.Activity
-import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationManager
-import android.os.BatteryManager
 import android.util.Log
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.NetworkType
@@ -25,7 +19,6 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
-import com.sil.listeners.SensorListener
 import com.sil.mia.BuildConfig
 import com.sil.workers.UploadWorker
 import kotlinx.coroutines.delay
@@ -38,9 +31,6 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class Helpers {
@@ -337,87 +327,6 @@ class Helpers {
                 }
                 e.printStackTrace()
             }
-        }
-        // endregion
-
-        // region Service Related
-        fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
-            Log.i(TAG, "isServiceRunning | Checking if ${serviceClass.simpleName} is running...")
-
-            val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
-                if (serviceClass.name == service.service.className) {
-                    return true
-                }
-            }
-            return false
-        }
-        // endregion
-
-        // region Sensor Data Related
-        fun createSensorDataFile(context: Context): File {
-            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val file = File(context.cacheDir, "sensor_data_$timeStamp.json")
-
-            file.writeText(collectSensorData(context).toString())
-            return file
-        }
-        private fun collectSensorData(context: Context): JSONObject {
-            val data = JSONObject()
-
-            // Add timestamp
-            data.put("timestamp", pullTimeFormattedString())
-
-            // Add battery info
-            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-            data.put("battery", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
-
-            // Add location if permitted
-            if (hasLocationPermission(context)) {
-                getLastKnownLocation(context)?.let { location ->
-                    data.put("latitude", location.latitude)
-                    data.put("longitude", location.longitude)
-                }
-            }
-
-            // Add movement status
-            val deviceSpeed = SensorListener(context).getDeviceStatus()
-            data.put("movement", when {
-                deviceSpeed < 10 -> "idle"
-                deviceSpeed < 150 -> "normal"
-                deviceSpeed < 500 -> "fast"
-                else -> "unknown"
-            })
-
-            Log.d(TAG, "Sensor data: $data")
-            return data
-        }
-        private fun hasLocationPermission(context: Context): Boolean {
-            return ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        android.Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-        }
-        private fun getLastKnownLocation(context: Context): Location? {
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
-            return try {
-                if (hasLocationPermission(context)) {
-                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                } else null
-            } catch (securityException: SecurityException) {
-                // Handle SecurityException (e.g., show a message to the user)
-                Log.e(TAG, "SecurityException: ${securityException.message}")
-                null
-            }
-        }
-        private fun pullTimeFormattedString(): String {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            return dateFormat.format(Date())
         }
         // endregion
 
