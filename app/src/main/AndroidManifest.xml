@@ -56,7 +56,20 @@
             android:exported="false" />
         <activity
             android:name=".Main"
-            android:exported="false" />
+            android:exported="false" >
+        </activity>
+        <activity
+            android:name=".Share"
+            android:exported="true"
+            android:theme="@style/TransparentActivity"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".Settings"
             android:exported="false" />

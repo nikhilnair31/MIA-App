@@ -13,11 +13,9 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.amazonaws.AmazonServiceException
@@ -29,7 +27,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.sil.listeners.SensorListener
 import com.sil.mia.BuildConfig
-import com.sil.workers.PeriodicSensorDataWorker
 import com.sil.workers.UploadWorker
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -50,8 +47,6 @@ class Helpers {
     companion object {
         // region API Keys
         private const val TAG = "Helper"
-        private const val PERIODIC_NOTIFICATION_CHECK_WORK = "periodic_notification_check_work"
-        private const val PERIODIC_UPLOAD_WORK = "periodic_data_upload_work"
 
         private const val BUCKET_NAME = BuildConfig.BUCKET_NAME
         private const val AWS_ACCESS_KEY = BuildConfig.AWS_ACCESS_KEY
@@ -185,34 +180,6 @@ class Helpers {
 
             val appContext = context.applicationContext
             WorkManager.getInstance(appContext).enqueue(uploadWorkRequest)
-        }
-
-        fun schedulePeriodicSensorDataUploadWork(context: Context, intervalMinutes: Long = 15) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            // Create the periodic work request
-            val uploadWorkRequest = PeriodicWorkRequestBuilder<PeriodicSensorDataWorker>(
-                intervalMinutes, TimeUnit.MINUTES
-            )
-                .setBackoffCriteria(
-                    BackoffPolicy.EXPONENTIAL,
-                    OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
-                    TimeUnit.MILLISECONDS
-                )
-                .setConstraints(constraints)
-                .build()
-
-            // Schedule the work, replacing any existing one
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                PERIODIC_UPLOAD_WORK,
-                ExistingPeriodicWorkPolicy.REPLACE,
-                uploadWorkRequest
-            )
-        }
-        fun cancelPeriodicSensorDataUploadWork(context: Context) {
-            WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_UPLOAD_WORK)
         }
         // endregion
 
@@ -370,21 +337,6 @@ class Helpers {
                 }
                 e.printStackTrace()
             }
-        }
-        // endregion
-
-        // region Worker Related
-        fun isWorkerRunning(context: Context, workName: String): Boolean {
-            Log.i(TAG, "isWorkerRunning | Checking if $workName is running...")
-
-            val workManager = WorkManager.getInstance(context)
-            val workInfos = workManager.getWorkInfosByTag(workName).get()
-            for (workInfo in workInfos) {
-                if (workInfo.state == androidx.work.WorkInfo.State.RUNNING) {
-                    return true
-                }
-            }
-            return false
         }
         // endregion
 

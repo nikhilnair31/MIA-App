@@ -84,27 +84,6 @@ class ScreenshotService : Service() {
         screenshotObserver?.stopWatching()
         screenshotObserver = null
     }
-
-    private fun uploadImageFileWithMetadata(imageFile: File) {
-        // Get the shared preferences for metadata values
-        val sharedPrefs = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-        val saveImage = sharedPrefs.getString("saveImageFiles", "false")
-        val preprocessImage = sharedPrefs.getString("preprocessImage", "false")
-
-        CoroutineScope(Dispatchers.IO).launch {
-            // Start upload process
-            Helpers.scheduleContentUploadWork(
-                this@ScreenshotService,
-                "image",
-                imageFile,
-                saveImage,
-                preprocessImage
-            )
-
-            // Show notification
-            notificationHelper.showImageProcessingNotification(this@ScreenshotService)
-        }
-    }
     // endregion
 
     // region Observer Related
@@ -119,7 +98,7 @@ class ScreenshotService : Service() {
                 if (isImageFile(file.name)) {
                     Log.i(TAG, "New screenshot detected at ${file.absolutePath} with name: ${file.name}")
 
-                    uploadImageFileWithMetadata(file)
+                    uploadImageFileWithMetadata(this@ScreenshotService, file)
                 }
             }
         }
@@ -160,4 +139,28 @@ class ScreenshotService : Service() {
                 lowerCaseName.endsWith(".webp")
     }
     // endregion
+
+    companion object {
+        fun uploadImageFileWithMetadata(context: Context, imageFile: File) {
+            // Get the shared preferences for metadata values
+            val sharedPrefs = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+            val saveImage = sharedPrefs.getString("saveImageFiles", "false")
+            val preprocessImage = sharedPrefs.getString("preprocessImage", "false")
+
+            CoroutineScope(Dispatchers.IO).launch {
+                // Start upload process
+                Helpers.scheduleContentUploadWork(
+                    context,
+                    "image",
+                    imageFile,
+                    saveImage,
+                    preprocessImage
+                )
+
+                // Show notification
+                val notificationHelper = NotificationHelper(context)
+                notificationHelper.showImageProcessingNotification(context)
+            }
+        }
+    }
 }

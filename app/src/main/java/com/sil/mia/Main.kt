@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
+
 class Main : AppCompatActivity() {
     // region Vars
     private val TAG = "Main"
