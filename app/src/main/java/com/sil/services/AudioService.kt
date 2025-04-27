@@ -89,7 +89,7 @@ class AudioService : Service() {
         }
 
         CoroutineScope(Dispatchers.IO).launch {
-            val audioFile: File = createAudioFile()
+            val audioFile: File = createAudioFile(this@AudioService)
             latestAudioFile = audioFile
             setupMediaRecorder(audioFile)
             try {
@@ -114,7 +114,7 @@ class AudioService : Service() {
         }
         finally {
             mediaRecorder = null
-            latestAudioFile?.let { uploadAudioFileWithMetadata(it) }
+            latestAudioFile?.let { uploadAudioFileWithMetadata(this@AudioService, it) }
         }
     }
 
@@ -136,45 +136,45 @@ class AudioService : Service() {
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
                     Log.i(TAG, "Max Recording Duration!")
 
-                    stopRecordingAndUpload(audioFile)
+                    mediaRecorder?.apply {
+                        stop()
+                        release()
+                    }
+                    mediaRecorder = null
+                    uploadAudioFileWithMetadata(this@AudioService, audioFile)
+                    startListening()
                 }
             }
         }
     }
-
-    private fun stopRecordingAndUpload(audioFile: File) {
-        mediaRecorder?.apply {
-            stop()
-            release()
-        }
-        mediaRecorder = null
-        uploadAudioFileWithMetadata(audioFile)
-        startListening()
-    }
-
-    private fun createAudioFile(): File {
-        // val timeStamp = System.currentTimeMillis()
-        val timeStamp = SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault()).format(Date())
-        val audioFileName = "recording_$timeStamp.m4a"
-        Log.i(TAG, "Created New Audio File: $audioFileName")
-        return File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
-    }
-    private fun uploadAudioFileWithMetadata(audioFile: File) {
-        CoroutineScope(Dispatchers.IO).launch {
-            // Get the shared preferences for metadata values
-            val sharedPrefs = getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
-            val saveAudio = sharedPrefs.getString("saveAudioFiles", "false")
-            val preprocessAudio = sharedPrefs.getString("preprocessAudio", "false")
-
-            // Start upload process
-            Helpers.scheduleContentUploadWork(
-                this@AudioService,
-                "audio",
-                audioFile,
-                saveAudio,
-                preprocessAudio
-            )
-        }
-    }
     // endregion
+
+    companion object {
+        private val TAG = "Audio Service"
+
+        private fun uploadAudioFileWithMetadata(context: Context, audioFile: File) {
+            CoroutineScope(Dispatchers.IO).launch {
+                // Get the shared preferences for metadata values
+                val sharedPrefs = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
+                val saveAudio = sharedPrefs.getString("saveAudioFiles", "false")
+                val preprocessAudio = sharedPrefs.getString("preprocessAudio", "false")
+
+                // Start upload process
+                Helpers.scheduleContentUploadWork(
+                    context,
+                    "audio",
+                    audioFile,
+                    saveAudio,
+                    preprocessAudio
+                )
+            }
+        }
+        private fun createAudioFile(context: Context): File {
+            // val timeStamp = System.currentTimeMillis()
+            val timeStamp = SimpleDateFormat("ddMMyyyyHHmmss", Locale.getDefault()).format(Date())
+            val audioFileName = "recording_$timeStamp.m4a"
+            Log.i(TAG, "Created New Audio File: $audioFileName")
+            return File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), audioFileName)
+        }
+    }
 }

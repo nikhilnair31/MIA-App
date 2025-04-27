@@ -134,7 +134,7 @@ class Main : AppCompatActivity() {
     }
     // endregion
 
-    // region Service Management
+    // region State Related
     private fun updateServiceState(serviceClass: Class<*>, isEnabled: Boolean, preferenceKey: String) {
         val serviceIntent = Intent(this, serviceClass)
         if (isEnabled) {
@@ -148,9 +148,6 @@ class Main : AppCompatActivity() {
             generalSharedPref.edit { putBoolean(preferenceKey, isEnabled) }
         }
     }
-    // endregion
-
-    // region Worker Management
     private fun updateWorkerState(workerType: String, workName: String, isEnabled: Boolean, preferenceKey: String, intervalMinutes: Long = 15) {
         if (isEnabled) {
             Log.i(TAG, "$workName created")

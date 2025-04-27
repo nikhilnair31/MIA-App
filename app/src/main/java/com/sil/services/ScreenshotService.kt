@@ -84,9 +84,7 @@ class ScreenshotService : Service() {
         screenshotObserver?.stopWatching()
         screenshotObserver = null
     }
-    // endregion
 
-    // region Observer Related
     private inner class ScreenshotFileObserver(path: String) : FileObserver(path, MOVED_TO) {
         private val observedPath = path
 
@@ -105,42 +103,9 @@ class ScreenshotService : Service() {
     }
     // endregion
 
-    // region Helpers
-    private fun getScreenshotsPath(): String? {
-        // For most devices, screenshots are in DCIM/Screenshots or Pictures/Screenshots
-        val dcimPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
-        val picturesPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-
-        val possiblePaths = listOf(
-            File(picturesPath, "Screenshots"),
-            // Some devices might use the root of DCIM or Pictures
-            picturesPath
-        )
-
-        for (path in possiblePaths) {
-            if (path.exists() && path.isDirectory) {
-                return path.absolutePath
-            }
-        }
-
-        // If we can't find a known screenshots directory, default to DCIM/Screenshots
-        val defaultPath = File(dcimPath, "Screenshots")
-        defaultPath.mkdirs()
-
-        return defaultPath.absolutePath
-    }
-    private fun isImageFile(fileName: String): Boolean {
-        Log.i(TAG, "isImageFile | fileName: $fileName")
-
-        val lowerCaseName = fileName.lowercase()
-        return lowerCaseName.endsWith(".jpg") ||
-                lowerCaseName.endsWith(".jpeg") ||
-                lowerCaseName.endsWith(".png") ||
-                lowerCaseName.endsWith(".webp")
-    }
-    // endregion
-
     companion object {
+        private val TAG = "Screenshot Service"
+
         fun uploadImageFileWithMetadata(context: Context, imageFile: File) {
             // Get the shared preferences for metadata values
             val sharedPrefs = context.getSharedPreferences("com.sil.mia.generalSharedPrefs", Context.MODE_PRIVATE)
@@ -161,6 +126,38 @@ class ScreenshotService : Service() {
                 val notificationHelper = NotificationHelper(context)
                 notificationHelper.showImageProcessingNotification(context)
             }
+        }
+        fun getScreenshotsPath(): String? {
+            // For most devices, screenshots are in DCIM/Screenshots or Pictures/Screenshots
+            val dcimPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val picturesPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+
+            val possiblePaths = listOf(
+                File(picturesPath, "Screenshots"),
+                // Some devices might use the root of DCIM or Pictures
+                picturesPath
+            )
+
+            for (path in possiblePaths) {
+                if (path.exists() && path.isDirectory) {
+                    return path.absolutePath
+                }
+            }
+
+            // If we can't find a known screenshots directory, default to DCIM/Screenshots
+            val defaultPath = File(dcimPath, "Screenshots")
+            defaultPath.mkdirs()
+
+            return defaultPath.absolutePath
+        }
+        fun isImageFile(fileName: String): Boolean {
+            Log.i(TAG, "isImageFile | fileName: $fileName")
+
+            val lowerCaseName = fileName.lowercase()
+            return lowerCaseName.endsWith(".jpg") ||
+                    lowerCaseName.endsWith(".jpeg") ||
+                    lowerCaseName.endsWith(".png") ||
+                    lowerCaseName.endsWith(".webp")
         }
     }
 }
